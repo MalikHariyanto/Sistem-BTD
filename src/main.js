@@ -1,8 +1,11 @@
 import "./style.css";
 import { content } from "./content.js";
+import { quotes } from "./quotes.js";
 import { createUniverse } from "./universe.js";
+import { openMemories, optimizePhoto } from "./memories.js";
 
 const $ = (s) => document.querySelector(s);
+const $$ = (s) => [...document.querySelectorAll(s)];
 const esc = (s) =>
   String(s).replace(
     /[&<>"']/g,
@@ -11,80 +14,623 @@ const esc = (s) =>
         c
       ],
   );
-const photo = (key, label, extra = "") =>
-  `<div class="photo-slot ${extra}" data-photo="${key}" role="img" aria-label="${esc(label)}"><span class="photo-mark" aria-hidden="true">✧</span><span class="photo-label">${esc(label)}</span></div>`;
-let poemIndex = 0;
-let trackIndex = 0;
-let audio;
-let ambient;
-let wishBlown = false;
-const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
+const motion = matchMedia("(prefers-reduced-motion: reduce)");
+const photo = (key, label, cls = "") =>
+  `<div class="photo-slot ${cls}" data-photo="${key}" role="img" aria-label="${esc(label)}"><span class="aperture" aria-hidden="true">✧</span><span class="photo-label">${esc(label)}</span></div>`;
+const arrow = '<span aria-hidden="true">→</span>';
+let active = 0,
+  changing = false,
+  poemIndex = 0,
+  quoteIndex = 0,
+  letterIndex = 0;
+let introRun = 0,
+  introPhase = "idle",
+  wishState = "waiting";
+let store,
+  settings = {},
+  localTrackUrl,
+  audio,
+  ambient;
+let storyVersion = 0,
+  letterRun = 0,
+  wishRun = 0;
+const urls = new Map(),
+  localPhotos = new Map();
+const photoKeys = Object.keys(content.photos);
+const photoLabel = (key) =>
+  ({
+    hero: "Foto surat",
+    portrait: "Potret ucapan",
+    poem0: "Puisi 01",
+    poem1: "Puisi 02",
+    poem2: "Puisi 03",
+    moment0: "Kenangan 01",
+    moment1: "Kenangan 02",
+    moment2: "Kenangan 03",
+    moment3: "Kenangan 04",
+  })[key] || `Semesta ${key.replace("orbit", "")}`;
+const chapters = [
+  "Semestamu",
+  "Hari lahirmu",
+  "Bait untukmu",
+  "Tiga doa",
+  "Suratku",
+  "Nada kita",
+  "Satu harapan",
+];
+const nextLabels = [
+  "Masuk ke ceritanya",
+  "Ada kata untukmu",
+  "Titip tiga doa",
+  "Ada surat untukmu",
+  "Dengarkan sebentar",
+  "Saatnya buat harapan",
+  "",
+];
 
 $("#app").innerHTML = `
-  <header class="site-header"><a class="wordmark" href="#home">AMBIS <span>COPENHAGEN</span></a><nav aria-label="Navigasi utama"><a href="#poems">Puisi</a><a href="#moments">Momen</a><a href="#letter">Surat untukmu <span aria-hidden="true">↗</span></a></nav></header>
-  <main id="main">
-    <section class="hero" id="home" aria-labelledby="hero-title">
-      <canvas id="universe" aria-hidden="true"></canvas>
-      <div class="hero-top"><span>SEBUAH SEMESTA KECIL UNTUKMU</span><span>VOL. 01 — WITH LOVE</span></div>
-      <div class="hero-copy"><p class="eyebrow">OF ALL THE STARS, I FOUND YOU.</p><h1 id="hero-title">Semesta punya<br>banyak bintang.<br><em>Favoritku, kamu.</em></h1><p class="hero-description">Untuk hari lahirmu, dan semua hari setelahnya.<br>Sebuah tempat untuk hal-hal yang tak habis diucapkan.</p><button class="light-button" id="begin">Buka semesta kita <span aria-hidden="true">↗</span></button><p id="birthday-countdown" class="birthday-countdown" aria-live="off"></p></div>
-      <div class="hero-aside"><span class="orbit-symbol" aria-hidden="true"><svg width="40" height="40" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1"><path d="M20 0v40M0 20h40M6 6l28 28M6 34L34 6"/></svg></span><p>Some things<br>are written<br><i>in the stars.</i></p></div>
-      <div class="hero-bottom"><span>SCROLL PELAN-PELAN. INI TENTANG KITA.</span><a href="#dedication" aria-label="Lanjut ke ucapan">↓</a><span>01 / FOREVER</span></div>
-    </section>
+<header class="story-header"><a href="#semesta" id="home-link" aria-label="Kembali ke awal">a little universe <i>for you.</i></a><button id="sound-toggle" aria-pressed="false" aria-label="Putar nada lembut"><span aria-hidden="true">♫</span><span id="sound-label">Suara mati</span></button></header>
+<main id="main" tabindex="-1"><div class="stage" id="stage">
+  <section class="scene universe-scene is-active" id="semesta" aria-labelledby="cover-title" data-scene="0" data-phase="idle">
+    <canvas id="universe" aria-hidden="true"></canvas>
+    <div class="cover-copy" id="cover-copy"><p class="eyebrow">UNTUK HARI KETIKA DUNIA MENGENALMU</p><h1 id="cover-title">Ada semesta.<br><em>Di dalamnya, kamu.</em></h1><p>Beberapa kenangan. Banyak sekali rasa.<br>Semuanya berawal dari satu tarikan kecil.</p><button class="primary light" id="begin">Buka semesta kita ${arrow}</button><p id="birthday-countdown" class="birthday-countdown"></p></div>
+    <p class="intro-count" id="intro-count" aria-live="polite" hidden></p>
+    <button class="skip-intro" id="skip-intro" hidden>Lewati perjalanan →</button>
+    <div class="reveal-copy" id="reveal-copy" hidden><p class="eyebrow">SETELAH SEMUA JARAK DAN CAHAYA</p><h2 id="reveal-title" tabindex="-1">Ternyata,<br><em>semuanya kamu.</em></h2><p>Setiap kepingnya, satu alasan untuk bersyukur kamu ada.</p><button class="primary light" id="enter-story">Ini cerita untukmu ${arrow}</button></div>
+    <p class="cover-footnote" id="cover-footnote">Bukan tentang luasnya semesta. Tentang siapa yang membuatnya berarti.</p>
+  </section>
+  <section class="scene dedication-scene" data-scene="1" aria-labelledby="dedication-title" hidden inert><div class="scene-inner dedication-layout">
+    <div class="memory-constellation" aria-label="Lima bingkai kenangan">${["portrait", "orbit01", "orbit02", "moment0", "orbit03"].map((key, i) => `<div class="memory memory-${i}">${photo(key, photoLabel(key))}</div>`).join("")}<span class="handwritten">the universe got lucky.</span></div>
+    <div class="dedication-copy"><p class="eyebrow">PADA HARI INI, SUATU WAKTU LALU</p><h2 id="dedication-title" tabindex="-1">Dunia mendapatmu.<br><em>Aku mendapat<br>alasan tersenyum.</em></h2><p>Selamat ulang tahun, <span data-recipient></span>.</p><p>Terima kasih sudah lahir. Sudah tumbuh. Sudah menjadi kamu, bahkan di hari-hari ketika menjadi diri sendiri terasa tidak mudah.</p><p>Aku ingin merayakan semuanya. Pelan-pelan, satu halaman pada satu waktu.</p><span class="handwritten">stay a little. this is all for you.</span></div>
+  </div></section>
+  <section class="scene poems-scene" data-scene="2" aria-labelledby="poem-title" hidden inert><div class="scene-inner poem-layout">
+    <div class="poem-visual"><div id="poem-photo"></div><div class="poem-small-photo">${photo("orbit04", "Sebuah detail kecil")}</div><span class="handwritten">some feelings become poems.</span></div>
+    <article class="poem-paper"><p class="eyebrow">KATA-KATA YANG SELALU PULANG PADAMU</p><div id="poem-page"><h2 id="poem-title" tabindex="-1"></h2><p id="poem-subtitle" class="poem-subtitle"></p><p id="poem-text" class="poem-text"></p></div><div class="page-controls"><button id="prev-poem" class="round" aria-label="Puisi sebelumnya">←</button><span id="poem-position" aria-live="polite"></span><button id="next-poem" class="round" aria-label="Puisi selanjutnya">→</button></div></article>
+  </div></section>
+  <section class="scene quotes-scene" data-scene="3" aria-labelledby="quote-heading" hidden inert><div class="scene-inner quotes-layout">
+    <div class="quote-side"><p class="eyebrow">KATA MEREKA. HARAPANKU UNTUKMU.</p><h2 id="quote-heading" tabindex="-1">Kata mereka.<br><em>Doa untukmu.</em></h2><div class="quote-photo-pair">${photo("moment1", "Satu hari yang indah")}${photo("orbit05", "Yang ingin kusimpan")}</div><p>Untuk hari lahirmu, kupinjam sedikit kata.<br>Doanya, kutulis sendiri untukmu.</p></div>
+    <article class="quote-page" id="quote-page"><p id="quote-theme" class="eyebrow"></p><span class="quote-mark" aria-hidden="true">“</span><blockquote id="quote-original"></blockquote><p id="quote-author"></p><p class="translation-label">TERJEMAHAN BEBAS</p><p id="quote-translation"></p><div class="personal-wish"><span>Dan harapanku untukmu...</span><p id="quote-wish"></p></div><div class="quote-bottom"><a id="quote-source" target="_blank" rel="noopener noreferrer">Baca karya aslinya →</a><div class="page-controls"><button class="round" id="prev-quote" aria-label="Doa sebelumnya">←</button><span id="quote-position" aria-live="polite"></span><button class="round" id="next-quote" aria-label="Doa selanjutnya">→</button></div></div></article>
+  </div></section>
+  <section class="scene letter-scene" data-scene="4" aria-labelledby="letter-heading" hidden inert><div class="scene-inner letter-layout">
+    <div class="letter-intro" id="letter-intro"><p class="eyebrow">YANG INI, KUTULIS SENDIRI</p><h2 id="letter-heading" tabindex="-1">Tidak semua rasa<br>muat dalam puisi.<br><em>Jadi, ini suratku.</em></h2><button id="open-letter" class="envelope" aria-label="Buka surat untukmu"><span class="envelope-back"></span><span class="envelope-paper">dear, you.</span><span class="envelope-front"></span><span class="envelope-flap"></span><span class="wax-seal">a.</span></button><button id="open-letter-text" class="text-button">Ketuk untuk membuka surat ${arrow}</button></div>
+    <article id="letter-reading" class="letter-reading" hidden><div class="letter-image">${photo("hero", "Senyummu, favoritku")}<span class="handwritten">my favorite person.</span></div><div class="letter-paper"><p class="eyebrow">UNTUK <span data-recipient></span>, DENGAN SELURUH RASA</p><div id="letter-page"><h2 id="letter-title" tabindex="-1">Happy birthday,<br><em>my love.</em></h2><p id="letter-paragraph"></p><p class="handwritten signature">${esc(content.sender)}</p></div><div class="page-controls"><button id="prev-letter" class="round" aria-label="Halaman surat sebelumnya">←</button><span id="letter-position" aria-live="polite"></span><button id="next-letter" class="round" aria-label="Halaman surat selanjutnya">→</button></div><button id="close-letter" class="text-button">Lipat kembali suratnya</button></div></article>
+  </div></section>
+  <section class="scene music-scene" data-scene="5" aria-labelledby="music-title" hidden inert><div class="scene-inner music-layout"><div class="record-composition"><div class="record-sleeve">${photo("moment2", "Tentang kita")}</div><div class="vinyl" aria-hidden="true"><div>a.</div></div><span class="handwritten">if this feeling had a sound.</span></div><div class="music-copy"><p class="eyebrow">BERHENTI SEBENTAR DI SINI</p><h2 id="music-title" tabindex="-1">Some songs<br><em>sound like you.</em></h2><p>Kalau ingin, biarkan satu lagu menemani sisa cerita ini.</p><div class="track-list">${content.tracks.map((t, i) => `<button class="track" data-track="${i}"><span class="track-state">▷</span><span><strong>${esc(t.title)}</strong><small>${esc(t.artist)}</small></span></button>`).join("")}</div><p id="track-status" role="status">Atau nikmati nada lembut yang sudah kusiapkan.</p><button class="text-button" id="ambient-toggle" aria-pressed="false">Putar nada lembut ♫</button></div></div></section>
+  <section class="scene wish-scene" data-scene="6" aria-labelledby="wish-title" hidden inert><div class="wish-halo"></div><div class="celebration-particles" aria-hidden="true">${Array.from({ length: 32 }, (_, i) => `<span style="--i:${i};--x:${(i * 37) % 100}%;--delay:${(i % 8) * 0.08}s"></span>`).join("")}</div><div class="scene-inner wish-layout">
+    <div class="wish-copy"><p class="eyebrow" id="wish-step">SATU HAL TERAKHIR. YANG PALING PENTING.</p><h2 id="wish-title" tabindex="-1">Hari ini,<br><em>milikmu.</em></h2><p id="wish-instruction">Semua cahaya ini untukmu.<br>Sudah siap membuat satu harapan?</p><div class="wish-steps" aria-label="Langkah perayaan"><span class="current" data-wish-step="0">01 <i>Buat harapan</i></span><span data-wish-step="1">02 <i>Tiup lilin</i></span><span data-wish-step="2">03 <i>Rayakan</i></span></div><button class="primary light" id="ready-wish">Aku siap buat harapan ${arrow}</button><button class="primary light blow-button" id="blow-candle" hidden>Tiup lilinnya <span aria-hidden="true">♡</span></button><p class="wish-hint" id="wish-hint">Ambil waktu sebanyak yang kamu butuhkan.</p></div>
+    <div class="cake-composition" id="cake" aria-hidden="true"><div class="candle-glow"></div><div class="cake-candle"><div class="flame"></div><span class="smoke"></span><div class="wick"></div><div class="candle-body"></div></div><div class="cake-top"></div><div class="cake-body"><span class="cake-ribbon">for you, always.</span></div><div class="cake-bottom"></div><div class="cake-plate"></div><div class="cake-stand"></div><div class="cake-foot"></div><div class="cake-spark spark-one">✧</div><div class="cake-spark spark-two">✧</div></div>
+    <div class="wish-result" id="wish-result" hidden><p class="eyebrow">SEMOGA SEMESTA MENGAMINKAN</p><h2 id="birthday-title" tabindex="-1">Happy birthday,<br><em data-recipient></em>.</h2><p>Semoga hidup memelukmu selembut doa-doa baik hari ini.<br>Aku bahagia kamu ada.</p><span class="handwritten">always, and a little longer.</span><div><button class="primary light" id="relight">Buat harapan lagi ♡</button><button class="text-button" id="replay">Putar cerita dari awal ↺</button></div></div>
+  </div></section>
+</div></main>
+<nav class="story-nav" id="story-nav" aria-label="Halaman cerita" hidden><button id="previous-scene" class="nav-back">← <span>Sebelumnya</span></button><div class="chapter-progress"><span id="chapter-name"></span><div class="progress-lines">${chapters.map((name, i) => `<button data-chapter="${i}" aria-label="Ke ${name}" ${i === 0 ? 'aria-current="step"' : ""}><span></span></button>`).join("")}</div></div><button id="next-scene" class="nav-next"></button></nav>
+<button class="edit-trigger" id="open-editor">Isi kenangan →</button><p class="sr-only" id="scene-announcement" role="status"></p>
+<dialog id="editor-dialog" aria-labelledby="editor-title"><button class="editor-close" id="close-editor">Tutup ×</button><p class="eyebrow">DI BALIK CERITA INI</p><h2 id="editor-title">Isi <em>kenangan.</em></h2><p>33 tempat untuk foto milikmu. Unggahan di sini hanya tersimpan di browser ini. Untuk dibagikan, isi <code>src/content.js</code> dan simpan file di <code>public/photos/</code>.</p><form id="editor-form"><label>Nama panggilan<input name="recipient" maxlength="60" placeholder="Kamu"></label><label>Tanggal ulang tahun <small>(opsional, waktu perangkat)</small><input name="birthday" type="datetime-local"></label><button class="primary" type="submit">Simpan nama & tanggal →</button><div class="bulk-upload"><label>Isi banyak foto sekaligus<small>Foto akan mengisi tempat kosong di semesta, sampai 24 foto.</small><input id="bulk-photos" type="file" accept="image/jpeg,image/png,image/webp" multiple></label><p id="photo-count"></p></div><details><summary>Atur masing-masing foto</summary><div class="editor-photo-grid">${photoKeys.map((k) => `<label>${photoLabel(k)}<input type="file" accept="image/jpeg,image/png,image/webp" data-upload="${k}"><button class="remove-photo" type="button" data-remove="${k}">Hapus foto lokal</button></label>`).join("")}</div></details><label>Lagu pilihan pertama <small>(maks. 15 MB)</small><input type="file" id="audio-upload" accept="audio/mpeg,audio/mp4,audio/ogg,audio/wav"></label><p id="editor-status" role="status"></p><button class="text-button" type="button" id="reset-local">Hapus semua isian lokal</button></form></dialog>`;
 
-    <section class="dedication section-pad" id="dedication"><div class="dedication-portrait">${photo("portrait", "Potret favoritku", "oval-photo")}<span class="handwritten">my favorite person</span></div><div class="dedication-copy"><p class="eyebrow">HARI INI, DUNIA SEDIKIT LEBIH INDAH.</p><h2>Karena pada suatu hari,<br><em>kamu lahir.</em></h2><p>Dan dari semua kebetulan yang indah, bertemu denganmu adalah yang paling ingin kuulang.</p><p>Ini bukan sekadar ucapan ulang tahun. Ini beberapa keping ingatan, sedikit puisi, dan banyak sekali rasa yang kusimpan untukmu, <span data-recipient></span>.</p><a class="text-link" href="#surprises">Ada sesuatu untukmu <span>↘</span></a></div></section>
-
-    <section class="surprises section-pad" id="surprises"><div class="section-heading"><p class="eyebrow">EMPAT CARA UNTUK BILANG SAYANG</p><h2>Choose your <em>little surprise.</em></h2></div><div class="surprise-grid"><a href="#poems"><span class="menu-art" aria-hidden="true">❧</span><span class="menu-number">01 / WORDS</span><h3>Di antara bait</h3><span>Puisi yang menemukanmu ↗</span></a><a href="#moments"><span class="menu-art" aria-hidden="true">◷</span><span class="menu-number">02 / MEMORIES</span><h3>Some moments</h3><span>Yang ingin kuingat lagi ↗</span></a><button id="open-playlist"><span class="menu-art record-mini" aria-hidden="true">◉</span><span class="menu-number">03 / MELODIES</span><h3>Sounds like us</h3><span>Lagu untuk menemanimu ↗</span></button><a href="#letter"><span class="menu-art" aria-hidden="true"><svg width="44" height="38" viewBox="0 0 44 38" fill="none" stroke="currentColor" stroke-width="1.1"><path d="M2 5h40v28H2z M2 5l20 16L42 5 M2 33l14-15 M42 33L28 18"/></svg></span><span class="menu-number">04 / A LITTLE GIFT</span><h3>Dear, you</h3><span>Satu surat, banyak rasa ↗</span></a></div></section>
-
-    <section class="poems section-pad" id="poems" aria-labelledby="poem-heading"><div class="poem-heading"><p class="eyebrow">KUMPULAN KATA YANG BERUJUNG PADAMU</p><h2 id="poem-heading">Things I couldn't say.<br><em>So I wrote.</em></h2></div><div class="poem-layout"><div class="poem-photo-wrap"><div id="poem-photo"></div><span class="poem-photo-caption handwritten">a little piece of you.</span><span class="vertical-label">AN ANTHOLOGY OF US / 01</span></div><article class="poem-paper" aria-live="polite"><div class="poem-meta"><span id="poem-count"></span><span>CATATAN HATI</span></div><h3 id="poem-title"></h3><p class="poem-subtitle" id="poem-subtitle"></p><p class="poem-text" id="poem-text"></p><div class="poem-controls"><button class="circle-button" id="prev-poem" aria-label="Puisi sebelumnya">←</button><span id="poem-position"></span><button class="circle-button" id="next-poem" aria-label="Puisi selanjutnya">→</button></div></article></div></section>
-
-    <section class="moments section-pad" id="moments"><div class="moments-heading"><p class="eyebrow">NO GRAND OCCASION. JUST US.</p><h2>Ordinary days.<br><em>Extraordinary you.</em></h2><p>Kalau waktu bisa dilipat,<br>aku akan menyimpan bagian-bagian ini.</p></div><div class="moments-grid">${content.moments.map((m, i) => `<button class="moment-card moment-${i}" data-moment="${i}"><div class="moment-photo">${photo("moment" + i, "Kenangan " + String(i + 1).padStart(2, "0"))}<span class="expand-photo" aria-hidden="true">↗</span></div><span class="moment-date">${esc(m.date)}</span><h3>${esc(m.title)}</h3><p>${esc(m.note)}</p></button>`).join("")}</div><p class="moment-footnote handwritten">and the best is yet to come.</p></section>
-
-    <section class="letter-section section-pad" id="letter"><p class="eyebrow">SATU PESAN BARU, KHUSUS UNTUKMU</p><h2>A letter, <em>with love.</em></h2><p>Ada yang ingin kusampaikan. Boleh dibuka sekarang.</p><button id="open-letter" class="envelope" aria-label="Buka amplop surat"><span class="envelope-flap"></span><span class="wax-seal">a.</span><span class="envelope-caption">untuk <span data-recipient></span>, dengan seluruh rasa.</span></button><span class="handwritten envelope-hint">press the envelope ↗</span></section>
-
-    <section class="wish-section section-pad"><p class="eyebrow">ONE MORE THING, BEFORE YOU GO.</p><h2>Make a <em>wish.</em></h2><p>Pejamkan mata sebentar.<br>Semoga yang kamu semogakan, menemukan jalannya.</p><button class="candle" id="blow-candle" aria-label="Tiup lilin"><span class="flame"></span><span class="wick"></span><span class="candle-body"></span></button><p id="wish-message" role="status">Ketuk lilinnya, titipkan satu harapan.</p><button class="text-link" id="relight" hidden>Nyalakan lagi ↺</button><div class="closing">Happy birthday,<br><em>my favorite person.</em></div></section>
-  </main>
-  <footer><a href="#home" class="wordmark">AMBIS COPENHAGEN</a><p>DIBUAT DARI HAL-HAL KECIL, DAN RASA YANG BESAR.</p><div><button id="replay" class="footer-button">Ulangi semesta ↺</button><button id="open-editor" class="footer-button">Isi kenangan ↗</button></div></footer>
-
-  <dialog id="intro-dialog" class="intro-dialog" aria-labelledby="intro-title"><button class="intro-skip" id="skip-intro">Lewati pembuka ↗</button><div class="intro-space"><div class="black-hole"><div class="accretion"></div><div class="hole-core"></div><div class="photo-orbit">${Array.from({ length: 24 }, (_, i) => `<div class="orbit-tile" style="--i:${i}" data-orbit="${i}"><span>✧</span></div>`).join("")}</div></div></div><div class="intro-words"><p class="eyebrow">MENDEKAT KE PUSAT SEMESTAKU</p><h2 id="intro-title">Ternyata, <em>semuanya kamu.</em></h2><p id="intro-count" aria-live="polite">03</p><p class="intro-note">Setiap kepingnya, satu kenangan.</p></div></dialog>
-  <dialog id="letter-dialog" class="letter-dialog" aria-labelledby="letter-title"><button class="dialog-back" data-close>Kembali ↗</button><div id="mail-preview"><p class="eyebrow">YOU'VE GOT A LITTLE LOVE NOTE</p><span class="mail-icon" aria-hidden="true">✉</span><h2>Hey, <em>you.</em></h2><dl><div><dt>From</dt><dd>${esc(content.sender)}</dd></div><div><dt>To</dt><dd data-recipient></dd></div><div><dt>Message</dt><dd>A little surprise, just for you.</dd></div></dl><button id="see-letter" class="light-button">Buka lampiran <span>↗</span></button></div><article id="full-letter" hidden><p class="eyebrow">A BIRTHDAY LETTER / WITH ALL MY LOVE</p><h2 id="letter-title" tabindex="-1">Happy birthday,<br><em>my love.</em></h2><div class="letter-photo">${photo("hero", "Senyummu, favoritku")}</div>${content.letter.map((p) => `<p class="letter-paragraph">${esc(p)}</p>`).join("")}<p class="handwritten signature">Always, and a little longer.</p><button class="text-link" id="letter-music">Putar nada lembut ♫</button><p class="music-note">Melodi instrumental sederhana, dibuat untuk halaman ini.</p></article></dialog>
-  <dialog id="playlist-dialog" class="playlist-dialog" aria-labelledby="playlist-title"><button class="dialog-back" data-close>Kembali ↗</button><p class="eyebrow">THE SOUNDTRACK OF A LITTLE UNIVERSE</p><h2 id="playlist-title">Sounds <em>like us.</em></h2><div class="vinyl" aria-hidden="true"><div><span>a.</span></div></div><p class="playlist-note" id="track-status" role="status">Pilih lagu. Beberapa rasa lebih mudah dinyanyikan.</p><div class="track-list">${content.tracks.map((t, i) => `<button class="track" data-track="${i}"><span>0${i + 1}</span><span><strong>${esc(t.title)}</strong><small>${esc(t.artist)}</small></span><span class="track-state">▷</span></button>`).join("")}</div><button class="text-link" id="ambient-toggle">Putar nada lembut ♫</button><p class="music-note">Lagu pribadi bisa ditambahkan lewat “Isi kenangan”.</p></dialog>
-  <dialog id="moment-dialog" class="moment-dialog" aria-labelledby="moment-title"><button class="dialog-back" data-close>Kembali ↗</button><div id="moment-detail-photo"></div><p class="eyebrow" id="moment-detail-date"></p><h2 id="moment-title"></h2><p id="moment-detail-note"></p></dialog>
-  <dialog id="editor-dialog" class="editor-dialog" aria-labelledby="editor-title"><button class="dialog-back" data-close>Tutup ↗</button><p class="eyebrow">RUANG KECIL DI BALIK CERITA</p><h2 id="editor-title">Isi <em>kenangan.</em></h2><p>Foto dan nama di sini tersimpan di browser ini saja. Untuk dibagikan ke dia, masukkan file ke <code>public/photos/</code> dan atur <code>src/content.js</code>.</p><form id="editor-form"><label>Nama panggilan<input name="recipient" maxlength="60" placeholder="Kamu" /></label><label>Tanggal ulang tahun <small>(opsional, waktu perangkat ini)</small><input name="birthday" type="datetime-local" /></label><div class="editor-photo-grid">${Object.keys(
-    content.photos,
+const universe = createUniverse($("#universe"));
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const ease = "cubic-bezier(.22,.7,.18,1)";
+async function animate(el, frames, duration = 700) {
+  if (motion.matches) return;
+  await el
+    .animate(frames, { duration, easing: ease, fill: "none" })
+    .finished.catch(() => {});
+}
+async function goTo(index) {
+  if (changing || index < 0 || index >= chapters.length || index === active)
+    return;
+  changing = true;
+  const before = $(`[data-scene="${active}"]`),
+    after = $(`[data-scene="${index}"]`),
+    dir = index > active ? 1 : -1;
+  if (active === 0) {
+    introRun++;
+    universe.settle();
+  }
+  before.inert = true;
+  after.hidden = false;
+  after.inert = true;
+  // Incoming and outgoing pages overlap for a single continuous dissolve.
+  const shift = motion.matches ? 0 : 36 * dir;
+  await Promise.all([
+    animate(
+      before,
+      [
+        { opacity: 1, transform: "translateY(0) scale(1)" },
+        { opacity: 0, transform: `translateY(${-shift / 2}px) scale(.985)` },
+      ],
+      700,
+    ),
+    animate(
+      after,
+      [
+        { opacity: 0, transform: `translateY(${shift}px) scale(1.018)` },
+        { opacity: 1, transform: "translateY(0) scale(1)" },
+      ],
+      950,
+    ),
+  ]);
+  before.hidden = true;
+  before.classList.remove("is-active");
+  after.inert = false;
+  after.classList.add("is-active");
+  active = index;
+  changing = false;
+  document.body.dataset.chapter = String(index);
+  const title = after.querySelector('[tabindex="-1"]');
+  title?.focus({ preventScroll: true });
+  $("#scene-announcement").textContent = chapters[index];
+  updateNav();
+}
+function updateNav() {
+  $("#story-nav").hidden = active === 0;
+  $("#chapter-name").textContent = chapters[active];
+  $("#next-scene").innerHTML = esc(nextLabels[active]) + arrow;
+  $("#next-scene").hidden = active === 6;
+  $$("[data-chapter]").forEach((b, i) => {
+    if (i === active) b.setAttribute("aria-current", "step");
+    else b.removeAttribute("aria-current");
+    b.classList.toggle("passed", i < active);
+  });
+  const dark = [0, 3, 6].includes(active);
+  document.body.classList.toggle("dark-scene", dark);
+}
+$("#previous-scene").onclick = () => goTo(active - 1);
+$("#next-scene").onclick = () => goTo(active + 1);
+$$("[data-chapter]").forEach(
+  (b) =>
+    (b.onclick = () => {
+      if (Number(b.dataset.chapter) === 0) replay();
+      else goTo(Number(b.dataset.chapter));
+    }),
+);
+$("#home-link").onclick = (e) => {
+  e.preventDefault();
+  replay();
+};
+// Arrow keys change scenes only when focus is on the stage, never inside forms or controls.
+window.addEventListener("keydown", (e) => {
+  if (
+    $("#editor-dialog").open ||
+    e.altKey ||
+    e.ctrlKey ||
+    e.metaKey ||
+    changing
   )
-    .map(
-      (k) =>
-        `<label>${esc({ hero: "Foto surat & semesta", portrait: "Potret ucapan", poem0: "Puisi 01", poem1: "Puisi 02", poem2: "Puisi 03", moment0: "Kenangan 01", moment1: "Kenangan 02", moment2: "Kenangan 03", moment3: "Kenangan 04" }[k])}<input type="file" accept="image/jpeg,image/png,image/webp" data-upload="${k}" /><button type="button" class="remove-photo" data-remove="${k}">Hapus foto lokal</button></label>`,
-    )
-    .join(
-      "",
-    )}</div><label>Lagu pilihan 01 <small>(maks. 15 MB, hanya browser ini)</small><input type="file" accept="audio/mpeg,audio/mp4,audio/ogg,audio/wav" id="audio-upload" /></label><button class="dark-button" type="submit">Simpan nama & tanggal ↗</button><p role="status" id="editor-status"></p><button class="text-link" type="button" id="reset-local">Hapus semua isian lokal</button></form></dialog>
-`;
+    return;
+  if (e.target.closest("button,a,input,textarea,select")) return;
+  if (e.key === "ArrowRight" && active > 0 && active < 6) {
+    e.preventDefault();
+    goTo(active + 1);
+  }
+  if (e.key === "ArrowLeft" && active > 0) {
+    e.preventDefault();
+    goTo(active - 1);
+  }
+});
+function phase(value) {
+  introPhase = value;
+  const inTravel = ["countdown", "traveling"].includes(value);
+  $(".story-header").inert = inTravel;
+  $("#open-editor").inert = inTravel;
+  document.body.classList.toggle(
+    "intro-running",
+    ["countdown", "traveling"].includes(value),
+  );
+  $("#semesta").dataset.phase = value;
+}
+function revealIntro() {
+  universe.settle();
+  phase("revealed");
+  $("#intro-count").hidden = true;
+  $("#skip-intro").hidden = true;
+  $("#cover-copy").hidden = true;
+  $("#cover-footnote").hidden = true;
+  $("#reveal-copy").hidden = false;
+  animate(
+    $("#reveal-copy"),
+    [
+      { opacity: 0, transform: "translateY(18px)" },
+      { opacity: 1, transform: "translateY(0)" },
+    ],
+    1300,
+  );
+  $("#reveal-title").focus({ preventScroll: true });
+}
+async function beginIntro() {
+  if (introPhase !== "idle") return;
+  const token = ++introRun;
+  phase("countdown");
+  $("#cover-copy").inert = true;
+  $("#skip-intro").hidden = false;
+  await animate($("#cover-copy"), [{ opacity: 1 }, { opacity: 0 }], 450);
+  if (token !== introRun) return;
+  $("#cover-copy").hidden = true;
+  $("#cover-footnote").hidden = true;
+  $("#intro-count").hidden = false;
+  for (const n of ["03", "02", "01"]) {
+    if (token !== introRun) return;
+    $("#intro-count").textContent = n;
+    await sleep(motion.matches ? 200 : 700);
+  }
+  if (token !== introRun) return;
+  $("#intro-count").hidden = true;
+  phase("traveling");
+  await universe.travel();
+  if (token !== introRun) return;
+  // No headings, captions, countdown, or birthday text during the camera move.
+  await sleep(motion.matches ? 0 : 400);
+  if (token !== introRun) return;
+  revealIntro();
+}
+$("#begin").onclick = beginIntro;
+$("#skip-intro").onclick = () => {
+  introRun++;
+  revealIntro();
+};
+$("#enter-story").onclick = () => goTo(1);
+async function replay() {
+  if (changing) return;
+  introRun++;
+  phase("idle");
+  $("#cover-copy").hidden = false;
+  $("#cover-copy").inert = false;
+  $("#cover-footnote").hidden = false;
+  $("#reveal-copy").hidden = true;
+  $("#intro-count").hidden = true;
+  $("#skip-intro").hidden = true;
+  storyVersion++;
+  letterRun++;
+  openingLetter = false;
+  poemIndex = quoteIndex = letterIndex = 0;
+  renderPoem();
+  renderQuote();
+  renderLetter();
+  $("#letter-reading").hidden = true;
+  $("#letter-intro").hidden = false;
+  $("#open-letter").classList.remove("opened");
+  resetWish(false);
+  universe.reset();
+  if (active !== 0) await goTo(0);
+  $("#begin").focus({ preventScroll: true });
+}
+$("#replay").onclick = replay;
+let poemChanging = false,
+  quoteChanging = false,
+  letterChanging = false;
+async function changePage(el, render) {
+  const version = storyVersion;
+  await animate(
+    el,
+    [
+      { opacity: 1, transform: "translateY(0)" },
+      { opacity: 0, transform: "translateY(-12px)" },
+    ],
+    220,
+  );
+  if (version !== storyVersion) return;
+  render();
+  await animate(
+    el,
+    [
+      { opacity: 0, transform: "translateY(15px)" },
+      { opacity: 1, transform: "translateY(0)" },
+    ],
+    550,
+  );
+}
+function renderPoem() {
+  const p = content.poems[poemIndex];
+  $("#poem-title").textContent = p.title;
+  $("#poem-subtitle").textContent = p.subtitle;
+  $("#poem-text").textContent = p.text;
+  $("#poem-position").textContent =
+    `${poemIndex + 1} / ${content.poems.length}`;
+  $("#poem-photo").innerHTML = photo(
+    "poem" + poemIndex,
+    `Puisi ${poemIndex + 1}`,
+  );
+  applyPhotos();
+}
+async function turnPoem(dir) {
+  if (poemChanging) return;
+  poemChanging = true;
+  $("#prev-poem").disabled = true;
+  $("#next-poem").disabled = true;
+  await changePage($("#poem-page"), () => {
+    poemIndex = (poemIndex + dir + content.poems.length) % content.poems.length;
+    renderPoem();
+  });
+  poemChanging = false;
+  $("#prev-poem").disabled = false;
+  $("#next-poem").disabled = false;
+}
+$("#prev-poem").onclick = () => turnPoem(-1);
+$("#next-poem").onclick = () => turnPoem(1);
+function renderQuote() {
+  const q = quotes[quoteIndex];
+  $("#quote-theme").textContent = q.theme;
+  $("#quote-original").textContent = q.original;
+  $("#quote-author").textContent = q.author + " — " + q.work;
+  $("#quote-translation").textContent = q.translation;
+  $("#quote-wish").textContent = q.wish;
+  $("#quote-source").href = q.source;
+  $("#quote-position").textContent = `${quoteIndex + 1} / ${quotes.length}`;
+}
+async function turnQuote(dir) {
+  if (quoteChanging) return;
+  quoteChanging = true;
+  $("#prev-quote").disabled = true;
+  $("#next-quote").disabled = true;
+  await changePage($("#quote-page"), () => {
+    quoteIndex = (quoteIndex + dir + quotes.length) % quotes.length;
+    renderQuote();
+  });
+  quoteChanging = false;
+  $("#prev-quote").disabled = false;
+  $("#next-quote").disabled = false;
+}
+$("#prev-quote").onclick = () => turnQuote(-1);
+$("#next-quote").onclick = () => turnQuote(1);
+function renderLetter() {
+  $("#letter-paragraph").textContent = content.letter[letterIndex];
+  $("#letter-position").textContent =
+    `${letterIndex + 1} / ${content.letter.length}`;
+  $("#prev-letter").disabled = letterIndex === 0;
+  $("#next-letter").disabled = letterIndex === content.letter.length - 1;
+}
+let openingLetter = false;
+async function openLetter() {
+  if (openingLetter) return;
+  openingLetter = true;
+  const token = ++letterRun;
+  $("#open-letter").classList.add("opened");
+  await sleep(motion.matches ? 0 : 850);
+  if (token !== letterRun) return;
+  await animate($("#letter-intro"), [{ opacity: 1 }, { opacity: 0 }], 300);
+  if (token !== letterRun) return;
+  $("#letter-intro").hidden = true;
+  $("#letter-reading").hidden = false;
+  renderLetter();
+  await animate(
+    $("#letter-reading"),
+    [
+      { opacity: 0, transform: "translateY(30px)" },
+      { opacity: 1, transform: "translateY(0)" },
+    ],
+    900,
+  );
+  if (token !== letterRun) return;
+  if (active === 4) $("#letter-title").focus({ preventScroll: true });
+  openingLetter = false;
+}
+$("#open-letter").onclick = openLetter;
+$("#open-letter-text").onclick = openLetter;
+$("#close-letter").onclick = async () => {
+  if (openingLetter) return;
+  openingLetter = true;
+  const token = ++letterRun;
+  await animate($("#letter-reading"), [{ opacity: 1 }, { opacity: 0 }], 350);
+  if (token !== letterRun) return;
+  $("#letter-reading").hidden = true;
+  $("#letter-intro").hidden = false;
+  $("#open-letter").classList.remove("opened");
+  await animate($("#letter-intro"), [{ opacity: 0 }, { opacity: 1 }], 500);
+  if (token !== letterRun) return;
+  if (active === 4) $("#open-letter").focus({ preventScroll: true });
+  openingLetter = false;
+};
+async function turnLetter(dir) {
+  if (
+    letterChanging ||
+    letterIndex + dir < 0 ||
+    letterIndex + dir >= content.letter.length
+  )
+    return;
+  letterChanging = true;
+  await changePage($("#letter-page"), () => {
+    letterIndex += dir;
+    renderLetter();
+  });
+  letterChanging = false;
+}
+$("#prev-letter").onclick = () => turnLetter(-1);
+$("#next-letter").onclick = () => turnLetter(1);
 
-// Persist blobs in IndexedDB rather than filling synchronous localStorage with photos.
-let db;
-const localPhotos = new Map();
-let localTrackUrl;
-let settings = {};
-const urls = new Map();
-function openStore() {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open("ambis-copenhagen", 1);
-    request.onupgradeneeded = () =>
-      request.result.createObjectStore("memories");
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
+function setWishStep(i) {
+  $$("[data-wish-step]").forEach((e, n) =>
+    e.classList.toggle("current", n === i),
+  );
 }
-function storeRequest(mode, action) {
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction("memories", mode);
-    const result = action(tx.objectStore("memories"));
-    tx.oncomplete = () => resolve(result?.result);
-    tx.onerror = () => reject(tx.error);
-    tx.onabort = () => reject(tx.error);
-  });
+$("#ready-wish").onclick = async () => {
+  if (wishState !== "waiting") return;
+  wishState = "ready";
+  const token = wishRun;
+  $(".wish-scene").dataset.wish = "ready";
+  setWishStep(1);
+  $("#ready-wish").hidden = true;
+  $("#wish-step").textContent = "PEJAMKAN MATA. SIMPAN SATU HARAPAN.";
+  $("#wish-title").innerHTML = "Buat harapan.<br><em>Lalu, tiup lilinnya.</em>";
+  $("#wish-instruction").textContent =
+    "Kalau sudah, ketuk tombol di bawah. Aku ikut mengaminkan.";
+  $("#wish-hint").textContent =
+    "Cukup ketuk tombolnya. Tidak perlu meniup layar.";
+  $("#blow-candle").hidden = false;
+  $("#cake").classList.add("awaiting-wish");
+  await animate(
+    $("#blow-candle"),
+    [
+      { opacity: 0, transform: "translateY(12px)" },
+      { opacity: 1, transform: "translateY(0)" },
+    ],
+    550,
+  );
+  if (token === wishRun && active === 6 && wishState === "ready")
+    $("#blow-candle").focus({ preventScroll: true });
+};
+$("#blow-candle").onclick = async () => {
+  if (wishState !== "ready") return;
+  wishState = "blown";
+  const token = ++wishRun;
+  setWishStep(2);
+  $("#blow-candle").disabled = true;
+  $("#cake").classList.add("blown");
+  $("#cake").classList.remove("awaiting-wish");
+  $("#wish-hint").textContent = "Semoga semesta mengaminkan.";
+  $(".wish-scene").classList.add("celebrating");
+  await sleep(motion.matches ? 100 : 1100);
+  if (token !== wishRun) return;
+  await Promise.all([
+    animate($(".wish-copy"), [{ opacity: 1 }, { opacity: 0 }], 600),
+    animate($("#cake"), [{ opacity: 1 }, { opacity: 0 }], 800),
+  ]);
+  if (token !== wishRun) return;
+  $(".wish-copy").hidden = true;
+  $("#cake").hidden = true;
+  $("#wish-result").hidden = false;
+  await animate(
+    $("#wish-result"),
+    [
+      { opacity: 0, transform: "translateY(20px)" },
+      { opacity: 1, transform: "translateY(0)" },
+    ],
+    1300,
+  );
+  if (token === wishRun && active === 6)
+    $("#birthday-title").focus({ preventScroll: true });
+};
+function resetWish(focus = true) {
+  wishRun++;
+  wishState = "waiting";
+  $(".wish-scene").dataset.wish = "waiting";
+  $(".wish-scene").classList.remove("celebrating");
+  $("#wish-result").hidden = true;
+  $(".wish-copy").hidden = false;
+  $("#cake").hidden = false;
+  $("#cake").classList.remove("blown", "awaiting-wish");
+  $("#blow-candle").hidden = true;
+  $("#blow-candle").disabled = false;
+  $("#ready-wish").hidden = false;
+  setWishStep(0);
+  $("#wish-step").textContent = "SATU HAL TERAKHIR. YANG PALING PENTING.";
+  $("#wish-title").innerHTML = "Hari ini,<br><em>milikmu.</em>";
+  $("#wish-instruction").innerHTML =
+    "Semua cahaya ini untukmu.<br>Sudah siap membuat satu harapan?";
+  $("#wish-hint").textContent = "Ambil waktu sebanyak yang kamu butuhkan.";
+  if (focus) $("#ready-wish").focus({ preventScroll: true });
 }
+$("#relight").onclick = () => resetWish();
+
+function pauseTrack() {
+  audio?.pause();
+  $$(".track").forEach((t) => {
+    t.classList.remove("playing");
+    t.querySelector(".track-state").textContent = "▷";
+  });
+  $(".vinyl").classList.remove("playing");
+}
+function soundLabels() {
+  const playing = !!ambient || !!(audio && !audio.paused);
+  $("#sound-toggle").setAttribute("aria-pressed", String(playing));
+  $("#sound-toggle").setAttribute(
+    "aria-label",
+    playing ? "Jeda musik" : "Putar nada lembut",
+  );
+  $("#sound-label").textContent = playing ? "Suara menyala" : "Suara mati";
+  $("#ambient-toggle").textContent = ambient
+    ? "Jeda nada lembut Ⅱ"
+    : "Putar nada lembut ♫";
+  $("#ambient-toggle").setAttribute("aria-pressed", String(!!ambient));
+}
+async function stopAmbient() {
+  if (ambient) {
+    const current = ambient;
+    ambient = undefined;
+    await current.close();
+  }
+}
+async function toggleAmbient() {
+  if (ambient) {
+    await stopAmbient();
+    soundLabels();
+    return;
+  }
+  pauseTrack();
+  try {
+    const context = new AudioContext();
+    await context.resume();
+    ambient = context;
+    const master = context.createGain();
+    master.gain.value = 0.04;
+    master.connect(context.destination);
+    [130.81, 164.81, 196, 261.63, 329.63].forEach((frequency, i) => {
+      const osc = context.createOscillator(),
+        gain = context.createGain();
+      osc.frequency.value = frequency;
+      gain.gain.setValueAtTime(0, context.currentTime);
+      gain.gain.linearRampToValueAtTime(
+        0.17,
+        context.currentTime + 2 + i * 0.3,
+      );
+      osc.connect(gain);
+      gain.connect(master);
+      osc.start();
+    });
+  } catch {
+    $("#track-status").textContent = "Audio belum bisa diputar di browser ini.";
+  }
+  soundLabels();
+}
+$("#ambient-toggle").onclick = toggleAmbient;
+$("#sound-toggle").onclick = async () => {
+  if (audio && !audio.paused) {
+    pauseTrack();
+    soundLabels();
+  } else await toggleAmbient();
+};
+$$("[data-track]").forEach(
+  (b) =>
+    (b.onclick = async () => {
+      const i = Number(b.dataset.track),
+        t = content.tracks[i],
+        src = i === 0 ? localTrackUrl || t.src : t.src;
+      if (!src) {
+        $("#track-status").textContent =
+          "Lagu ini belum diisi. Kamu tetap bisa menikmati nada lembut di bawah.";
+        return;
+      }
+      if (audio && !audio.paused && audio.datasetIndex === i) {
+        pauseTrack();
+        soundLabels();
+        return;
+      }
+      await stopAmbient();
+      pauseTrack();
+      audio = new Audio(src);
+      audio.datasetIndex = i;
+      try {
+        await audio.play();
+        b.classList.add("playing");
+        b.querySelector(".track-state").textContent = "Ⅱ";
+        $(".vinyl").classList.add("playing");
+        $("#track-status").textContent = t.title;
+      } catch {
+        $("#track-status").textContent =
+          "Lagu belum bisa diputar. Periksa format atau lokasi filenya.";
+      }
+      audio.onended = () => {
+        pauseTrack();
+        soundLabels();
+      };
+      soundLabels();
+    }),
+);
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) {
+    pauseTrack();
+    stopAmbient().then(soundLabels);
+  }
+});
+
 function setBlob(key, blob) {
   if (urls.has(key)) URL.revokeObjectURL(urls.get(key));
   const url = URL.createObjectURL(blob);
@@ -93,11 +639,13 @@ function setBlob(key, blob) {
   else localPhotos.set(key, url);
 }
 function applyPhotos() {
-  document.querySelectorAll("[data-photo]").forEach((el) => {
-    const src =
-      localPhotos.get(el.dataset.photo) || content.photos[el.dataset.photo];
+  $$("[data-photo]").forEach((el) => {
+    const key = el.dataset.photo,
+      src = localPhotos.get(key) || content.photos[key];
+    if (el.dataset.src === src) return;
     el.querySelector("img")?.remove();
     el.classList.toggle("has-photo", !!src);
+    el.dataset.src = src || "";
     if (src) {
       const img = new Image();
       img.alt = el.getAttribute("aria-label");
@@ -110,300 +658,71 @@ function applyPhotos() {
       el.prepend(img);
     }
   });
-  document.querySelectorAll("[data-orbit]").forEach((el, i) => {
-    el.querySelector("img")?.remove();
-    const key = Object.keys(content.photos)[
-      i % Object.keys(content.photos).length
-    ];
-    const src =
-      localPhotos.get(key) ||
-      content.photos[key] ||
-      localPhotos.get("hero") ||
-      content.photos.hero;
-    if (src) {
-      const img = new Image();
-      img.src = src;
-      img.alt = "";
-      el.prepend(img);
-    }
-  });
-  window.dispatchEvent(
-    new CustomEvent("photoschanged", {
-      detail: [
-        ...new Set([
-          ...localPhotos.values(),
-          ...Object.values(content.photos).filter(Boolean),
-        ]),
-      ],
-    }),
-  );
+  const photos = [
+    ...new Set(
+      photoKeys
+        .map((key) => localPhotos.get(key) || content.photos[key])
+        .filter(Boolean),
+    ),
+  ];
+  window.dispatchEvent(new CustomEvent("photoschanged", { detail: photos }));
+  $("#photo-count").textContent =
+    `${photos.length} foto terisi · ${photoKeys.length} tempat tersedia`;
 }
 function applySettings() {
-  document
-    .querySelectorAll("[data-recipient]")
-    .forEach((e) => (e.textContent = settings.recipient || content.recipient));
+  $$("[data-recipient]").forEach(
+    (el) => (el.textContent = settings.recipient || content.recipient),
+  );
   $("#editor-form").elements.recipient.value =
     settings.recipient || content.recipient;
   const date = settings.birthday || content.birthday;
   if (date && !Number.isNaN(Date.parse(date))) {
     const d = new Date(date);
-    const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000)
+    $("#editor-form").elements.birthday.value = new Date(
+      d.getTime() - d.getTimezoneOffset() * 60000,
+    )
       .toISOString()
       .slice(0, 16);
-    $("#editor-form").elements.birthday.value = local;
   } else $("#editor-form").elements.birthday.value = "";
   updateCountdown();
 }
 function updateCountdown() {
-  const date = settings.birthday || content.birthday;
-  const el = $("#birthday-countdown");
+  const date = settings.birthday || content.birthday,
+    el = $("#birthday-countdown");
   if (!date || Number.isNaN(Date.parse(date))) {
-    el.textContent = "A LITTLE BIRTHDAY UNIVERSE, JUST FOR YOU.";
+    el.textContent = "Ambis Copenhagen · dibuat dengan seluruh rasa.";
     return;
   }
   const seconds = Math.max(
     0,
     Math.ceil((Date.parse(date) - Date.now()) / 1000),
   );
-  if (!seconds) {
-    el.textContent = "Hari spesialmu sudah tiba. Selamat ulang tahun ♡";
-    return;
-  }
-  el.textContent = `MENUJU HARI SPESIALMU — ${Math.floor(seconds / 86400)} HARI : ${String(Math.floor(seconds / 3600) % 24).padStart(2, "0")} JAM : ${String(Math.floor(seconds / 60) % 60).padStart(2, "0")} MENIT : ${String(seconds % 60).padStart(2, "0")} DETIK`;
+  el.textContent = seconds
+    ? `Menuju hari spesialmu · ${Math.floor(seconds / 86400)} hari ${String(Math.floor(seconds / 3600) % 24).padStart(2, "0")} jam ${String(Math.floor(seconds / 60) % 60).padStart(2, "0")} menit ${String(seconds % 60).padStart(2, "0")} detik`
+    : "Hari spesialmu sudah tiba. Selamat ulang tahun ♡";
 }
-function renderPoem() {
-  const p = content.poems[poemIndex];
-  $("#poem-count").textContent =
-    String(poemIndex + 1).padStart(2, "0") +
-    " / " +
-    String(content.poems.length).padStart(2, "0");
-  $("#poem-title").textContent = p.title;
-  $("#poem-subtitle").textContent = p.subtitle;
-  $("#poem-text").textContent = p.text;
-  $("#poem-position").textContent =
-    `${poemIndex + 1} dari ${content.poems.length}`;
-  $("#poem-photo").innerHTML = photo(
-    "poem" + poemIndex,
-    "Sepotong cerita " + String(poemIndex + 1).padStart(2, "0"),
-    "poem-photo",
-  );
-  $(".vertical-label").textContent = "AN ANTHOLOGY OF US / 0" + (poemIndex + 1);
-  applyPhotos();
-}
-$("#prev-poem").onclick = () => {
-  poemIndex = (poemIndex - 1 + content.poems.length) % content.poems.length;
-  renderPoem();
-};
-$("#next-poem").onclick = () => {
-  poemIndex = (poemIndex + 1) % content.poems.length;
-  renderPoem();
-};
-
-function openDialog(id) {
-  $(id).showModal();
-  document.body.classList.add("modal-open");
-}
-function closeDialog(dialog) {
-  dialog.close();
-  if (!document.querySelector("dialog[open]"))
-    document.body.classList.remove("modal-open");
-}
-document.querySelectorAll("dialog").forEach((d) => {
-  d.addEventListener("close", () => {
-    if (!document.querySelector("dialog[open]"))
-      document.body.classList.remove("modal-open");
-  });
-  d.addEventListener("click", (e) => {
-    if (e.target === d) {
-      const r = d.getBoundingClientRect();
-      if (
-        e.clientX < r.left ||
-        e.clientX > r.right ||
-        e.clientY < r.top ||
-        e.clientY > r.bottom
-      )
-        closeDialog(d);
-    }
-  });
-});
-document
-  .querySelectorAll("[data-close]")
-  .forEach((b) => (b.onclick = () => closeDialog(b.closest("dialog"))));
-$("#open-letter").onclick = () => {
-  $("#mail-preview").hidden = false;
-  $("#full-letter").hidden = true;
-  openDialog("#letter-dialog");
-};
-$("#see-letter").onclick = () => {
-  $("#mail-preview").hidden = true;
-  $("#full-letter").hidden = false;
-  $("#letter-dialog").scrollTop = 0;
-  $("#letter-title").focus();
-};
-$("#open-playlist").onclick = () => openDialog("#playlist-dialog");
-$("#open-editor").onclick = () => openDialog("#editor-dialog");
-document.querySelectorAll("[data-moment]").forEach(
-  (b) =>
-    (b.onclick = () => {
-      const i = Number(b.dataset.moment),
-        m = content.moments[i];
-      $("#moment-detail-photo").innerHTML = photo(
-        "moment" + i,
-        "Kenangan " + String(i + 1).padStart(2, "0"),
-      );
-      $("#moment-title").textContent = m.title;
-      $("#moment-detail-date").textContent = m.date;
-      $("#moment-detail-note").textContent = m.note;
-      applyPhotos();
-      openDialog("#moment-dialog");
-    }),
-);
-
-let introTimer;
-function finishIntro() {
-  clearInterval(introTimer);
-  closeDialog($("#intro-dialog"));
-  $("#intro-dialog").classList.remove("zooming");
-  $("#dedication").scrollIntoView({
-    behavior: reducedMotion.matches ? "instant" : "smooth",
-  });
-}
-function runIntro() {
-  $("#intro-dialog").classList.remove("zooming");
-  $("#intro-count").textContent = "03";
-  openDialog("#intro-dialog");
-  requestAnimationFrame(() =>
-    requestAnimationFrame(() => $("#intro-dialog").classList.add("zooming")),
-  );
-  let remaining = 3;
-  introTimer = setInterval(() => {
-    remaining--;
-    $("#intro-count").textContent =
-      remaining > 0 ? "0" + remaining : "Happy birthday.";
-    if (remaining < -2) finishIntro();
-  }, 1000);
-}
-$("#begin").onclick = runIntro;
-$("#replay").onclick = runIntro;
-$("#skip-intro").onclick = finishIntro;
-$("#intro-dialog").addEventListener("close", () => clearInterval(introTimer));
-$("#blow-candle").onclick = () => {
-  if (wishBlown) return;
-  wishBlown = true;
-  $(".candle").classList.add("blown");
-  $("#wish-message").textContent =
-    "Semoga semesta mengaminkan. Selamat ulang tahun ♡";
-  $("#relight").hidden = false;
-  $("#blow-candle").setAttribute("aria-label", "Lilin sudah ditiup");
-};
-$("#relight").onclick = () => {
-  wishBlown = false;
-  $(".candle").classList.remove("blown");
-  $("#wish-message").textContent = "Ketuk lilinnya, titipkan satu harapan.";
-  $("#relight").hidden = true;
-  $("#blow-candle").setAttribute("aria-label", "Tiup lilin");
-};
-
-// Gentle, user-triggered original tones; never autoplay or fetch third-party audio.
-function pauseTrack() {
-  audio?.pause();
-  document.querySelectorAll(".track").forEach((track) => {
-    track.classList.remove("playing");
-    track.querySelector(".track-state").textContent = "▷";
-  });
-  $(".vinyl").classList.remove("playing");
-}
-async function toggleAmbient() {
-  if (ambient) {
-    await ambient.close();
-    ambient = null;
-    updateAmbientLabels();
-    return;
-  }
-  pauseTrack();
-  try {
-    const ctx = new AudioContext();
-    await ctx.resume();
-    ambient = ctx;
-    const master = ctx.createGain();
-    master.gain.value = 0.035;
-    master.connect(ctx.destination);
-    [130.81, 164.81, 196, 261.63, 329.63].forEach((freq, i) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = "sine";
-      osc.frequency.value = freq;
-      gain.gain.setValueAtTime(0, ctx.currentTime);
-      gain.gain.linearRampToValueAtTime(0.17, ctx.currentTime + 2 + i * 0.3);
-      osc.connect(gain);
-      gain.connect(master);
-      osc.start();
-    });
-  } catch {
-    $("#track-status").textContent = "Audio belum bisa diputar di browser ini.";
-  }
-  updateAmbientLabels();
-}
-function updateAmbientLabels() {
-  ["#ambient-toggle", "#letter-music"].forEach((id) => {
-    $(id).textContent = ambient ? "Jeda nada lembut Ⅱ" : "Putar nada lembut ♫";
-    $(id).setAttribute("aria-pressed", String(!!ambient));
-  });
-}
-$("#ambient-toggle").onclick = toggleAmbient;
-$("#letter-music").onclick = toggleAmbient;
-document.querySelectorAll("[data-track]").forEach(
-  (b) =>
-    (b.onclick = async () => {
-      const i = Number(b.dataset.track),
-        t = content.tracks[i],
-        src = i === 0 ? localTrackUrl || t.src : t.src;
-      if (!src) {
-        $("#track-status").textContent =
-          "Lagu ini belum diisi. Tambahkan lagu lewat “Isi kenangan”, atau nikmati nada lembut di bawah.";
-        return;
-      }
-      if (audio && trackIndex === i && !audio.paused) {
-        audio.pause();
-        b.classList.remove("playing");
-        b.querySelector(".track-state").textContent = "▷";
-        $(".vinyl").classList.remove("playing");
-        return;
-      }
-      if (ambient) {
-        await ambient.close();
-        ambient = null;
-        updateAmbientLabels();
-      }
-      audio?.pause();
-      document.querySelectorAll(".track").forEach((e) => {
-        e.classList.remove("playing");
-        e.querySelector(".track-state").textContent = "▷";
-      });
-      audio = new Audio(src);
-      trackIndex = i;
-      try {
-        await audio.play();
-        b.classList.add("playing");
-        b.querySelector(".track-state").textContent = "Ⅱ";
-        $(".vinyl").classList.add("playing");
-        $("#track-status").textContent = t.title;
-      } catch {
-        $("#track-status").textContent =
-          "Lagu belum bisa diputar. Periksa format dan lokasi file audio.";
-      }
-      audio.onended = () => {
-        b.classList.remove("playing");
-        b.querySelector(".track-state").textContent = "▷";
-        $(".vinyl").classList.remove("playing");
-      };
-    }),
-);
-
 const status = (message) => ($("#editor-status").textContent = message);
+$("#open-editor").onclick = () => $("#editor-dialog").showModal();
+$("#close-editor").onclick = () => $("#editor-dialog").close();
+const storageReady = openMemories()
+  .then(async (s) => {
+    store = s;
+    for (const [key, value] of await s.all()) {
+      if (key === "settings") settings = value;
+      else if (value instanceof Blob) setBlob(key, value);
+    }
+    applySettings();
+    applyPhotos();
+  })
+  .catch(() => {
+    status(
+      "Penyimpanan browser tidak tersedia. Edit src/content.js untuk perubahan permanen.",
+    );
+  });
 $("#editor-form").onsubmit = async (e) => {
   e.preventDefault();
   const f = e.currentTarget;
+  await storageReady;
   const next = {
     recipient: f.elements.recipient.value.trim(),
     birthday: f.elements.birthday.value
@@ -411,101 +730,106 @@ $("#editor-form").onsubmit = async (e) => {
       : "",
   };
   try {
-    if (!db) throw Error();
-    await storeRequest("readwrite", (s) => s.put(next, "settings"));
+    if (!store) throw Error();
+    await store.put("settings", next);
     settings = next;
     applySettings();
     status("Nama & tanggal tersimpan di browser ini.");
   } catch {
-    status(
-      "Penyimpanan browser tidak tersedia. Ubah src/content.js untuk menyimpan permanen.",
-    );
+    status("Pengaturan belum bisa disimpan. Periksa penyimpanan browser.");
   }
 };
-document.querySelectorAll("[data-upload]").forEach(
+async function savePhoto(key, file) {
+  await storageReady;
+  if (!store) throw new Error("Penyimpanan browser tidak tersedia.");
+  const blob = await optimizePhoto(file);
+  await store.put(key, blob);
+  setBlob(key, blob);
+}
+$$("[data-upload]").forEach(
   (input) =>
     (input.onchange = async () => {
-      const file = input.files[0];
-      if (!file) return;
-      if (
-        !["image/jpeg", "image/png", "image/webp"].includes(file.type) ||
-        file.size > 8 * 1024 * 1024
-      ) {
-        status("Pilih foto JPG, PNG, atau WebP maksimal 8 MB.");
-        input.value = "";
-        return;
-      }
+      if (!input.files[0]) return;
       try {
-        const bitmap = await createImageBitmap(file);
-        const canvas = document.createElement("canvas");
-        const scale = Math.min(1, 1400 / Math.max(bitmap.width, bitmap.height));
-        canvas.width = Math.round(bitmap.width * scale);
-        canvas.height = Math.round(bitmap.height * scale);
-        canvas
-          .getContext("2d")
-          .drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-        bitmap.close();
-        const blob = await new Promise((r) =>
-          canvas.toBlob(r, "image/webp", 0.85),
-        );
-        if (!blob || !db) throw Error();
-        await storeRequest("readwrite", (s) =>
-          s.put(blob, input.dataset.upload),
-        );
-        setBlob(input.dataset.upload, blob);
+        await savePhoto(input.dataset.upload, input.files[0]);
         applyPhotos();
-        status("Foto tersimpan. Ukuran dioptimalkan agar tetap ringan.");
-      } catch {
-        status(
-          "Foto gagal disimpan. Coba file lain atau periksa ruang penyimpanan browser.",
-        );
+        status("Foto tersimpan dan dioptimalkan.");
+      } catch (e) {
+        status(e.message || "Foto belum bisa disimpan.");
       }
       input.value = "";
     }),
 );
-document.querySelectorAll("[data-remove]").forEach(
+$("#bulk-photos").onchange = async (e) => {
+  await storageReady;
+  const available = photoKeys.filter(
+    (k) => k.startsWith("orbit") && !localPhotos.has(k) && !content.photos[k],
+  );
+  const files = [...e.target.files];
+  if (!files.length) return;
+  let saved = 0,
+    failed = 0;
+  for (let i = 0; i < Math.min(files.length, available.length); i++) {
+    status(
+      `Menyimpan foto ${i + 1} dari ${Math.min(files.length, available.length)}…`,
+    );
+    try {
+      await savePhoto(available[i], files[i]);
+      saved++;
+    } catch {
+      failed++;
+    }
+  }
+  applyPhotos();
+  status(
+    `${saved} foto tersimpan.${failed ? " " + failed + " foto gagal; gunakan JPG, PNG, atau WebP maksimal 8 MB." : ""}${files.length > available.length ? " Sisa file tidak dimasukkan karena tempat sudah penuh." : ""}`,
+  );
+  e.target.value = "";
+};
+$$("[data-remove]").forEach(
   (b) =>
     (b.onclick = async () => {
+      await storageReady;
       try {
-        if (!db) throw Error();
-        const key = b.dataset.remove;
-        await storeRequest("readwrite", (s) => s.delete(key));
-        localPhotos.delete(key);
-        if (urls.has(key)) {
-          URL.revokeObjectURL(urls.get(key));
-          urls.delete(key);
+        if (!store) throw Error();
+        await store.remove(b.dataset.remove);
+        localPhotos.delete(b.dataset.remove);
+        if (urls.has(b.dataset.remove)) {
+          URL.revokeObjectURL(urls.get(b.dataset.remove));
+          urls.delete(b.dataset.remove);
         }
         applyPhotos();
-        status(
-          "Foto lokal dihapus. Foto dari content.js, bila ada, tetap digunakan.",
-        );
+        status("Foto lokal dihapus.");
       } catch {
-        status("Foto lokal belum berhasil dihapus.");
+        status("Foto belum bisa dihapus.");
       }
     }),
 );
 $("#audio-upload").onchange = async (e) => {
   const file = e.target.files[0];
   if (!file) return;
+  await storageReady;
   if (!file.type.startsWith("audio/") || file.size > 15 * 1024 * 1024) {
-    status("Pilih file audio maksimal 15 MB.");
+    status("Pilih audio maksimal 15 MB.");
     return;
   }
   try {
-    if (!db) throw Error();
+    if (!store) throw Error();
     pauseTrack();
-    await storeRequest("readwrite", (s) => s.put(file, "track"));
+    await store.put("track", file);
     setBlob("track", file);
-    status("Lagu 01 tersimpan di browser ini.");
+    soundLabels();
+    status("Lagu pertama tersimpan di browser ini.");
   } catch {
-    status("Lagu gagal disimpan. Periksa ruang penyimpanan browser.");
+    status("Lagu belum bisa disimpan.");
   }
   e.target.value = "";
 };
 $("#reset-local").onclick = async () => {
+  await storageReady;
   try {
-    if (!db) throw Error();
-    await storeRequest("readwrite", (s) => s.clear());
+    if (!store) throw Error();
+    await store.clear();
     pauseTrack();
     for (const url of urls.values()) URL.revokeObjectURL(url);
     urls.clear();
@@ -514,44 +838,15 @@ $("#reset-local").onclick = async () => {
     settings = {};
     applySettings();
     applyPhotos();
+    soundLabels();
     status("Semua isian lokal dihapus. Konten bawaan dipulihkan.");
   } catch {
-    status("Isian lokal belum berhasil dihapus.");
+    status("Isian lokal belum bisa dihapus.");
   }
 };
-
-createUniverse($("#universe"));
 renderPoem();
+renderQuote();
+renderLetter();
 applySettings();
+updateNav();
 setInterval(updateCountdown, 1000);
-try {
-  db = await openStore();
-  const keys = await storeRequest("readonly", (s) => s.getAllKeys());
-  for (const key of keys) {
-    const value = await storeRequest("readonly", (s) => s.get(key));
-    if (key === "settings") settings = value;
-    else if (value instanceof Blob) setBlob(key, value);
-  }
-  applyPhotos();
-  applySettings();
-} catch {
-  status(
-    "Penyimpanan browser tidak tersedia. Preview tetap bisa dibuka; edit src/content.js untuk perubahan permanen.",
-  );
-}
-document.addEventListener("visibilitychange", () => {
-  if (document.hidden) {
-    audio?.pause();
-    document
-      .querySelectorAll(".playing")
-      .forEach((e) => e.classList.remove("playing"));
-    document
-      .querySelectorAll(".track-state")
-      .forEach((e) => (e.textContent = "▷"));
-    if (ambient) {
-      ambient.close();
-      ambient = null;
-      updateAmbientLabels();
-    }
-  }
-});

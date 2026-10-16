@@ -14,6 +14,13 @@ export const content = {
     moment1: "",
     moment2: "",
     moment3: "",
+    // 24 foto tambahan untuk mozaik Gargantua. Boleh diisi bertahap.
+    ...Object.fromEntries(
+      Array.from({ length: 24 }, (_, i) => [
+        `orbit${String(i + 1).padStart(2, "0")}`,
+        "",
+      ]),
+    ),
   },
   poems: [
     {
@@ -32,6 +39,7 @@ export const content = {
       text: "Semoga hari-hari memelukmu\nselembut pagi menyentuh jendela.\nSemoga yang kamu tunggu\nmenemukan jalan menuju rumah.\n\nDan bila dunia terasa terlalu riuh,\nsemoga kamu selalu ingat:\nada hati yang menyediakan sunyi,\nagar kamu bisa beristirahat.",
     },
   ],
+  // Catatan lama tetap disimpan agar konten personal tidak hilang.
   moments: [
     {
       title: "Awal sebuah cerita",
