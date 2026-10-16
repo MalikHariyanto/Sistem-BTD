@@ -253,6 +253,8 @@ async function beginIntro() {
     await sleep(motion.matches ? 200 : 700);
   }
   if (token !== introRun) return;
+  await universe.ready;
+  if (token !== introRun) return;
   $("#intro-count").hidden = true;
   phase("traveling");
   await universe.travel();

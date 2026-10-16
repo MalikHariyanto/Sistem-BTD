@@ -1,296 +1,344 @@
-const clamp = (n, a = 0, b = 1) => Math.max(a, Math.min(b, n));
-const smooth = (n) => {
-  const x = clamp(n);
-  return x * x * (3 - 2 * x);
-};
-const mix = (a, b, t) => a + (b - a) * t;
-const random = (i) => {
-  const n = Math.sin(i * 127.1 + 311.7) * 43758.5453;
-  return n - Math.floor(n);
-};
+import { cameraAt, JOURNEY_MS, DISK, clamp, ease } from "./universe-camera.js";
 
-// Cached light field + 160/224 photo fragments; no 3D engine or video download.
+const PLATE_URL = `${import.meta.env.BASE_URL}art/gargantua.webp`;
+const mod = (n, base) => ((n % base) + base) % base;
+
+// One photographic plate and a disk-bound photo material, both in source-image UVs.
+// The camera approaches the disk itself. Photos never scatter into a separate grid.
 export function createUniverse(canvas) {
   const ctx = canvas.getContext("2d", { alpha: false });
-  const motion = matchMedia("(prefers-reduced-motion: reduce)");
   if (!ctx)
-    return { travel: async () => {}, settle: () => {}, reset: () => {} };
-  let w = 0,
-    h = 0,
-    frame = 0,
-    last = 0,
-    time = 0;
-  let visible = true,
+    return {
+      ready: Promise.resolve(false),
+      travel: async () => {},
+      settle: () => {},
+      reset: () => {},
+    };
+  const motion = matchMedia("(prefers-reduced-motion: reduce)");
+  let width = 0,
+    height = 0,
+    dpr = 1,
     progress = 0,
-    traveling = false,
-    travelStart = 0,
-    travelDuration = 0;
-  let resolveTravel,
+    visible = true,
+    frame = 0,
+    last = 0;
+  let traveling = false,
+    started = 0,
+    duration = JOURNEY_MS,
+    finish;
+  let detailPlate,
+    detailArrived = 0;
+  let plate,
     images = [],
     generation = 0,
-    field;
-  const stars = Array.from({ length: 280 }, (_, i) => ({
-    x: random(i),
-    y: random(i + 400),
-    r: random(i + 800) * 1.2 + 0.25,
-  }));
-  const fragments = Array.from({ length: 224 }, (_, i) => ({
-    angle: random(i + 20) * Math.PI * 2,
-    radius: 1.12 + random(i + 1000) * 1.55,
-    tilt: (random(i + 2000) - 0.5) * 0.55,
-    size: 9 + random(i + 3000) * 10,
-  }));
-  const thumbs = new Map();
-  function buildField() {
-    field = document.createElement("canvas");
-    field.width = field.height = 1100;
-    const c = field.getContext("2d"),
-      r = 183;
-    c.translate(550, 550);
-    const halo = c.createRadialGradient(0, 0, r * 0.85, 0, 0, r * 2.9);
-    halo.addColorStop(0, "#e3a65e38");
-    halo.addColorStop(0.27, "#b6763220");
-    halo.addColorStop(1, "#00000000");
-    c.fillStyle = halo;
-    c.fillRect(-550, -550, 1100, 1100);
-    c.rotate(-0.12);
-    for (let i = 150; i >= 0; i--) {
-      const radius = r * (1.02 + i * 0.012);
-      c.lineWidth = i % 9 === 0 ? 1.9 : 0.65;
-      c.strokeStyle = `rgba(239,${156 + (i % 50)},${80 + (i % 60)},${0.08 + (150 - i) / 900})`;
-      c.beginPath();
-      c.ellipse(
-        0,
-        0,
-        radius,
-        radius * (0.14 + i * 0.00055),
-        0,
-        Math.PI,
-        Math.PI * 2,
-      );
-      c.stroke();
-    }
-    for (let i = 35; i >= 0; i--) {
-      c.strokeStyle = `rgba(255,${183 + i},${115 + i},${0.025 + (35 - i) / 230})`;
-      c.lineWidth = i % 8 === 0 ? 1.8 : 0.75;
-      c.beginPath();
-      c.ellipse(
-        0,
-        0,
-        r * (1.005 + i * 0.005),
-        r * (1.005 + i * 0.005),
-        0,
-        Math.PI,
-        Math.PI * 2,
-      );
-      c.stroke();
-    }
-    for (let i = 0; i < 2400; i++) {
-      const a = random(i + 1234) * Math.PI * 2,
-        rr = r * (1.07 + random(i + 4666) * 1.72);
-      c.fillStyle = `rgba(240,${170 + (i % 55)},${99 + (i % 70)},${0.12 + random(i + 59) * 0.4})`;
-      c.fillRect(
-        Math.cos(a) * rr,
-        Math.sin(a) * rr * 0.21,
-        0.5 + random(i + 99) * 1.5,
-        0.6,
-      );
-    }
-    c.fillStyle = "#090909";
-    c.beginPath();
-    c.arc(0, 0, r * 0.965, 0, Math.PI * 2);
-    c.fill();
-    const ring = c.createRadialGradient(0, 0, r * 0.94, 0, 0, r * 1.06);
-    ring.addColorStop(0, "#00000000");
-    ring.addColorStop(0.4, "#fbe2b0b0");
-    ring.addColorStop(0.55, "#b67d4150");
-    ring.addColorStop(1, "#00000000");
-    c.fillStyle = ring;
-    c.beginPath();
-    c.arc(0, 0, r * 1.06, 0, Math.PI * 2);
-    c.fill();
-    for (let i = 0; i < 72; i++) {
-      c.strokeStyle = `rgba(255,${177 + (i % 45)},${99 + (i % 60)},${0.12 + (72 - i) / 500})`;
-      c.lineWidth = i % 11 === 0 ? 1.6 : 0.6;
-      c.beginPath();
-      c.ellipse(
-        0,
-        4,
-        r * (1.07 + i * 0.025),
-        r * (0.075 + i * 0.0019),
-        0,
-        0,
-        Math.PI,
-      );
-      c.stroke();
-    }
-    for (let i = 0; i < 18; i++) {
-      c.strokeStyle = `rgba(225,170,107,${0.04 + (18 - i) / 320})`;
-      c.lineWidth = 0.6;
-      c.beginPath();
-      c.ellipse(
-        0,
-        0,
-        r * (1.01 + i * 0.006),
-        r * (0.95 + i * 0.009),
-        0,
-        0,
-        Math.PI,
-      );
-      c.stroke();
-    }
+    signature;
+  const thumbnails = new Map();
+  const aspect = 1672 / 941;
+  const cellU = 1 / DISK.columns,
+    cellD = cellU * aspect * 1.25;
+  const rows = Math.ceil(DISK.halfWidth / cellD);
+
+  function drawPlaceholder(column, row, u, d) {
+    const shade = mod(column * 7 + row * 11, 4);
+    ctx.fillStyle = ["#cbbb9e", "#ac9776", "#dccdb4", "#b8a282"][shade];
+    ctx.fillRect(u, d, cellU, cellD);
+    ctx.fillStyle = ["#948266", "#a69374", "#bba88b", "#a08a6b"][shade];
+    ctx.fillRect(
+      u + cellU * 0.045,
+      d + cellD * 0.04,
+      cellU * 0.91,
+      cellD * 0.83,
+    );
+    ctx.strokeStyle = "#eee0c380";
+    ctx.lineWidth = cellU * 0.008;
+    ctx.beginPath();
+    ctx.arc(u + cellU * 0.5, d + cellD * 0.35, cellU * 0.11, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.ellipse(
+      u + cellU * 0.5,
+      d + cellD * 0.66,
+      cellU * 0.23,
+      cellD * 0.14,
+      0,
+      Math.PI,
+      Math.PI * 2,
+    );
+    ctx.stroke();
   }
-  function drawPhoto(i, x, y, size, angle, opacity) {
+
+  function drawMaterial(camera) {
+    if (camera.photoMix <= 0) return 0;
+    const first = Math.max(0, Math.floor(-camera.x / camera.width / cellU) - 1);
+    const end = Math.min(
+      DISK.columns,
+      Math.ceil((width - camera.x) / camera.width / cellU) + 1,
+    );
+    // Photos are sheared with the disk, not rotated independently or sent to a wall.
     ctx.save();
-    ctx.globalAlpha = opacity;
-    ctx.translate(x, y);
-    ctx.rotate(angle);
-    ctx.fillStyle = ["#dbc8a8", "#ae9374", "#e5d8c2", "#79604b"][i % 4];
-    ctx.fillRect(-size * 0.5, -size * 0.62, size, size * 1.24);
-    const im = images.length ? images[i % images.length] : null;
-    if (im)
-      ctx.drawImage(im, -size * 0.46, -size * 0.58, size * 0.92, size * 1.04);
-    else {
-      ctx.fillStyle = ["#746657", "#a08c77", "#b6a58e"][i % 3];
-      ctx.fillRect(-size * 0.45, -size * 0.57, size * 0.9, size * 1.02);
-      ctx.strokeStyle = "#e7d4b26b";
-      ctx.lineWidth = 0.6;
-      ctx.strokeRect(-size * 0.37, -size * 0.49, size * 0.74, size * 0.86);
-      ctx.beginPath();
-      ctx.arc(0, -size * 0.08, size * 0.1, 0, Math.PI * 2);
-      ctx.moveTo(-size * 0.2, size * 0.25);
-      ctx.quadraticCurveTo(0, -size * 0.05, size * 0.2, size * 0.25);
-      ctx.stroke();
+    ctx.translate(camera.x, camera.y);
+    ctx.scale(camera.width, camera.height);
+    ctx.transform(1, DISK.slope, 0, 1, 0, DISK.intercept);
+    let drawn = 0;
+    for (let column = first; column < end; column++) {
+      const u = column * cellU;
+      for (let row = -rows; row < rows; row++) {
+        const d = row * cellD;
+        const screenY =
+          camera.y + camera.height * (DISK.intercept + DISK.slope * u + d);
+        if (
+          screenY > height + cellD * camera.height ||
+          screenY + cellD * camera.height < 0
+        )
+          continue;
+        const edge = ease(
+          (DISK.halfWidth - Math.abs(d + cellD * 0.5)) / (cellD * 2),
+        );
+        if (edge <= 0) continue;
+        // Preserve the dark silhouette where the far disk disappears behind the hole.
+        const v =
+          DISK.intercept + DISK.slope * (u + cellU * 0.5) + d + cellD * 0.5;
+        const inShadow =
+          ((u + 0.5 * cellU - 0.5) / 0.089) ** 2 + ((v - 0.45) / 0.17) ** 2 <
+          0.94;
+        if (inShadow && d < -0.02) continue;
+        ctx.globalAlpha = camera.photoMix * edge;
+        const im = images.length
+          ? images[mod(column * 37 + row * 17, images.length)]
+          : undefined;
+        if (im) {
+          // Draw from the original decoded thumbnail on every visible cell. No
+          // low-resolution atlas is magnified 16x during the close approach.
+          ctx.drawImage(im, u, d, cellU, cellD);
+          ctx.fillStyle = `rgba(214,151,73,${(1 - camera.photoMix) * 0.28})`;
+          ctx.fillRect(u, d, cellU, cellD);
+        } else drawPlaceholder(column, row, u, d);
+        // Fine seams emerge only when the photos are already close enough to read.
+        if (camera.photoMix > 0.78) {
+          ctx.globalAlpha = edge * (camera.photoMix - 0.78) * 1.1;
+          ctx.strokeStyle = "#100f0e";
+          ctx.lineWidth = 0.65 / camera.width;
+          ctx.strokeRect(u, d, cellU, cellD);
+        }
+        drawn++;
+      }
     }
     ctx.restore();
+    return drawn;
   }
+
   function draw() {
-    if (!w || !h) return;
-    ctx.fillStyle = "#100f0e";
-    ctx.fillRect(0, 0, w, h);
-    const mobile = w < 700,
-      r = Math.min(w * (mobile ? 0.265 : 0.18), h * 0.2),
-      cx = w * 0.5,
-      cy = h * (mobile ? 0.32 : 0.33);
-    const zoom = smooth(progress * 0.96),
-      dissolve = smooth((progress - 0.5) / 0.5),
-      scale = mix(1, 4.7, zoom);
-    for (const star of stars) {
-      ctx.globalAlpha = (1 - dissolve) * (0.15 + star.r * 0.25);
-      ctx.fillStyle = "#ebd7b4";
-      ctx.fillRect(
-        mix(star.x * w, (star.x - 0.5) * w * 1.3 + w * 0.5, zoom),
-        star.y * h,
-        star.r,
-        star.r,
-      );
-    }
+    if (!width || !height) return;
+    const camera = cameraAt(progress, width, height, aspect);
     ctx.globalAlpha = 1;
-    ctx.save();
-    ctx.translate(cx - r * 0.85 * zoom, cy + r * 0.1 * zoom);
-    ctx.scale(scale, scale);
-    ctx.globalAlpha = 1 - dissolve;
-    ctx.drawImage(field, -r * 3, -r * 3, r * 6, r * 6);
-    ctx.restore();
-    const count = mobile ? 160 : 224,
-      cols = mobile ? 7 : 14,
-      rows = Math.ceil(count / cols);
-    for (let i = 0; i < count; i++) {
-      const f = fragments[i],
-        a = f.angle + (progress >= 1 ? 0 : time * 0.018),
-        rr = r * f.radius,
-        sx = Math.cos(a) * rr,
-        sy = Math.sin(a) * rr * 0.25;
-      if (dissolve === 0 && sy < 0 && Math.abs(sx) < r * 0.97) continue;
-      const startX = cx - r * 0.85 * zoom + sx * scale,
-        startY = cy + r * 0.1 * zoom + sy * scale,
-        cellW = w / (cols - 1),
-        cellH = h / (rows - 1);
-      const endX = (i % cols) * cellW + (random(i + 22) - 0.5) * cellW * 0.38,
-        endY =
-          Math.floor(i / cols) * cellH + (random(i + 99) - 0.5) * cellH * 0.25;
-      drawPhoto(
-        i,
-        mix(startX, endX, dissolve),
-        mix(startY, endY, dissolve),
-        mix(f.size * (mobile ? 0.63 : 1) * scale, cellW * 0.94, dissolve),
-        mix(a * 0.12, f.tilt, dissolve),
-        mix(0.52, 0.66, dissolve),
+    ctx.fillStyle = "#08090b";
+    ctx.fillRect(0, 0, width, height);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+    if (plate)
+      ctx.drawImage(plate, camera.x, camera.y, camera.width, camera.height);
+    // A separately reconstructed close-up resolves the disk filaments before
+    // photographs emerge, rather than enlarging one small bitmap all the way.
+    const detailMix = detailPlate
+      ? ease((camera.zoom - 2.8) / 3.2) *
+        ease((performance.now() - detailArrived) / 600)
+      : 0;
+    if (detailMix > 0) {
+      ctx.globalAlpha = detailMix;
+      ctx.drawImage(
+        detailPlate,
+        camera.x + camera.width * 0.513,
+        camera.y + camera.height * 0.36,
+        camera.width / 3,
+        camera.height / 3,
       );
+      ctx.globalAlpha = 1;
     }
-    if (dissolve > 0) {
-      const shade = ctx.createRadialGradient(
-        w / 2,
-        h / 2,
-        0,
-        w / 2,
-        h / 2,
-        Math.max(w, h) * 0.7,
-      );
-      shade.addColorStop(0, `rgba(16,15,14,${dissolve * 0.62})`);
-      shade.addColorStop(1, `rgba(16,15,14,${dissolve * 0.82})`);
-      ctx.fillStyle = shade;
-      ctx.fillRect(0, 0, w, h);
+    const drawn = drawMaterial(camera);
+    // Only subtle edge falloff during the move. Text contrast is added after
+    // approaching the photographs, never as a flash that hides the transition.
+    ctx.globalAlpha = 1;
+    const vignette = ctx.createRadialGradient(
+      width * 0.5,
+      height * 0.45,
+      Math.min(width, height) * 0.12,
+      width * 0.5,
+      height * 0.45,
+      Math.max(width, height) * 0.83,
+    );
+    vignette.addColorStop(0, `rgba(8,9,11,${camera.shade * 0.65})`);
+    vignette.addColorStop(0.65, `rgba(8,9,11,${camera.shade})`);
+    vignette.addColorStop(
+      1,
+      `rgba(8,9,11,${Math.min(0.84, camera.shade + 0.24)})`,
+    );
+    ctx.fillStyle = vignette;
+    ctx.fillRect(0, 0, width, height);
+    // A soft fade belongs to the distant cover only, so the greeting remains
+    // readable without putting text in front of the zoomed accretion disk.
+    if (progress === 0) {
+      const bottom = ctx.createLinearGradient(0, height * 0.44, 0, height);
+      bottom.addColorStop(0, "#100f0e00");
+      bottom.addColorStop(0.55, "#100f0ec0");
+      bottom.addColorStop(1, "#100f0e");
+      ctx.fillStyle = bottom;
+      ctx.fillRect(0, 0, width, height);
     }
-    canvas.dataset.fragments = String(count);
+    canvas.dataset.fragments = String(DISK.columns * rows * 2);
+    canvas.dataset.visiblePhotos = String(drawn);
+    canvas.dataset.photoMix = camera.photoMix.toFixed(4);
+    canvas.dataset.zoom = camera.zoom.toFixed(4);
+    canvas.dataset.detailMix = detailMix.toFixed(4);
+    canvas.dataset.progress = progress.toFixed(4);
   }
+
+  function fallbackPlate() {
+    const c = document.createElement("canvas");
+    c.width = 1672;
+    c.height = 941;
+    const p = c.getContext("2d");
+    p.fillStyle = "#08090b";
+    p.fillRect(0, 0, c.width, c.height);
+    const glow = p.createRadialGradient(836, 430, 140, 836, 430, 390);
+    glow.addColorStop(0, "#f3d4a645");
+    glow.addColorStop(0.3, "#b77d3830");
+    glow.addColorStop(1, "#08090b00");
+    p.fillStyle = glow;
+    p.fillRect(0, 0, c.width, c.height);
+    p.strokeStyle = "#d9b179";
+    p.lineWidth = 1.5;
+    p.beginPath();
+    p.ellipse(836, 430, 154, 168, 0, 0, Math.PI * 2);
+    p.stroke();
+    p.fillStyle = "#08090b";
+    p.beginPath();
+    p.ellipse(836, 430, 150, 164, 0, 0, Math.PI * 2);
+    p.fill();
+    p.save();
+    p.translate(0, DISK.intercept * c.height);
+    p.transform(1, (DISK.slope * c.height) / c.width, 0, 1, 0, 0);
+    const disk = p.createLinearGradient(0, -24, 0, 72);
+    disk.addColorStop(0, "#77523700");
+    disk.addColorStop(0.35, "#e5b875");
+    disk.addColorStop(0.48, "#fff0cf");
+    disk.addColorStop(0.65, "#85552d");
+    disk.addColorStop(1, "#77523700");
+    p.fillStyle = disk;
+    p.fillRect(0, -24, c.width, 96);
+    p.restore();
+    return c;
+  }
+
+  const ready = new Promise((resolve) => {
+    const image = new Image();
+    image.decoding = "async";
+    image.fetchPriority = "high";
+    let done = false;
+    const complete = (ok) => {
+      if (done) return;
+      done = true;
+      clearTimeout(timeout);
+      plate = ok ? image : fallbackPlate();
+      canvas.dataset.plate = ok ? "ready" : "fallback";
+      canvas.dataset.plateWidth = String(plate.width);
+      draw();
+      resolve(ok);
+    };
+    const timeout = setTimeout(() => complete(false), 7000);
+    image.onload = () => complete(true);
+    image.onerror = () => complete(false);
+    image.src = PLATE_URL;
+  });
+  const detailImage = new Image();
+  detailImage.decoding = "async";
+  detailImage.fetchPriority = "low";
+  detailImage.onload = () => {
+    // Feather the detail plate into its parent UV crop. Missing or slow detail
+    // never blocks the story, and a late response fades in instead of popping.
+    const c = document.createElement("canvas");
+    c.width = detailImage.width;
+    c.height = detailImage.height;
+    const p = c.getContext("2d");
+    p.drawImage(detailImage, 0, 0);
+    p.globalCompositeOperation = "destination-in";
+    for (const vertical of [false, true]) {
+      const g = p.createLinearGradient(
+        0,
+        0,
+        vertical ? 0 : c.width,
+        vertical ? c.height : 0,
+      );
+      g.addColorStop(0, "#0000");
+      g.addColorStop(0.07, "#000");
+      g.addColorStop(0.93, "#000");
+      g.addColorStop(1, "#0000");
+      p.fillStyle = g;
+      p.fillRect(0, 0, c.width, c.height);
+    }
+    detailPlate = c;
+    detailArrived = performance.now();
+    canvas.dataset.detail = "ready";
+    draw();
+  };
+  detailImage.onerror = () => {
+    canvas.dataset.detail = "unavailable";
+  };
+  ready.then(() => {
+    detailImage.src = `${import.meta.env.BASE_URL}art/gargantua-detail.webp`;
+  });
+
   function tick(now) {
     frame = 0;
-    if (!visible || document.hidden) return;
-    if (now - last >= 33) {
-      time = now / 1000;
+    if (!visible || document.hidden || !traveling) return;
+    if (now - last >= 1000 / 30) {
       last = now;
-      if (traveling) {
-        progress = clamp((now - travelStart) / travelDuration);
-        if (progress >= 1) {
-          traveling = false;
-          resolveTravel?.();
-          resolveTravel = null;
-        }
-      }
+      progress = clamp((now - started) / duration);
       draw();
+      if (progress >= 1) {
+        traveling = false;
+        const resolve = finish;
+        finish = undefined;
+        resolve?.();
+      }
     }
-    if (traveling || (!motion.matches && progress < 1))
-      frame = requestAnimationFrame(tick);
+    if (traveling) frame = requestAnimationFrame(tick);
   }
   function resume() {
-    if (
-      !frame &&
-      visible &&
-      !document.hidden &&
-      (traveling || (!motion.matches && progress < 1))
-    )
+    if (traveling && visible && !document.hidden && !frame)
       frame = requestAnimationFrame(tick);
     else draw();
   }
   function resize() {
-    w = canvas.clientWidth;
-    h = canvas.clientHeight;
-    const d = Math.min(devicePixelRatio || 1, 1.5);
-    canvas.width = Math.round(w * d);
-    canvas.height = Math.round(h * d);
-    ctx.setTransform(d, 0, 0, d, 0, 0);
+    width = canvas.clientWidth;
+    height = canvas.clientHeight;
+    if (!width || !height) return;
+    // Retina drawing with a pixel budget, rather than the old fixed 1100px field.
+    dpr = Math.min(devicePixelRatio || 1, 2, 3840 / width, 2160 / height);
+    canvas.width = Math.round(width * dpr);
+    canvas.height = Math.round(height * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     draw();
     resume();
   }
-  buildField();
   new ResizeObserver(resize).observe(canvas);
-  new IntersectionObserver(([e]) => {
-    visible = e.isIntersecting;
+  new IntersectionObserver(([entry]) => {
+    visible = entry.isIntersecting;
     if (visible) resume();
     else {
       cancelAnimationFrame(frame);
       frame = 0;
     }
   }).observe(canvas);
-  let hiddenAt = 0;
+  let hiddenAt;
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) {
       hiddenAt = performance.now();
       cancelAnimationFrame(frame);
       frame = 0;
     } else {
-      if (traveling && hiddenAt) travelStart += performance.now() - hiddenAt;
+      if (traveling && hiddenAt !== undefined)
+        started += performance.now() - hiddenAt;
+      hiddenAt = undefined;
       resume();
     }
   });
@@ -298,37 +346,35 @@ export function createUniverse(canvas) {
     if (motion.matches && traveling) {
       progress = 1;
       traveling = false;
-      resolveTravel?.();
-      resolveTravel = null;
+      draw();
+      finish?.();
+      finish = undefined;
     }
-    cancelAnimationFrame(frame);
-    frame = 0;
-    resume();
   });
-  let sourceSignature;
+
   function loadThumbnail(src) {
-    if (thumbs.has(src)) return Promise.resolve(thumbs.get(src));
+    if (thumbnails.has(src)) return Promise.resolve(thumbnails.get(src));
     return new Promise((resolve) => {
       const im = new Image();
       im.onload = () => {
         const thumb = document.createElement("canvas");
-        thumb.width = 160;
-        thumb.height = 180;
-        const edge = Math.min(im.width / 8, im.height / 9);
+        thumb.width = 384;
+        thumb.height = 480;
+        const unit = Math.min(im.width / 4, im.height / 5);
         thumb
           .getContext("2d")
           .drawImage(
             im,
-            (im.width - edge * 8) / 2,
-            (im.height - edge * 9) / 2,
-            edge * 8,
-            edge * 9,
+            (im.width - unit * 4) / 2,
+            (im.height - unit * 5) / 2,
+            unit * 4,
+            unit * 5,
             0,
             0,
-            160,
-            180,
+            384,
+            480,
           );
-        thumbs.set(src, thumb);
+        thumbnails.set(src, thumb);
         im.onload = im.onerror = null;
         im.src = "";
         resolve(thumb);
@@ -338,53 +384,60 @@ export function createUniverse(canvas) {
     });
   }
   window.addEventListener("photoschanged", async (e) => {
-    const sources = e.detail;
-    const signature = JSON.stringify(sources);
-    if (sourceSignature === signature) return;
-    sourceSignature = signature;
+    const sources = e.detail,
+      nextSignature = JSON.stringify(sources);
+    if (signature === nextSignature) return;
+    signature = nextSignature;
     const current = ++generation,
       loaded = new Array(sources.length);
     let next = 0;
-    // Bound full-resolution decoding to four photos at once on phones.
     await Promise.all(
       Array.from({ length: Math.min(4, sources.length) }, async () => {
         while (next < sources.length && current === generation) {
-          const index = next++;
-          loaded[index] = await loadThumbnail(sources[index]);
+          const i = next++;
+          loaded[i] = await loadThumbnail(sources[i]);
         }
       }),
     );
     if (current !== generation) return;
     images = loaded.filter(Boolean);
-    for (const key of thumbs.keys())
-      if (!sources.includes(key)) thumbs.delete(key);
+    canvas.dataset.photoSources = String(images.length);
+    for (const key of thumbnails.keys())
+      if (!sources.includes(key)) thumbnails.delete(key);
     draw();
   });
   resize();
+  function settle() {
+    progress = 1;
+    traveling = false;
+    cancelAnimationFrame(frame);
+    frame = 0;
+    draw();
+    finish?.();
+    finish = undefined;
+  }
   return {
+    ready,
     travel: () =>
       new Promise((resolve) => {
-        resolveTravel?.();
-        resolveTravel = resolve;
-        traveling = true;
+        finish?.();
+        finish = resolve;
         progress = 0;
-        travelStart = performance.now();
-        travelDuration = motion.matches ? 350 : 5600;
+        traveling = true;
+        started = performance.now();
+        if (document.hidden) hiddenAt = started;
+        duration = motion.matches ? 350 : JOURNEY_MS;
         resume();
       }),
-    settle: () => {
-      progress = 1;
-      traveling = false;
-      resolveTravel?.();
-      resolveTravel = null;
-      draw();
-    },
+    settle,
     reset: () => {
-      progress = 0;
       traveling = false;
-      resolveTravel?.();
-      resolveTravel = null;
-      resume();
+      cancelAnimationFrame(frame);
+      frame = 0;
+      finish?.();
+      finish = undefined;
+      progress = 0;
+      draw();
     },
   };
 }
