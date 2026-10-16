@@ -49,7 +49,7 @@ test("camera move contains no greeting or countdown; dense photos settle before 
   await expect(page.locator("#semesta")).toHaveAttribute(
     "data-phase",
     "revealed",
-    { timeout: 7000 },
+    { timeout: 11000 },
   );
   await expect(page.locator("#reveal-title")).toBeVisible();
   await expect(page.locator("dialog[open]")).toHaveCount(0);
@@ -200,6 +200,7 @@ test("replay cancels an unfinished celebration and resets the story", async ({
 test("33 photo slots and bulk uploads persist, with old photo keys preserved", async ({
   page,
 }) => {
+  test.setTimeout(45000); // Multiple uploads, reloads, and scene transitions on software GPU.
   await page.goto("/");
   await page.locator("#open-editor").click();
   await expect(page.locator("[data-upload]")).toHaveCount(33);

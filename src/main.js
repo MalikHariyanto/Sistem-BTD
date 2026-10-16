@@ -3,6 +3,7 @@ import { content } from "./content.js";
 import { quotes } from "./quotes.js";
 import { createUniverse } from "./universe.js";
 import { openMemories, optimizePhoto } from "./memories.js";
+import { createMotion } from "./motion.js";
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
@@ -108,17 +109,14 @@ $("#app").innerHTML = `
 
 const universe = createUniverse($("#universe"));
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-const ease = "cubic-bezier(.22,.7,.18,1)";
-async function animate(el, frames, duration = 700) {
-  if (motion.matches) return;
-  await el
-    .animate(frames, { duration, easing: ease, fill: "none" })
-    .finished.catch(() => {});
-}
+const effects = createMotion(motion);
+const animate = effects.play;
 async function goTo(index) {
   if (changing || index < 0 || index >= chapters.length || index === active)
     return;
   changing = true;
+  $("#stage").setAttribute("aria-busy", "true");
+  $$("#story-nav button").forEach((button) => (button.disabled = true));
   const before = $(`[data-scene="${active}"]`),
     after = $(`[data-scene="${index}"]`),
     dir = index > active ? 1 : -1;
@@ -127,6 +125,10 @@ async function goTo(index) {
     universe.settle();
   }
   before.inert = true;
+  effects.reset(after);
+  before.style.zIndex = "1";
+  after.style.zIndex = "2";
+  after.style.opacity = "0";
   after.hidden = false;
   after.inert = true;
   // Incoming and outgoing pages overlap for a single continuous dissolve.
@@ -138,7 +140,7 @@ async function goTo(index) {
         { opacity: 1, transform: "translateY(0) scale(1)" },
         { opacity: 0, transform: `translateY(${-shift / 2}px) scale(.985)` },
       ],
-      700,
+      820,
     ),
     animate(
       after,
@@ -146,15 +148,21 @@ async function goTo(index) {
         { opacity: 0, transform: `translateY(${shift}px) scale(1.018)` },
         { opacity: 1, transform: "translateY(0) scale(1)" },
       ],
-      950,
+      820,
     ),
   ]);
   before.hidden = true;
   before.classList.remove("is-active");
+  effects.reset(before);
+  before.style.removeProperty("z-index");
   after.inert = false;
   after.classList.add("is-active");
+  effects.reset(after);
+  after.style.removeProperty("z-index");
   active = index;
   changing = false;
+  $("#stage").removeAttribute("aria-busy");
+  $$("#story-nav button").forEach((button) => (button.disabled = false));
   document.body.dataset.chapter = String(index);
   const title = after.querySelector('[tabindex="-1"]');
   title?.focus({ preventScroll: true });
@@ -273,6 +281,7 @@ $("#enter-story").onclick = () => goTo(1);
 async function replay() {
   if (changing) return;
   introRun++;
+  effects.resetTree($("#stage"));
   phase("idle");
   $("#cover-copy").hidden = false;
   $("#cover-copy").inert = false;
@@ -338,7 +347,7 @@ async function turnPoem(dir) {
   poemChanging = true;
   $("#prev-poem").disabled = true;
   $("#next-poem").disabled = true;
-  await changePage($("#poem-page"), () => {
+  await changePage($(".poem-layout"), () => {
     poemIndex = (poemIndex + dir + content.poems.length) % content.poems.length;
     renderPoem();
   });
@@ -502,6 +511,9 @@ $("#blow-candle").onclick = async () => {
 };
 function resetWish(focus = true) {
   wishRun++;
+  [".wish-copy", "#cake", "#wish-result", "#blow-candle"].forEach((selector) =>
+    effects.reset($(selector)),
+  );
   wishState = "waiting";
   $(".wish-scene").dataset.wish = "waiting";
   $(".wish-scene").classList.remove("celebrating");
@@ -704,7 +716,11 @@ function updateCountdown() {
     : "Hari spesialmu sudah tiba. Selamat ulang tahun ♡";
 }
 const status = (message) => ($("#editor-status").textContent = message);
-$("#open-editor").onclick = () => $("#editor-dialog").showModal();
+$("#open-editor").onclick = () => {
+  $("#editor-dialog").showModal();
+  universe.setPaused(true);
+};
+$("#editor-dialog").addEventListener("close", () => universe.setPaused(false));
 $("#close-editor").onclick = () => $("#editor-dialog").close();
 const storageReady = openMemories()
   .then(async (s) => {

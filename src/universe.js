@@ -1,18 +1,37 @@
-import { cameraAt, JOURNEY_MS, DISK, clamp, ease } from "./universe-camera.js";
+import {
+  cameraAt,
+  JOURNEY_MS,
+  DISK,
+  PARTICLE_COUNT,
+  createOrbit,
+  orbitAt,
+  projectOrbit,
+  clamp,
+  ease,
+} from "./universe-camera.js";
+
+import { createUniverseGPU } from "./universe-gpu.js";
 
 const PLATE_URL = `${import.meta.env.BASE_URL}art/gargantua.webp`;
-const mod = (n, base) => ((n % base) + base) % base;
 
-// One photographic plate and a disk-bound photo material, both in source-image UVs.
-// The camera approaches the disk itself. Photos never scatter into a separate grid.
+// A photographic gravitational lens and a physical annulus of photo particles.
+// The flight approaches the very same orbits visible from the first frame.
 export function createUniverse(canvas) {
-  const ctx = canvas.getContext("2d", { alpha: false });
-  if (!ctx)
+  const gpu = createUniverseGPU(canvas);
+  if (!gpu) {
+    const fallback = canvas.cloneNode(false);
+    canvas.replaceWith(fallback);
+    canvas = fallback;
+  }
+  const ctx = gpu ? null : canvas.getContext("2d", { alpha: false });
+  canvas.dataset.renderer = gpu ? "webgl" : "canvas2d";
+  if (!ctx && !gpu)
     return {
       ready: Promise.resolve(false),
       travel: async () => {},
       settle: () => {},
       reset: () => {},
+      setPaused: () => {},
     };
   const motion = matchMedia("(prefers-reduced-motion: reduce)");
   let width = 0,
@@ -20,8 +39,11 @@ export function createUniverse(canvas) {
     dpr = 1,
     progress = 0,
     visible = true,
+    suspended = false,
     frame = 0,
     last = 0;
+  let flowSeconds = 0,
+    lastSimulationFrame = 0;
   let traveling = false,
     started = 0,
     duration = JOURNEY_MS,
@@ -34,117 +56,95 @@ export function createUniverse(canvas) {
     signature;
   const thumbnails = new Map();
   const aspect = 1672 / 941;
-  const cellU = 1 / DISK.columns,
-    cellD = cellU * aspect * 1.25;
-  const rows = Math.ceil(DISK.halfWidth / cellD);
+  const orbit = createOrbit(gpu ? PARTICLE_COUNT : 8192);
 
-  function drawPlaceholder(column, row, u, d) {
-    const shade = mod(column * 7 + row * 11, 4);
-    ctx.fillStyle = ["#cbbb9e", "#ac9776", "#dccdb4", "#b8a282"][shade];
-    ctx.fillRect(u, d, cellU, cellD);
-    ctx.fillStyle = ["#948266", "#a69374", "#bba88b", "#a08a6b"][shade];
-    ctx.fillRect(
-      u + cellU * 0.045,
-      d + cellD * 0.04,
-      cellU * 0.91,
-      cellD * 0.83,
-    );
-    ctx.strokeStyle = "#eee0c380";
-    ctx.lineWidth = cellU * 0.008;
-    ctx.beginPath();
-    ctx.arc(u + cellU * 0.5, d + cellD * 0.35, cellU * 0.11, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.ellipse(
-      u + cellU * 0.5,
-      d + cellD * 0.66,
-      cellU * 0.23,
-      cellD * 0.14,
-      0,
-      Math.PI,
-      Math.PI * 2,
-    );
-    ctx.stroke();
+  function visibleEstimate(camera) {
+    let visible = 0;
+    for (let i = 0; i < orbit.length / 4; i += 64)
+      if (projectOrbit(orbitAt(orbit, i, flowSeconds), camera, width, height))
+        visible++;
+    return visible * 64;
   }
-
   function drawMaterial(camera) {
-    if (camera.photoMix <= 0) return 0;
-    const first = Math.max(0, Math.floor(-camera.x / camera.width / cellU) - 1);
-    const end = Math.min(
-      DISK.columns,
-      Math.ceil((width - camera.x) / camera.width / cellU) + 1,
-    );
-    // Photos are sheared with the disk, not rotated independently or sent to a wall.
-    ctx.save();
-    ctx.translate(camera.x, camera.y);
-    ctx.scale(camera.width, camera.height);
-    ctx.transform(1, DISK.slope, 0, 1, 0, DISK.intercept);
-    let drawn = 0;
-    for (let column = first; column < end; column++) {
-      const u = column * cellU;
-      for (let row = -rows; row < rows; row++) {
-        const d = row * cellD;
-        const screenY =
-          camera.y + camera.height * (DISK.intercept + DISK.slope * u + d);
-        if (
-          screenY > height + cellD * camera.height ||
-          screenY + cellD * camera.height < 0
-        )
-          continue;
-        const edge = ease(
-          (DISK.halfWidth - Math.abs(d + cellD * 0.5)) / (cellD * 2),
-        );
-        if (edge <= 0) continue;
-        // Preserve the dark silhouette where the far disk disappears behind the hole.
-        const v =
-          DISK.intercept + DISK.slope * (u + cellU * 0.5) + d + cellD * 0.5;
-        const inShadow =
-          ((u + 0.5 * cellU - 0.5) / 0.089) ** 2 + ((v - 0.45) / 0.17) ** 2 <
-          0.94;
-        if (inShadow && d < -0.02) continue;
-        ctx.globalAlpha = camera.photoMix * edge;
-        const im = images.length
-          ? images[mod(column * 37 + row * 17, images.length)]
-          : undefined;
-        if (im) {
-          // Draw from the original decoded thumbnail on every visible cell. No
-          // low-resolution atlas is magnified 16x during the close approach.
-          ctx.drawImage(im, u, d, cellU, cellD);
-          ctx.fillStyle = `rgba(214,151,73,${(1 - camera.photoMix) * 0.28})`;
-          ctx.fillRect(u, d, cellU, cellD);
-        } else drawPlaceholder(column, row, u, d);
-        // Fine seams emerge only when the photos are already close enough to read.
-        if (camera.photoMix > 0.78) {
-          ctx.globalAlpha = edge * (camera.photoMix - 0.78) * 1.1;
-          ctx.strokeStyle = "#100f0e";
-          ctx.lineWidth = 0.65 / camera.width;
-          ctx.strokeRect(u, d, cellU, cellD);
-        }
-        drawn++;
-      }
+    const points = [];
+    for (let i = 0; i < orbit.length / 4; i++) {
+      const point = orbitAt(orbit, i, flowSeconds);
+      const projected = projectOrbit(point, camera, width, height);
+      if (projected) points.push({ ...point, ...projected });
     }
-    ctx.restore();
-    return drawn;
+    points.sort((a, b) => b.depth - a.depth);
+    for (const point of points) {
+      const { x, y, size, seed, angle, depth } = point;
+      const readable = ease((size - 4) / 66);
+      ctx.save();
+      ctx.translate(x, y);
+      const tangent = Math.atan2(
+        0.19 * Math.cos(angle) - 0.26 * Math.sin(angle),
+        -Math.sin(angle),
+      );
+      ctx.rotate(tangent * (1 - readable) + (seed - 0.5) * 0.32 * readable);
+      ctx.globalAlpha = (0.38 + readable * 0.6) * ease((depth - 0.028) / 0.047);
+      if (readable > 0.1 && images.length) {
+        ctx.drawImage(
+          images[Math.floor(seed * images.length)],
+          -size * 0.395,
+          -size * 0.5,
+          size * 0.79,
+          size,
+        );
+        ctx.fillStyle = `rgba(227,161,77,${(1 - readable) * 0.85})`;
+        ctx.fillRect(-size * 0.395, -size * 0.5, size * 0.79, size);
+      } else {
+        ctx.fillStyle = readable > 0.1 ? "#b8a68e" : "#f4c58e";
+        ctx.fillRect(
+          -size * 0.395,
+          -size * 0.5,
+          Math.max(0.8, size * 0.79),
+          Math.max(0.8, size),
+        );
+      }
+      if (readable > 0.65) {
+        ctx.strokeStyle = "#e7dcc9";
+        ctx.lineWidth = Math.max(1, size * 0.018);
+        ctx.strokeRect(-size * 0.37, -size * 0.475, size * 0.74, size * 0.95);
+      }
+      ctx.restore();
+    }
+    return points.length;
   }
 
   function draw() {
-    if (!width || !height) return;
+    if (!width || !height || suspended || !visible || document.hidden) return;
     const camera = cameraAt(progress, width, height, aspect);
+    const detailMix = detailPlate
+      ? ease((camera.zoom - 2.8) / 3.2) *
+        ease((performance.now() - detailArrived) / 600)
+      : 0;
+    if (gpu) {
+      gpu.draw({
+        camera,
+        width,
+        height,
+        time: flowSeconds,
+        detail: detailMix,
+        cover: 1 - ease(progress / 0.18),
+      });
+      report(camera, visibleEstimate(camera), detailMix);
+      return;
+    }
     ctx.globalAlpha = 1;
     ctx.fillStyle = "#08090b";
     ctx.fillRect(0, 0, width, height);
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = "high";
+    const radiance = 1 - 0.965 * ease((camera.zoom - 8) / 47);
+    ctx.globalAlpha = radiance;
     if (plate)
       ctx.drawImage(plate, camera.x, camera.y, camera.width, camera.height);
     // A separately reconstructed close-up resolves the disk filaments before
     // photographs emerge, rather than enlarging one small bitmap all the way.
-    const detailMix = detailPlate
-      ? ease((camera.zoom - 2.8) / 3.2) *
-        ease((performance.now() - detailArrived) / 600)
-      : 0;
     if (detailMix > 0) {
-      ctx.globalAlpha = detailMix;
+      ctx.globalAlpha = detailMix * radiance;
       ctx.drawImage(
         detailPlate,
         camera.x + camera.width * 0.513,
@@ -153,6 +153,22 @@ export function createUniverse(canvas) {
         camera.height / 3,
       );
       ctx.globalAlpha = 1;
+    }
+    if (!motion.matches && plate) {
+      ctx.save();
+      ctx.globalAlpha = 0.28 * (1 - camera.photoMix) * radiance;
+      ctx.translate(
+        camera.x + camera.width * 0.5,
+        camera.y + camera.height * 0.445,
+      );
+      ctx.scale(camera.width * 0.17, camera.height * 0.3);
+      ctx.beginPath();
+      ctx.arc(0, 0, 1.3, 0, Math.PI * 2);
+      ctx.arc(0, 0, 0.72, 0, Math.PI * 2, true);
+      ctx.clip("evenodd");
+      ctx.rotate(flowSeconds * 0.065);
+      ctx.drawImage(plate, -0.5 / 0.17, -0.445 / 0.3, 1 / 0.17, 1 / 0.3);
+      ctx.restore();
     }
     const drawn = drawMaterial(camera);
     // Only subtle edge falloff during the move. Text contrast is added after
@@ -176,20 +192,28 @@ export function createUniverse(canvas) {
     ctx.fillRect(0, 0, width, height);
     // A soft fade belongs to the distant cover only, so the greeting remains
     // readable without putting text in front of the zoomed accretion disk.
-    if (progress === 0) {
+    const cover = 1 - ease(progress / 0.18);
+    if (cover > 0) {
+      ctx.globalAlpha = cover;
       const bottom = ctx.createLinearGradient(0, height * 0.44, 0, height);
       bottom.addColorStop(0, "#100f0e00");
       bottom.addColorStop(0.55, "#100f0ec0");
       bottom.addColorStop(1, "#100f0e");
       ctx.fillStyle = bottom;
       ctx.fillRect(0, 0, width, height);
+      ctx.globalAlpha = 1;
     }
-    canvas.dataset.fragments = String(DISK.columns * rows * 2);
+    report(camera, drawn, detailMix);
+  }
+  function report(camera, drawn, detailMix) {
+    canvas.dataset.fragments = String(orbit.length / 4);
     canvas.dataset.visiblePhotos = String(drawn);
+    canvas.dataset.visibilityCount = gpu ? "sampled-estimate" : "exact";
     canvas.dataset.photoMix = camera.photoMix.toFixed(4);
     canvas.dataset.zoom = camera.zoom.toFixed(4);
     canvas.dataset.detailMix = detailMix.toFixed(4);
     canvas.dataset.progress = progress.toFixed(4);
+    canvas.dataset.flow = flowSeconds.toFixed(4);
   }
 
   function fallbackPlate() {
@@ -239,6 +263,7 @@ export function createUniverse(canvas) {
       done = true;
       clearTimeout(timeout);
       plate = ok ? image : fallbackPlate();
+      gpu?.setPlate(plate);
       canvas.dataset.plate = ok ? "ready" : "fallback";
       canvas.dataset.plateWidth = String(plate.width);
       draw();
@@ -276,6 +301,7 @@ export function createUniverse(canvas) {
       p.fillRect(0, 0, c.width, c.height);
     }
     detailPlate = c;
+    gpu?.setDetail(c);
     detailArrived = performance.now();
     canvas.dataset.detail = "ready";
     draw();
@@ -287,26 +313,39 @@ export function createUniverse(canvas) {
     detailImage.src = `${import.meta.env.BASE_URL}art/gargantua-detail.webp`;
   });
 
+  function shouldAnimate() {
+    return !suspended && (traveling || !motion.matches);
+  }
   function tick(now) {
     frame = 0;
-    if (!visible || document.hidden || !traveling) return;
-    if (now - last >= 1000 / 30) {
-      last = now;
-      progress = clamp((now - started) / duration);
+    if (!visible || document.hidden || !shouldAnimate()) return;
+    const interval = 1000 / (gpu ? 30 : 24);
+    if (now - last >= interval) {
+      // Carry fractional frame time instead of dropping to 20 fps on 60 Hz.
+      last = now - ((now - last) % interval);
+      const dt = lastSimulationFrame
+        ? Math.min((now - lastSimulationFrame) / 1000, 0.1)
+        : 0;
+      lastSimulationFrame = now;
+      if (traveling) progress = clamp((now - started) / duration);
+      if (!motion.matches)
+        flowSeconds +=
+          dt * (0.025 + 0.975 * (1 - ease((progress - 0.7) / 0.3)));
       draw();
-      if (progress >= 1) {
+      if (traveling && progress >= 1) {
         traveling = false;
         const resolve = finish;
         finish = undefined;
         resolve?.();
       }
     }
-    if (traveling) frame = requestAnimationFrame(tick);
+    if (shouldAnimate()) frame = requestAnimationFrame(tick);
   }
   function resume() {
-    if (traveling && visible && !document.hidden && !frame)
+    if (shouldAnimate() && visible && !document.hidden && !frame) {
+      lastSimulationFrame = 0;
       frame = requestAnimationFrame(tick);
-    else draw();
+    } else draw();
   }
   function resize() {
     width = canvas.clientWidth;
@@ -316,7 +355,7 @@ export function createUniverse(canvas) {
     dpr = Math.min(devicePixelRatio || 1, 2, 3840 / width, 2160 / height);
     canvas.width = Math.round(width * dpr);
     canvas.height = Math.round(height * dpr);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx?.setTransform(dpr, 0, 0, dpr, 0, 0);
     draw();
     resume();
   }
@@ -327,6 +366,7 @@ export function createUniverse(canvas) {
     else {
       cancelAnimationFrame(frame);
       frame = 0;
+      lastSimulationFrame = 0;
     }
   }).observe(canvas);
   let hiddenAt;
@@ -335,6 +375,7 @@ export function createUniverse(canvas) {
       hiddenAt = performance.now();
       cancelAnimationFrame(frame);
       frame = 0;
+      lastSimulationFrame = 0;
     } else {
       if (traveling && hiddenAt !== undefined)
         started += performance.now() - hiddenAt;
@@ -346,10 +387,14 @@ export function createUniverse(canvas) {
     if (motion.matches && traveling) {
       progress = 1;
       traveling = false;
-      draw();
       finish?.();
       finish = undefined;
     }
+    cancelAnimationFrame(frame);
+    frame = 0;
+    lastSimulationFrame = 0;
+    draw();
+    resume();
   });
 
   function loadThumbnail(src) {
@@ -401,6 +446,7 @@ export function createUniverse(canvas) {
     );
     if (current !== generation) return;
     images = loaded.filter(Boolean);
+    gpu?.setPhotos(images);
     canvas.dataset.photoSources = String(images.length);
     for (const key of thumbnails.keys())
       if (!sources.includes(key)) thumbnails.delete(key);
@@ -415,9 +461,17 @@ export function createUniverse(canvas) {
     draw();
     finish?.();
     finish = undefined;
+    resume();
   }
   return {
     ready,
+    setPaused(value) {
+      suspended = value;
+      cancelAnimationFrame(frame);
+      frame = 0;
+      lastSimulationFrame = 0;
+      if (!value) resume();
+    },
     travel: () =>
       new Promise((resolve) => {
         finish?.();
@@ -438,6 +492,7 @@ export function createUniverse(canvas) {
       finish = undefined;
       progress = 0;
       draw();
+      resume();
     },
   };
 }
