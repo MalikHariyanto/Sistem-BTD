@@ -9,5 +9,8 @@
     "preview": "vite preview --host 0.0.0.0",
     "test": "playwright test"
   },
-  "devDependencies": { "@playwright/test": "^1.56.1", "vite": "^7.1.12" }
+  "devDependencies": {
+    "@playwright/test": "^1.56.1",
+    "vite": "^7.1.12"
+  }
 }

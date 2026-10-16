@@ -1,77 +1,124 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from "@playwright/test";
 
-test('romantic journey, poem navigation, letter, memories and wish', async ({ page }) => {
-  const errors=[];page.on('pageerror',e=>errors.push(e.message));
-  await page.goto('/');
+test("romantic journey, poem navigation, letter, memories and wish", async ({
+  page,
+}) => {
+  const errors = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await page.goto("/");
   await expect(page).toHaveTitle(/Ambis Copenhagen/);
-  await page.getByRole('button',{name:'Buka semesta kita'}).click();
-  await expect(page.locator('#intro-dialog')).toBeVisible();
-  await expect(page.locator('#intro-dialog')).not.toBeVisible({timeout:10000});
-  await expect(page.locator('#poem-title')).toHaveText('Gravitasi');
-  await page.getByRole('button',{name:'Puisi selanjutnya'}).click();
-  await expect(page.locator('#poem-title')).toHaveText('Hal-hal Kecil');
-  await page.getByRole('button',{name:'Puisi selanjutnya'}).click();
-  await expect(page.locator('#poem-title')).toHaveText('Pada Hari Lahirmu');
-  await page.getByRole('button',{name:'Puisi sebelumnya'}).click();
-  await expect(page.locator('#poem-position')).toHaveText('2 dari 3');
+  await page.getByRole("button", { name: "Buka semesta kita" }).click();
+  await expect(page.locator("#intro-dialog")).toBeVisible();
+  await expect(page.locator("#intro-dialog")).not.toBeVisible({
+    timeout: 10000,
+  });
+  await expect(page.locator("#poem-title")).toHaveText("Gravitasi");
+  await page.getByRole("button", { name: "Puisi selanjutnya" }).click();
+  await expect(page.locator("#poem-title")).toHaveText("Hal-hal Kecil");
+  await page.getByRole("button", { name: "Puisi selanjutnya" }).click();
+  await expect(page.locator("#poem-title")).toHaveText("Pada Hari Lahirmu");
+  await page.getByRole("button", { name: "Puisi sebelumnya" }).click();
+  await expect(page.locator("#poem-position")).toHaveText("2 dari 3");
   await page.locator('[data-moment="1"]').click();
-  await expect(page.locator('#moment-title')).toHaveText('Tawa yang tinggal');
-  await page.keyboard.press('Escape');
-  await page.getByRole('button',{name:'Buka amplop surat'}).click();
-  await expect(page.locator('#mail-preview')).toBeVisible();
-  await page.getByRole('button',{name:'Buka lampiran'}).click();
-  await expect(page.locator('#full-letter')).toBeVisible();
-  await expect(page.locator('.letter-paragraph')).toHaveCount(4);
-  await page.keyboard.press('Escape');
-  await page.getByRole('button',{name:'Tiup lilin',exact:true}).click();
-  await expect(page.locator('#wish-message')).toContainText('Semoga semesta mengaminkan');
-  await page.getByRole('button',{name:'Nyalakan lagi'}).click();
-  await expect(page.locator('.candle')).not.toHaveClass(/blown/);
-  await page.locator('#open-playlist').click();
+  await expect(page.locator("#moment-title")).toHaveText("Tawa yang tinggal");
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "Buka amplop surat" }).click();
+  await expect(page.locator("#mail-preview")).toBeVisible();
+  await page.getByRole("button", { name: "Buka lampiran" }).click();
+  await expect(page.locator("#full-letter")).toBeVisible();
+  await expect(page.locator(".letter-paragraph")).toHaveCount(4);
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "Tiup lilin", exact: true }).click();
+  await expect(page.locator("#wish-message")).toContainText(
+    "Semoga semesta mengaminkan",
+  );
+  await page.getByRole("button", { name: "Nyalakan lagi" }).click();
+  await expect(page.locator(".candle")).not.toHaveClass(/blown/);
+  await page.locator("#open-playlist").click();
   await page.locator('[data-track="0"]').click();
-  await expect(page.locator('#track-status')).toContainText('belum diisi');
-  await page.getByRole('button',{name:'Putar nada lembut',exact:false}).filter({visible:true}).click();
-  await expect(page.locator('#ambient-toggle')).toHaveAttribute('aria-pressed','true');
-  await page.locator('#ambient-toggle').click();
-  await page.keyboard.press('Escape');
-  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  await expect(page.locator("#track-status")).toContainText("belum diisi");
+  await page
+    .getByRole("button", { name: "Putar nada lembut", exact: false })
+    .filter({ visible: true })
+    .click();
+  await expect(page.locator("#ambient-toggle")).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await page.locator("#ambient-toggle").click();
+  await page.keyboard.press("Escape");
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
   expect(errors).toEqual([]);
 });
 
-test('local photos, name and birthday survive reload and can be reset', async ({ page }) => {
-  await page.goto('/');
-  await page.getByRole('button',{name:'Isi kenangan'}).click();
-  await page.getByRole('textbox',{name:'Nama panggilan'}).fill('Sayang');
-  await page.locator('input[name="birthday"]').fill('2099-02-14T00:00');
-  const photoData = await page.evaluate(()=>{const c=document.createElement('canvas');c.width=120;c.height=160;const ctx=c.getContext('2d');ctx.fillStyle='#9b7253';ctx.fillRect(0,0,120,160);return c.toDataURL('image/png').split(',')[1];});
-  await page.locator('[data-upload="hero"]').setInputFiles({name:'photo.png',mimeType:'image/png',buffer:Buffer.from(photoData,'base64')});
-  await expect(page.locator('#editor-status')).toContainText('Foto tersimpan');
-  await page.getByRole('button',{name:'Simpan nama & tanggal'}).click();
-  await expect(page.locator('#editor-status')).toContainText('Nama & tanggal tersimpan');
+test("local photos, name and birthday survive reload and can be reset", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Isi kenangan" }).click();
+  await page.getByRole("textbox", { name: "Nama panggilan" }).fill("Sayang");
+  await page.locator('input[name="birthday"]').fill("2099-02-14T00:00");
+  const photoData = await page.evaluate(() => {
+    const c = document.createElement("canvas");
+    c.width = 120;
+    c.height = 160;
+    const ctx = c.getContext("2d");
+    ctx.fillStyle = "#9b7253";
+    ctx.fillRect(0, 0, 120, 160);
+    return c.toDataURL("image/png").split(",")[1];
+  });
+  await page
+    .locator('[data-upload="hero"]')
+    .setInputFiles({
+      name: "photo.png",
+      mimeType: "image/png",
+      buffer: Buffer.from(photoData, "base64"),
+    });
+  await expect(page.locator("#editor-status")).toContainText("Foto tersimpan");
+  await page.getByRole("button", { name: "Simpan nama & tanggal" }).click();
+  await expect(page.locator("#editor-status")).toContainText(
+    "Nama & tanggal tersimpan",
+  );
   await page.reload();
-  await expect(page.locator('.dedication-copy [data-recipient]')).toHaveText('Sayang');
-  await expect(page.locator('#birthday-countdown')).toContainText('MENUJU HARI SPESIALMU');
-  await page.locator('#open-letter').click();
-  await page.locator('#see-letter').click();
+  await expect(page.locator(".dedication-copy [data-recipient]")).toHaveText(
+    "Sayang",
+  );
+  await expect(page.locator("#birthday-countdown")).toContainText(
+    "MENUJU HARI SPESIALMU",
+  );
+  await page.locator("#open-letter").click();
+  await page.locator("#see-letter").click();
   await expect(page.locator('[data-photo="hero"]')).toHaveClass(/has-photo/);
   await expect(page.locator('[data-photo="hero"] img')).toBeVisible();
-  await page.keyboard.press('Escape');
-  await page.locator('#open-editor').click();
-  await page.locator('#reset-local').click();
-  await expect(page.locator('#editor-status')).toContainText('Semua isian lokal dihapus');
+  await page.keyboard.press("Escape");
+  await page.locator("#open-editor").click();
+  await page.locator("#reset-local").click();
+  await expect(page.locator("#editor-status")).toContainText(
+    "Semua isian lokal dihapus",
+  );
   await page.reload();
-  await expect(page.locator('.dedication-copy [data-recipient]')).toHaveText('Kamu');
-  await expect(page.locator('#birthday-countdown')).not.toContainText('MENUJU HARI SPESIALMU');
+  await expect(page.locator(".dedication-copy [data-recipient]")).toHaveText(
+    "Kamu",
+  );
+  await expect(page.locator("#birthday-countdown")).not.toContainText(
+    "MENUJU HARI SPESIALMU",
+  );
 });
 
-test('opening can be skipped with reduced motion and keyboard', async ({ page }) => {
-  await page.emulateMedia({reducedMotion:'reduce'});
-  await page.goto('/');
-  await page.locator('#begin').click();
-  await page.locator('#skip-intro').click();
-  await expect(page.locator('#intro-dialog')).not.toBeVisible();
-  await page.locator('#open-letter').click();
-  await page.keyboard.press('Escape');
-  await expect(page.locator('#letter-dialog')).not.toBeVisible();
-  await expect(page.locator('#open-letter')).toBeFocused();
+test("opening can be skipped with reduced motion and keyboard", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  await page.locator("#begin").click();
+  await page.locator("#skip-intro").click();
+  await expect(page.locator("#intro-dialog")).not.toBeVisible();
+  await page.locator("#open-letter").click();
+  await page.keyboard.press("Escape");
+  await expect(page.locator("#letter-dialog")).not.toBeVisible();
+  await expect(page.locator("#open-letter")).toBeFocused();
 });
