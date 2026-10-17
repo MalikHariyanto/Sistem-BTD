@@ -9,6 +9,7 @@ import {
   orbitRateAt,
   DISK,
   PARTICLE_COUNT,
+  ORBIT_SPEED,
   createOrbit,
   orbitAt,
   orbitTangent,
@@ -280,7 +281,7 @@ export function createUniverse(canvas) {
       ctx.arc(0, 0, 1.3, 0, Math.PI * 2);
       ctx.arc(0, 0, 0.72, 0, Math.PI * 2, true);
       ctx.clip("evenodd");
-      ctx.rotate(flowSeconds * 0.115);
+      ctx.rotate(flowSeconds * ORBIT_SPEED);
       ctx.drawImage(plate, -0.5 / 0.17, -0.445 / 0.3, 1 / 0.17, 1 / 0.3);
       ctx.restore();
     }

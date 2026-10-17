@@ -9,6 +9,8 @@ export const ORBIT = { inner: 0.14, outer: 0.64, tilt: 0.19, centerY: 0.475 };
 export const ASPECT = 1672 / 941;
 export const HORIZON = { x: 0, y: -0.045 / ASPECT, z: 0, radius: 0.095 };
 export const INFLOW = 0.0018;
+// Shared by particles, their optical image and the luminous texture flow.
+export const ORBIT_SPEED = 0.065;
 export const PLUNGE_RADIUS = 0.075;
 export const clamp = (n) => Math.max(0, Math.min(1, n));
 export const ease = (n) => {
@@ -75,7 +77,7 @@ export function orbitAt(data, index, time) {
   const radius = Math.sqrt(PLUNGE_RADIUS ** 2 + radial - cycles * span);
   const angle =
     data[offset + 1] +
-    ((4 * 0.115 * 0.28 ** 1.5) / INFLOW) *
+    ((4 * ORBIT_SPEED * 0.28 ** 1.5) / INFLOW) *
       (Math.sqrt(initial) -
         Math.sqrt(radius) -
         cycles * (Math.sqrt(ORBIT.outer) - Math.sqrt(PLUNGE_RADIUS)));
@@ -161,6 +163,7 @@ export function orbitPhotoSize(seed) {
 }
 export const orbitDustSize = (seed) => 0.00018 + seed * 0.00038;
 export const photoSizeLimit = (width) => Math.min(190, width * 0.36);
+export const portraitScaleAt = (zoom) => 1 + 0.18 * ease((zoom - 12) / 20);
 
 export function projectOrbit(
   point,
@@ -168,17 +171,18 @@ export function projectOrbit(
   width,
   height,
   worldSize = orbitPhotoSize(point.seed),
+  sizeBoost = 1,
 ) {
   point = lensedOrbit(point, camera);
   if (point.opacity < 0.005 || occludedByHole(point, camera)) return null;
-  return projectWorld(point, camera, width, height, worldSize);
+  return projectWorld(point, camera, width, height, worldSize, sizeBoost);
 }
 
-export function projectWorld(point, camera, width, height, worldSize = 0) {
+export function projectWorld(point, camera, width, height, worldSize = 0, sizeBoost = 1) {
   const depth = camera.distance - point.depth;
   if (depth <= 0.028) return null;
   const scale = (camera.baseWidth * 5) / depth;
-  const size = Math.min(photoSizeLimit(width), worldSize * scale);
+  const size = Math.min(photoSizeLimit(width), worldSize * scale) * sizeBoost;
   const x = camera.centerX + (point.x - camera.cx) * scale;
   const y = camera.centerY + ((point.y - camera.cy) * scale) / (1672 / 941);
   if (x < -size || x > width + size || y < -size || y > height + size)
@@ -210,7 +214,7 @@ export function orbitTangent(point, camera) {
   if (point.depth < 0 && Math.abs(camera.cx) / camera.distance < 0.25) {
     const dt = 0.001, r = point.radius, a = point.angle;
     const nextR = Math.sqrt(r * r - INFLOW * dt);
-    const nextA = a + 0.115 * (0.28 / r) ** 1.5 * dt;
+    const nextA = a + ORBIT_SPEED * (0.28 / r) ** 1.5 * dt;
     const x = Math.cos(nextA) * nextR, depth = Math.sin(nextA) * nextR;
     const next = lensedOrbit({ ...point, x, depth, radius: nextR, angle: nextA,
       y: 0.26 * x + ORBIT.tilt * depth + point.y - 0.26 * point.x - ORBIT.tilt * point.depth }, camera);
@@ -222,7 +226,7 @@ export function orbitTangent(point, camera) {
   const r = point.radius,
     a = point.angle,
     dr = -INFLOW / (2 * r);
-  const omega = 0.115 * (0.28 / r) ** 1.5;
+  const omega = ORBIT_SPEED * (0.28 / r) ** 1.5;
   const vx = Math.cos(a) * dr - Math.sin(a) * r * omega;
   const vz = Math.sin(a) * dr + Math.cos(a) * r * omega;
   const depth = camera.distance - point.depth;

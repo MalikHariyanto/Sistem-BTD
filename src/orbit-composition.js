@@ -4,6 +4,7 @@ import {
   orbitDustSize,
   orbitPhotoSize,
   projectOrbit,
+  portraitScaleAt,
   mix,
 } from "./universe-camera.js";
 
@@ -24,6 +25,7 @@ export function focusProjection(point, camera, width, height) {
     width,
     height,
     (0.003 + point.seed * 0.0018) * 1.35 * (1 + 0.8 * (camera.showcase || 0)),
+    portraitScaleAt(camera.zoom),
   );
 }
 

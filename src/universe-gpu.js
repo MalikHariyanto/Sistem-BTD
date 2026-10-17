@@ -1,6 +1,8 @@
 import {
   createOrbit,
   PARTICLE_COUNT,
+  ORBIT_SPEED,
+  portraitScaleAt,
   INFLOW,
   PLUNGE_RADIUS,
   HORIZON,
@@ -50,14 +52,14 @@ void main(){
   // The upper arc is the optically bent rear disk. The inverse texture flow
   // uses the same positive angular velocity as the photograph orbits.
   float sourceRadius=clamp((radius*.17-.112)/.13,.14,.64);
-  float angularRate=.115*pow(.28/sourceRadius,1.5);
+  float angularRate=${ORBIT_SPEED.toFixed(8)}*pow(.28/sourceRadius,1.5);
   float angle=theta-time*angularRate;
   vec2 spun=center+vec2(cos(angle),sin(angle))*radius*radii;
   vec2 ringUV=mix(uv,spun,annulus*.18);
 
   // Positive orbital rotation moves the near-side stream to the left, just
   // like the resolved photos. Fine turbulence rides on that common flow.
-  float phase=fract(time*.115),otherPhase=fract(phase+.5);
+  float phase=fract(time*${ORBIT_SPEED.toFixed(8)}),otherPhase=fract(phase+.5);
   float flowBlend=1.0-abs(phase*2.0-1.0);
   float turbulence=.003*sin(time*.82+diskD*47.0);
   float diskMask=(1.0-smoothstep(.035,.13,abs(diskD)))*mix(shadowGuard,1.0,smoothstep(-.04,.012,diskD));
@@ -103,6 +105,7 @@ uniform vec2 uCenter;
 uniform float uTime;
 uniform float uDpr;
 uniform float uPointLimit;
+uniform float uPortraitScale;
 varying vec4 vPhoto; // id, apparent size, rotation, opacity
 varying float vHeat;
 varying vec2 vOffset;
@@ -121,7 +124,7 @@ void main(){
   float span=.64*.64-${(PLUNGE_RADIUS ** 2).toFixed(8)};
   float cycles=floor(radial/span);
   float r=sqrt(${(PLUNGE_RADIUS ** 2).toFixed(8)}+radial-cycles*span);
-  float theta=aOrbit.y+4.0*.115*pow(.28,1.5)/${INFLOW.toFixed(8)}*
+  float theta=aOrbit.y+4.0*${ORBIT_SPEED.toFixed(8)}*pow(.28,1.5)/${INFLOW.toFixed(8)}*
     (sqrt(aOrbit.x)-sqrt(r)-cycles*(sqrt(.64)-sqrt(${PLUNGE_RADIUS.toFixed(8)})));
   float x=cos(theta)*r,z=sin(theta)*r;
   float y=.26*x+.19*z+aOrbit.z;
@@ -151,7 +154,7 @@ void main(){
       mask*=step(.76,grain)*uPhotoField;
     }
     else {
-      worldSize*=1.35;
+      worldSize*=1.35*uPortraitScale;
       mask*=aFade*uComposition;
     }
   }
@@ -159,7 +162,9 @@ void main(){
     mask*=(1.0-.38*far)*infall;
     worldSize*=.6+.4*infall;
   }
-  float size=min(uLayer>2.5?24.0:min(190.0,uViewport.x*.36),worldSize*scale);
+  float sizeLimit=min(190.0,uViewport.x*.36);
+  if(uLayer>1.5&&uLayer<2.5)sizeLimit*=uPortraitScale;
+  float size=min(uLayer>2.5?24.0:sizeLimit,worldSize*scale);
   mask*=smoothstep(.028,.075,distance);
   if(distance<=.028||pixel.x < -size||pixel.x>uViewport.x+size||pixel.y < -size||pixel.y>uViewport.y+size)mask=0.0;
   // Keep partially visible cards alive when their centers leave the viewport.
@@ -174,7 +179,7 @@ void main(){
   // through perspective magnification, with no new grid or new positions.
   float readable=uLayer>2.5?smoothstep(1.5,5.0,size):smoothstep(2.0,mix(28.0,12.0,uShowcase),size);
   if(uLayer>.5)readable*=(1.0-.3*far)*infall;
-  float omega=.115*pow(.28/r,1.5);
+  float omega=${ORBIT_SPEED.toFixed(8)}*pow(.28/r,1.5);
   // Follow the derivative of the bent optical path, not a screen-space spin.
   float nr=sqrt(r*r-${INFLOW.toFixed(8)}*.001),nt=theta+omega*.001;
   vec3 ns=vec3(cos(nt)*nr,0.0,sin(nt)*nr);
@@ -394,6 +399,7 @@ export function createUniverseGPU(canvas) {
         "uTime",
         "uDpr",
         "uPointLimit",
+        "uPortraitScale",
         "uPhotos",
         "uWide",
         "uCamera",
@@ -492,6 +498,7 @@ export function createUniverseGPU(canvas) {
     gl.uniform1f(u.uTime, time);
     gl.uniform1f(u.uDpr, dpr);
     gl.uniform1f(u.uPointLimit, pointLimit);
+    gl.uniform1f(u.uPortraitScale, portraitScaleAt(camera.zoom));
     gl.uniform1i(u.uPhotos, 2);
     gl.uniform3fv(u.uAtlas, atlas);
     gl.uniform1f(u.uShade, camera.shade);
