@@ -1,4 +1,4 @@
-/* One shared transparent botanical image; decoration never captures a tap. */
+/* A coordinated set of botanical species; decoration never captures a tap. */
 .romance-flower {
   position: absolute;
   display: block;
@@ -17,23 +17,23 @@
 }
 
 .flower-memory-right {
-  width: 28%;
-  right: -9%;
-  top: -10%;
-  transform: rotate(24deg) scaleX(-1);
+  width: 27%;
+  right: -7%;
+  top: -9%;
+  transform: rotate(19deg);
 }
 
 .flower-poem {
-  width: 40%;
-  left: -15%;
-  bottom: 0;
-  transform: rotate(-22deg);
+  width: 38%;
+  left: -12%;
+  bottom: -3%;
+  transform: rotate(-14deg);
 }
 
 .flower-letter {
   width: 43%;
-  right: -19%;
-  bottom: -10%;
+  right: -14%;
+  bottom: -8%;
   transform: rotate(20deg);
 }
 

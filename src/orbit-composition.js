@@ -46,6 +46,7 @@ export function createOrbitComposition(orbit) {
   const candidates = [];
   for (let i = 0; i < orbit.length / 4; i++)
     if (
+      orbit.length / 4 <= 8192 ||
       i % 4 === 0 ||
       orbitPhotoSize(orbit[i * 4 + 3]) > orbitDustSize(orbit[i * 4 + 3])
     )
@@ -76,7 +77,7 @@ export function createOrbitComposition(orbit) {
       const limit = width < 700 ? 8 : 16;
       const records = [];
       for (const index of candidates) {
-        const point = orbitAt(orbit, index, time);
+        const point = orbitAt(orbit, index, time, camera.viewAngle);
         const projected = focusProjection(point, camera, width, height);
         if (!projected || projected.size < (width < 700 ? 34 : 55)) continue;
         const existing = active.has(index);
@@ -111,7 +112,7 @@ export function createOrbitComposition(orbit) {
           continue;
         const future =
           focusProjection(
-            orbitAt(orbit, index, time + 0.12),
+            orbitAt(orbit, index, time + 0.12, camera.viewAngle),
             camera,
             width,
             height,
@@ -163,7 +164,8 @@ export function createOrbitComposition(orbit) {
           active.delete(index);
           continue;
         }
-        const point = record?.point || orbitAt(orbit, index, time);
+        const point =
+          record?.point || orbitAt(orbit, index, time, camera.viewAngle);
         const projected =
           record?.projected || focusProjection(point, camera, width, height);
         if (projected)

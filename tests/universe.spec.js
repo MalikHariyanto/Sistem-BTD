@@ -46,13 +46,13 @@ test("a dense physical annulus rotates differentially, retaining its identities 
   ]) {
     // Preserve the opening's original pull into Gargantua, then approach a
     // closer ending than the wide revision without overshooting or pulling back.
-    for (const p of [0, 0.15, 0.3, 0.35]) {
+    for (const p of [0, 0.1, 0.2]) {
       expect(cameraAt(p, width, height).zoom).toBeCloseTo(
         Math.exp(Math.log(5 / 0.052) * ease(p)),
         8,
       );
     }
-    expect(cameraAt(0.5, width, height).zoom).toBeGreaterThan(9);
+    expect(cameraAt(0.5, width, height).zoom).toBeGreaterThan(7);
     expect(cameraAt(1, width, height).zoom).toBeGreaterThan(40);
     expect(cameraAt(1, width, height).zoom).toBeLessThan(50);
     let previous = cameraAt(0, width, height);
@@ -100,17 +100,32 @@ test("the crowded middle has a moving viewing interval while opening and ending 
   }
   // The opening clock is unchanged; after the viewing interval, the same final
   // camera path and idle rotation are reached without a cut or a hard pause.
-  expect(journeyProgress(2580)).toBeCloseTo(0.3, 6);
+  expect(journeyProgress(1720)).toBeCloseTo(0.2, 6);
   expect(highlightedMs).toBeGreaterThan(4000);
   expect(highlightedMs).toBeLessThan(5000);
-  expect(journeyProgress(7000) - journeyProgress(5000)).toBeGreaterThan(0.05);
-  expect(journeyProgress(7000) - journeyProgress(5000)).toBeLessThan(0.08);
+  expect(journeyProgress(5500) - journeyProgress(3500)).toBeGreaterThan(0.02);
+  expect(journeyProgress(5500) - journeyProgress(3500)).toBeLessThan(0.04);
   expect(photoShowcaseAt(0)).toBe(0);
   expect(photoShowcaseAt(1)).toBe(0);
   expect(orbitRateAt(0)).toBe(1);
-  expect(orbitRateAt(0.5)).toBeGreaterThan(0.4);
-  expect(orbitRateAt(0.5)).toBeLessThan(0.5);
+  expect(orbitRateAt(0.3)).toBe(1);
   expect(orbitRateAt(1)).toBeCloseTo(0.025, 8);
+  for (const [width, height] of [
+    [390, 664],
+    [1440, 900],
+  ]) {
+    for (const p of [0.26, 0.3, 0.34, 0.36]) {
+      const camera = cameraAt(p, width, height);
+      expect(camera.x + camera.width * 0.5).toBeGreaterThan(0);
+      expect(camera.x + camera.width * 0.5).toBeLessThan(width);
+      expect(camera.y + camera.height * 0.43).toBeGreaterThan(0);
+      expect(camera.y + camera.height * 0.43).toBeLessThan(height);
+    }
+    expect(
+      cameraAt(0.36, width, height).viewAngle -
+        cameraAt(0.24, width, height).viewAngle,
+    ).toBeLessThan(-0.5);
+  }
 });
 
 test("uploaded photos form the live accretion disk and resolve through perspective on approach", async ({

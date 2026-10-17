@@ -71,7 +71,14 @@ export function createUniverse(canvas) {
   function visibleEstimate(camera) {
     let visible = 0;
     for (let i = 0; i < orbit.length / 4; i += 64)
-      if (projectOrbit(orbitAt(orbit, i, flowSeconds), camera, width, height))
+      if (
+        projectOrbit(
+          orbitAt(orbit, i, flowSeconds, camera.viewAngle),
+          camera,
+          width,
+          height,
+        )
+      )
         visible++;
     return visible * 64;
   }
@@ -80,7 +87,7 @@ export function createUniverse(canvas) {
     const blend = compositionAt(camera.zoom);
     const showcase = photoShowcaseAt(progress);
     for (let i = 0; i < orbit.length / 4; i++) {
-      const point = orbitAt(orbit, i, flowSeconds);
+      const point = orbitAt(orbit, i, flowSeconds, camera.viewAngle);
       const projected = projectOrbit(point, camera, width, height);
       if (projected)
         points.push({ ...point, ...projected, index: i, photoId: photoIds[i] });
@@ -88,7 +95,7 @@ export function createUniverse(canvas) {
     points.sort((a, b) => b.depth - a.depth);
     function paint(point, opacity = 1) {
       const { x, y, size, seed, angle, depth } = point;
-      const readable = ease((size - 2) / (26 - 8 * showcase));
+      const readable = ease((size - 2) / (26 - 16 * showcase));
       ctx.save();
       ctx.translate(x, y);
       const tangent = Math.atan2(
@@ -133,7 +140,7 @@ export function createUniverse(canvas) {
     }
     for (const point of points) {
       const dust = projectOrbit(
-        orbitAt(orbit, point.index, flowSeconds),
+        orbitAt(orbit, point.index, flowSeconds, camera.viewAngle),
         camera,
         width,
         height,
@@ -141,7 +148,19 @@ export function createUniverse(canvas) {
       );
       if (dust) paint({ ...point, ...dust }, 1 - 0.4 * blend);
       if (blend < 1 && orbitPhotoSize(point.seed) > orbitDustSize(point.seed))
-        paint(point, 1 - blend);
+        paint(
+          {
+            ...point,
+            ...projectOrbit(
+              orbitAt(orbit, point.index, flowSeconds, camera.viewAngle),
+              camera,
+              width,
+              height,
+              orbitPhotoSize(point.seed) * (1 + 0.25 * showcase),
+            ),
+          },
+          1 - blend,
+        );
     }
     const focused = composition.update({
       camera,
@@ -266,6 +285,7 @@ export function createUniverse(canvas) {
     canvas.dataset.visibilityCount = gpu ? "sampled-estimate" : "exact";
     canvas.dataset.photoMix = camera.photoMix.toFixed(4);
     canvas.dataset.zoom = camera.zoom.toFixed(4);
+    canvas.dataset.viewAngle = camera.viewAngle.toFixed(4);
     canvas.dataset.detailMix = detailMix.toFixed(4);
     canvas.dataset.progress = progress.toFixed(4);
     canvas.dataset.photoShowcase = photoShowcaseAt(progress).toFixed(4);

@@ -1,5 +1,6 @@
 import "./style.css";
 import "./florals.css";
+import { flowerSrc } from "./florals.js";
 import "./wish-garden.css";
 import { createWishGarden } from "./wish-garden.js";
 import { content, ORBIT_PHOTO_COUNT } from "./content.js";
@@ -22,8 +23,18 @@ const motion = matchMedia("(prefers-reduced-motion: reduce)");
 const photo = (key, label, cls = "") =>
   `<div class="photo-slot ${cls}" data-photo="${key}" role="img" aria-label="${esc(label)}"><span class="aperture" aria-hidden="true">✧</span><span class="photo-label">${esc(label)}</span></div>`;
 // Decorative flowers stay outside photo slots so uploads never replace them.
-const flowers = (placement) =>
-  `<img class="romance-flower ${placement}" src="${import.meta.env.BASE_URL}art/romantic-roses.webp" alt="" aria-hidden="true" width="512" height="768" loading="lazy" decoding="async" draggable="false">`;
+const flowerPlacements = {
+  "flower-memory-left": "bouquet",
+  "flower-memory-right": "tulip",
+  "flower-poem": "anemone",
+  "flower-letter": "rose",
+  "flower-garden": "anemone",
+  "flower-editor": "tulip",
+};
+const flowers = (placement) => {
+  const kind = flowerPlacements[placement];
+  return `<img class="romance-flower ${placement}" data-flower="${kind}" src="${flowerSrc(kind)}" alt="" aria-hidden="true" width="512" height="768" loading="lazy" decoding="async" draggable="false">`;
+};
 const arrow = '<span aria-hidden="true">→</span>';
 let active = 0,
   changing = false,

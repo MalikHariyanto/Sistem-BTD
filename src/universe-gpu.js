@@ -18,6 +18,7 @@ uniform vec4 uCamera;
 uniform vec4 uState; // simulation time, photo reveal, vignette, detail reveal
 uniform float uCover;
 uniform float uZoom;
+uniform float uViewAngle;
 uniform float uShowcase;
 
 float luminance(vec3 c){return dot(c,vec3(.2126,.7152,.0722));}
@@ -38,7 +39,7 @@ void main(){
   float radius=length(polar),theta=atan(polar.y,polar.x);
   float shadowGuard=smoothstep(1.0,1.32,length((uv-vec2(.5,.458))/vec2(.12,.22)));
   float annulus=smoothstep(.64,.86,radius)*(1.0-smoothstep(1.2,1.65,radius))*shadowGuard;
-  float angle=theta-time*.095/(radius+.65);
+  float angle=theta-time*.095/(radius+.65)-uViewAngle*.4;
   vec2 spun=center+vec2(cos(angle),sin(angle))*radius*radii;
   vec2 ringUV=mix(uv,spun,annulus*.78);
 
@@ -83,6 +84,7 @@ uniform vec2 uViewport;
 uniform vec4 uFlight; // camera x, y, distance, base image width
 uniform vec2 uCenter;
 uniform float uTime;
+uniform float uViewAngle;
 uniform float uDpr;
 uniform float uPointLimit;
 uniform float uLens;
@@ -94,7 +96,7 @@ void main(){
   vPhotoId=aPhoto.x;
   vAspect=aPhoto.y;
   float r=aOrbit.x, seed=aOrbit.w;
-  float theta=aOrbit.y+uTime*.115*pow(.28/r,1.5);
+  float theta=aOrbit.y+uTime*.115*pow(.28/r,1.5)-uViewAngle;
   float x=cos(theta)*r, z=sin(theta)*r;
   float y=.26*x+.19*z+aOrbit.z;
   float originalU=.5+x*5.0/(5.0-z);
@@ -120,7 +122,7 @@ void main(){
   float heroSize=.003+seed*.0018;
   float worldSize=dustSize;
   if(uLayer>.5){
-    worldSize=heroSize;
+    worldSize=heroSize*(1.0+.25*uShowcase);
     if(uLayer<1.5)mask*=step(.88,grain)*(1.0-uComposition);
     else {
       worldSize*=1.35;
@@ -141,7 +143,7 @@ void main(){
   gl_PointSize=mask>.001?min(uPointLimit,footprint*uDpr):1.0;
   // Tiny tilted cards merge into light filaments. The same cards become legible
   // through perspective magnification, with no new grid or new positions.
-  float readable=smoothstep(2.0,mix(28.0,20.0,uShowcase),size);
+  float readable=smoothstep(2.0,mix(28.0,12.0,uShowcase),size);
   float tangent=atan(.19*cos(theta)-.26*sin(theta),-sin(theta));
   vPhoto=vec4(seed,size,mix(tangent,(seed-.5)*.18,readable),mask);
   vHeat=(1.0-smoothstep(.14,.64,r))*.36+seed*.20;
@@ -165,7 +167,7 @@ varying float vHeat;
 varying vec2 vOffset;
 void main(){
   if(vPhoto.w<.001)discard;
-  float size=vPhoto.y, readable=smoothstep(2.0,mix(28.0,20.0,uShowcase),size);
+  float size=vPhoto.y, readable=smoothstep(2.0,mix(28.0,12.0,uShowcase),size);
   vec2 p=(gl_PointCoord-vec2(.5)+vOffset)*1.3;
   float c=cos(vPhoto.z),s=sin(vPhoto.z);
   p=mat2(c,-s,s,c)*p;
@@ -289,6 +291,7 @@ export function createUniverseGPU(canvas) {
         "uDetail",
         "uZoom",
         "uShowcase",
+        "uViewAngle",
       ],
       "aPosition",
     );
@@ -300,6 +303,7 @@ export function createUniverseGPU(canvas) {
         "uLayer",
         "uComposition",
         "uShowcase",
+        "uViewAngle",
         "uFlight",
         "uCenter",
         "uTime",
@@ -376,6 +380,7 @@ export function createUniverseGPU(canvas) {
     gl.uniform1f(u.uCover, cover);
     gl.uniform1f(u.uZoom, camera.zoom);
     gl.uniform1f(u.uShowcase, showcase);
+    gl.uniform1f(u.uViewAngle, camera.viewAngle || 0);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
     gl.disableVertexAttribArray(background.attribute);
 
@@ -405,6 +410,7 @@ export function createUniverseGPU(canvas) {
     gl.uniform1f(u.uCover, cover);
     gl.uniform1f(u.uComposition, compositionAt(camera.zoom));
     gl.uniform1f(u.uShowcase, showcase);
+    gl.uniform1f(u.uViewAngle, camera.viewAngle || 0);
     gl.uniform1f(u.uLayer, 0);
     gl.disableVertexAttribArray(particles.fadeAttribute);
     gl.vertexAttrib1f(particles.fadeAttribute, 1);

@@ -1,5 +1,5 @@
 const FLIGHT_MS = 8600;
-const PHOTO_REVEAL_MS = 2600;
+const PHOTO_REVEAL_MS = 4000;
 export const JOURNEY_MS = FLIGHT_MS + PHOTO_REVEAL_MS;
 export const DISK = { slope: 0.26, intercept: 0.35 };
 export const PARTICLE_COUNT = 32768;
@@ -21,17 +21,15 @@ export function journeyProgress(elapsedMs) {
     high = 1;
   for (let i = 0; i < 24; i++) {
     const p = (low + high) / 2;
-    const elapsed = FLIGHT_MS * p + PHOTO_REVEAL_MS * ease((p - 0.4) / 0.22);
+    const elapsed = FLIGHT_MS * p + PHOTO_REVEAL_MS * ease((p - 0.24) / 0.12);
     if (elapsed < elapsedMs) low = p;
     else high = p;
   }
   return (low + high) / 2;
 }
 export const photoShowcaseAt = (p) =>
-  ease((p - 0.37) / 0.07) * (1 - ease((p - 0.6) / 0.1));
-export const orbitRateAt = (p) =>
-  (0.025 + 0.975 * (1 - ease((p - 0.7) / 0.3))) *
-  (1 - 0.55 * photoShowcaseAt(p));
+  ease((p - 0.22) / 0.04) * (1 - ease((p - 0.34) / 0.08));
+export const orbitRateAt = (p) => 0.025 + 0.975 * (1 - ease((p - 0.7) / 0.3));
 
 // Stable particle identities: an uploaded image changes the texture, never its
 // orbit. A single packed buffer is shared by the GPU and the Canvas fallback.
@@ -50,10 +48,11 @@ export function createOrbit(count = PARTICLE_COUNT) {
   }
   return data;
 }
-export function orbitAt(data, index, time) {
+export function orbitAt(data, index, time, viewAngle = 0) {
   const offset = index * 4,
     radius = data[offset];
-  const angle = data[offset + 1] + time * 0.115 * (0.28 / radius) ** 1.5;
+  const angle =
+    data[offset + 1] + time * 0.115 * (0.28 / radius) ** 1.5 - viewAngle;
   const x = Math.cos(angle) * radius,
     depth = Math.sin(angle) * radius;
   return {
@@ -70,8 +69,15 @@ export function orbitAt(data, index, time) {
 // the z=0 plane; particles have their own perspective, parallax and near clip.
 // No interpolation of particle positions into a second layout takes place.
 export function cameraAt(progress, width, height, aspect = 1672 / 941) {
-  const p = clamp(progress),
-    travel = ease(p),
+  const clockP = clamp(progress);
+  const wideView = photoShowcaseAt(clockP);
+  // Trace an azimuthal arc while the whole shadow is still in view. A shallow
+  // dolly continues throughout the pass, then rejoins the approved close-up.
+  const p =
+    clockP -
+    0.025 * ease((clockP - 0.2) / 0.1) * (1 - ease((clockP - 0.36) / 0.22));
+  const viewAngle = -0.55 * ease((clockP - 0.24) / 0.12);
+  const travel = ease(p),
     mobile = width < 700;
   const baseWidth = mobile
     ? Math.max(width * 1.9, height * 0.82)
@@ -88,14 +94,16 @@ export function cameraAt(progress, width, height, aspect = 1672 / 941) {
   const logZoom = mix(Math.log(5 / 0.052), Math.log(5 / clearance), closeUp);
   const zoom = Math.exp(logZoom * travel);
   const distance = focusDepth * focus + 5 / zoom;
-  const cx = focusX * focus,
+  const cx = focusX * focus * (1 - 0.75 * wideView),
     cy =
       (0.26 * focusX + ORBIT.tilt * focusDepth - heightAboveDisk * closeUp) *
-      focus;
+      focus *
+      (1 - 0.65 * wideView);
   const imageWidth = (baseWidth * 5) / distance,
     imageHeight = imageWidth / aspect;
   return {
     zoom,
+    viewAngle,
     distance,
     cx,
     cy,

@@ -14,6 +14,21 @@ test("garden wishes bloom in any order and accumulate without replacing the earl
   page,
 }) => {
   await enterGarden(page);
+  await expect(page.locator(".garden-flower-art")).toHaveCount(3);
+  await expect
+    .poll(() =>
+      page
+        .locator(".garden-flower-art")
+        .evaluateAll((images) =>
+          images.every((image) => image.complete && image.naturalWidth > 0),
+        ),
+    )
+    .toBe(true);
+  expect(
+    await page
+      .locator("[data-bloom]")
+      .evaluateAll((buttons) => buttons.map((button) => button.dataset.flower)),
+  ).toEqual(["rose", "tulip", "anemone"]);
   await expect(page.locator(".garden-note:not([hidden])")).toHaveCount(0);
   await expect(
     page.locator("#next-quote, #prev-quote, #quote-position"),
@@ -87,7 +102,7 @@ test("garden works with keyboard and reduced motion, with sourced quotes and no 
   }
   expect(
     await page
-      .locator(".garden-petals > span")
+      .locator(".garden-flower-art")
       .first()
       .evaluate((e) => getComputedStyle(e).transitionDuration),
   ).toBe("0s");

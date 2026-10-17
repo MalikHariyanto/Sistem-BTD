@@ -59,7 +59,14 @@ test("camera move contains no greeting or countdown; dense photos settle before 
   const middleStart = Number(
     await page.locator("#universe").getAttribute("data-progress"),
   );
+  const angleStart = Number(
+    await page.locator("#universe").getAttribute("data-view-angle"),
+  );
   await page.waitForTimeout(1000);
+  const angleEnd = Number(
+    await page.locator("#universe").getAttribute("data-view-angle"),
+  );
+  expect(angleEnd).toBeLessThan(angleStart);
   const middleEnd = Number(
     await page.locator("#universe").getAttribute("data-progress"),
   );
