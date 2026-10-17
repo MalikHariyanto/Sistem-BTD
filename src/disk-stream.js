@@ -4,15 +4,16 @@ import { ORBIT_SPEED, ease } from "./universe-camera.js";
 // Their velocity matches a photo at the reference radius (dx/dt = -r * omega).
 export const DISK_STREAM = {
   speed: 0.28 * ORBIT_SPEED,
-  period: 0.5,
-  origin: 0.25,
-  feather: 0.10,
-  minD: -0.05,
-  maxD: 0.22,
+  period: 0.92,
+  origin: 0.04,
+  feather: 0.04,
+  minD: -0.13,
+  maxD: 0.17,
 };
 
-// Cache a seamless, rectified strip for the Canvas fallback. Only its offset
-// changes per frame; neither the material nor its HD detail oscillates back.
+// Advect the ORIGINAL disk, including its bright rim and dark material. At
+// time zero its coordinates match the reference across the entire central
+// view. Only the far image edges join; no central crop replaces the original.
 export function createDiskStream(plate) {
   const { period, origin, feather, minD, maxD, speed } = DISK_STREAM;
   const makeCanvas = (width, height) => {
@@ -42,18 +43,26 @@ export function createDiskStream(plate) {
   }
   const wide = material(plate);
   let detail;
-  const mask = makeCanvas(836, 470), frame = makeCanvas(836, 470);
+  const mask = makeCanvas(836, 470), frame = makeCanvas(836, 470), coreMatte = makeCanvas(836, 470);
   const m = mask.getContext("2d", { willReadFrequently: true });
   m.drawImage(plate, 0, 0, mask.width, mask.height);
   const pixels = m.getImageData(0, 0, mask.width, mask.height);
+  const corePixels = new ImageData(new Uint8ClampedArray(pixels.data), mask.width, mask.height);
   for (let y = 0; y < mask.height; y++) for (let x = 0; x < mask.width; x++) {
     const i = (y * mask.width + x) * 4;
     const d = y / mask.height - 0.35 - 0.26 * x / mask.width;
     const light = (pixels.data[i] * 0.2126 + pixels.data[i + 1] * 0.7152 + pixels.data[i + 2] * 0.0722) / 255;
-    pixels.data[i + 3] = 255 * 0.90 * ease((d + 0.010) / 0.022) *
-      (1 - ease((d - 0.12) / 0.10)) * ease((light - 0.035) / 0.115);
+    const u = x / mask.width, v = y / mask.height;
+    const core = 1 - ease((Math.hypot((u - 0.5) / 0.11, (v - 0.445) / 0.21) - 1.1) / 0.2);
+    const shadow = core * (1 - ease((light - 0.125) / 0.125)) * (1 - ease((d + 0.045) / 0.027));
+    corePixels.data[i + 3] = 255 * shadow;
+    // Opaque material coverage, not a luminance-gated overlay. Dark grains
+    // move too; the sole stationary exception is the actual core behind it.
+    pixels.data[i + 3] = 255 * ease((d + 0.13) / 0.03) *
+      (1 - ease((d - 0.105) / 0.05)) * (1 - shadow);
   }
   m.putImageData(pixels, 0, 0);
+  coreMatte.getContext("2d").putImageData(corePixels, 0, 0);
   const c = frame.getContext("2d");
   return {
     setDetail(image) { detail = material(image, true); },
@@ -74,6 +83,16 @@ export function createDiskStream(plate) {
       c.globalCompositeOperation = "source-over";
       target.save();
       target.globalAlpha = radiance;
+      target.drawImage(frame, camera.x, camera.y, camera.width, camera.height);
+      // Shade the core in this same small scratch surface. Applying a filter
+      // to its vastly enlarged close-up would needlessly expand filter work.
+      c.clearRect(0, 0, frame.width, frame.height);
+      c.drawImage(coreMatte, 0, 0);
+      c.globalCompositeOperation = "source-atop";
+      c.fillStyle = `rgba(0,0,0,${1 - radiance})`;
+      c.fillRect(0, 0, frame.width, frame.height);
+      c.globalCompositeOperation = "source-over";
+      target.globalAlpha = 1;
       target.drawImage(frame, camera.x, camera.y, camera.width, camera.height);
       target.restore();
     },

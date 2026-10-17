@@ -85,20 +85,24 @@ void main(){
   float lowerAnnulus=smoothstep(.58,.82,radius)*(1.0-smoothstep(1.35,1.75,radius));
   float lowerMask=lowerAnnulus*smoothstep(.025,.10,diskD)*smoothstep(.018,.20,luminance(original));
   plasma=mix(plasma,lowerFlow,lowerMask*.82);
-  // The central ribbon is the inclined foreground disk, not the curved halo.
-  // Scroll its material in disk coordinates so wide + HD filaments travel
-  // left/up with the front-side photographs. Feather only the tile seam;
-  // there are no two crossfading copies of the entire stream or a static HD cap.
+  // Transport the original foreground disk, with its rim and dark grains.
+  // Coordinates are identical to the reference at t=0 throughout the central
+  // view. Wrap only at the far image edges, not across a replacement crop.
   float material=mod(uv.x-${DISK_STREAM.origin.toFixed(8)}+time*${DISK_STREAM.speed.toFixed(8)},${DISK_STREAM.period.toFixed(8)});
   float sourceU=${DISK_STREAM.origin.toFixed(8)}+material;
   vec2 middleA=vec2(sourceU,.35+.26*sourceU+diskD);
   vec2 middleB=middleA-vec2(${DISK_STREAM.period.toFixed(8)},${(DISK_STREAM.period * 0.26).toFixed(8)});
   float seam=smoothstep(${(DISK_STREAM.period - DISK_STREAM.feather).toFixed(8)},${DISK_STREAM.period.toFixed(8)},material);
   vec3 middleFlow=mix(radianceAt(middleA),radianceAt(middleB),seam);
-  // The top silhouette remains the geometric rim. Keep transported material
-  // inside it, so a bright source halo cannot cut a square into the black core.
-  float middleMask=smoothstep(-.010,.012,diskD)*(1.0-smoothstep(.12,.22,diskD))*smoothstep(.035,.15,luminance(original));
-  plasma=mix(plasma,middleFlow,middleMask*.90);
+  float core=1.0-smoothstep(1.1,1.3,length((uv-vec2(.5,.445))/vec2(.11,.21)));
+  float shadow=core*(1.0-smoothstep(.125,.25,luminance(original)))*(1.0-smoothstep(-.045,-.018,diskD));
+  float middleMask=smoothstep(-.13,-.10,diskD)*(1.0-smoothstep(.105,.155,diskD))*(1.0-shadow);
+  // Full replacement at the same original coordinates: no stationary copy
+  // remains underneath the moving rim, body or HD material.
+  plasma=mix(plasma,middleFlow,middleMask);
+  // HD radiance cannot leak into the opaque core through its original haze.
+  // Protect that shadow after every light pass, not just the transport mask.
+  plasma=mix(plasma,original,shadow);
   float orbitLight=1.0+.06*sin((theta-time*angularRate)*13.0+radius*23.0)*annulus;
   plasma*=orbitLight;
 
