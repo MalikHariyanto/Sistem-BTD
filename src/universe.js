@@ -66,6 +66,7 @@ export function createUniverse(canvas) {
   let detailPlate,
     detailArrived = 0;
   let plate,
+    lightField,
     images = [],
     generation = 0,
     signature;
@@ -101,28 +102,34 @@ export function createUniverse(canvas) {
       const point = orbitAt(orbit, i, flowSeconds);
       const projected = projectOrbit(point, camera, width, height);
       if (projected)
-        points.push({ ...point, ...projected, index: i, photoId: photoIds[i] });
+        points.push({ ...point, ...projected, source: point, index: i, photoId: photoIds[i] });
     }
     points.sort((a, b) => b.depth - a.depth);
     function paint(point, opacity = 1, maskRear = true, photographic = false, isPhoto = true) {
       const { x, y, seed, depth } = point;
-      const atmosphere = isPhoto ? photoDepthAt(point, camera) : { opacity: 1, brightness: 1, detail: 1, scale: 1 };
+      const sourcePoint = point.source || point;
+      const atmosphere = isPhoto ? photoDepthAt(sourcePoint, camera) : { opacity: 1, brightness: 1, detail: 1, scale: 1 };
       const size = point.size * atmosphere.scale;
       const readable = (photographic
         ? ease((size - 1.5) / 3.5)
         : ease((size - 2) / (26 - 16 * showcase))) * atmosphere.detail;
+      const coupled = lightField ? 1 - ease((Math.abs(camera.cx) / camera.distance - 0.07) / 0.18) : 0;
+      const u = clamp((x - camera.x) / camera.width), v = clamp((y - camera.y) / camera.height);
+      const light = lightField?.[Math.min(71, Math.floor(v * 72)) * 128 + Math.min(127, Math.floor(u * 128))] || 0;
+      const localLight = 1 - coupled + coupled * (0.24 + 0.76 * ease((light - 0.025) / 0.525));
       ctx.save();
       if (maskRear && depth >= rearDepth) ctx.clip(shadowMask, "evenodd");
       ctx.translate(x, y);
-      const tangent = orbitTangent(point, camera);
+      const tangent = orbitTangent(sourcePoint, camera);
       ctx.rotate(tangent * (1 - readable) + (seed - 0.5) * 0.18 * readable);
       ctx.globalAlpha =
         opacity *
         atmosphere.opacity *
+        localLight *
         point.opacity *
         (0.38 + readable * 0.6) *
         ease((depth - 0.028) / 0.047);
-      const integration = field * (photographic ? 1 : 0.4);
+      const integration = Math.max(field * (photographic ? 1 : 0.4), coupled * 0.65);
       if (photographic) ctx.globalAlpha *= 0.78;
       const source = images[point.photoId];
       const image = photographic ? softenedThumbnails.get(source) || source : source;
@@ -182,7 +189,7 @@ export function createUniverse(canvas) {
       if (dust) paint({ ...point, ...dust }, 1 - 0.4 * blend, false, false, false);
       const fieldSize = field > 0 ? orbitFieldSize(point.seed, width) : 0;
       if (fieldSize) {
-        const photo = projectOrbit(point, camera, width, height, fieldSize);
+        const photo = projectOrbit(point.source, camera, width, height, fieldSize);
         if (photo)
           paint(
             { ...point, ...photo, size: Math.min(24, photo.size) },
@@ -207,7 +214,7 @@ export function createUniverse(canvas) {
     });
     for (const { index, point, projected, alpha } of focused)
       paint(
-        { ...point, ...projected, photoId: photoIds[index] },
+        { ...point, ...projected, source: point, photoId: photoIds[index] },
         alpha * blend,
       );
     canvas.dataset.focusPhotos = String(
@@ -273,7 +280,7 @@ export function createUniverse(canvas) {
       ctx.arc(0, 0, 1.3, 0, Math.PI * 2);
       ctx.arc(0, 0, 0.72, 0, Math.PI * 2, true);
       ctx.clip("evenodd");
-      ctx.rotate(flowSeconds * 0.065);
+      ctx.rotate(flowSeconds * 0.115);
       ctx.drawImage(plate, -0.5 / 0.17, -0.445 / 0.3, 1 / 0.17, 1 / 0.3);
       ctx.restore();
     }
@@ -375,6 +382,16 @@ export function createUniverse(canvas) {
       clearTimeout(timeout);
       plate = ok ? image : fallbackPlate();
       gpu?.setPlate(plate);
+      if (!gpu) {
+        // Read a tiny irradiance map once, never the full image every frame.
+        const sample = document.createElement("canvas");
+        sample.width = 128; sample.height = 72;
+        const context = sample.getContext("2d", { willReadFrequently: true });
+        context.drawImage(plate, 0, 0, 128, 72);
+        const pixels = context.getImageData(0, 0, 128, 72).data;
+        lightField = Float32Array.from({ length: 128 * 72 }, (_, i) =>
+          (pixels[i * 4] * 0.2126 + pixels[i * 4 + 1] * 0.7152 + pixels[i * 4 + 2] * 0.0722) / 255);
+      }
       canvas.dataset.plate = ok ? "ready" : "fallback";
       canvas.dataset.plateWidth = String(plate.width);
       draw();

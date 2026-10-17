@@ -1,3 +1,5 @@
+import { lensedOrbit } from "./accretion-lens.js";
+
 const FLIGHT_MS = 8600;
 const PHOTO_REVEAL_MS = 3600;
 export const JOURNEY_MS = FLIGHT_MS + PHOTO_REVEAL_MS;
@@ -38,7 +40,7 @@ export const photoShowcaseAt = (p) =>
 export const photoFieldAt = (p) =>
   ease((p - 0.14) / 0.12) * (1 - ease((p - 0.4) / 0.18));
 export const orbitFieldSize = (seed, width) =>
-  (seed * 97.13) % 1 > 0.82
+  (seed * 97.13) % 1 > 0.76
     ? (0.0032 + seed * 0.0016) * (width < 700 ? 1.3 : 1)
     : 0;
 export const orbitRateAt = (p) =>
@@ -167,6 +169,7 @@ export function projectOrbit(
   height,
   worldSize = orbitPhotoSize(point.seed),
 ) {
+  point = lensedOrbit(point, camera);
   if (point.opacity < 0.005 || occludedByHole(point, camera)) return null;
   return projectWorld(point, camera, width, height, worldSize);
 }
@@ -204,6 +207,18 @@ export function occludedByHole(point, camera) {
 }
 
 export function orbitTangent(point, camera) {
+  if (point.depth < 0 && Math.abs(camera.cx) / camera.distance < 0.25) {
+    const dt = 0.001, r = point.radius, a = point.angle;
+    const nextR = Math.sqrt(r * r - INFLOW * dt);
+    const nextA = a + 0.115 * (0.28 / r) ** 1.5 * dt;
+    const x = Math.cos(nextA) * nextR, depth = Math.sin(nextA) * nextR;
+    const next = lensedOrbit({ ...point, x, depth, radius: nextR, angle: nextA,
+      y: 0.26 * x + ORBIT.tilt * depth + point.y - 0.26 * point.x - ORBIT.tilt * point.depth }, camera);
+    const current = lensedOrbit(point, camera);
+    const d = camera.distance - point.depth, nd = camera.distance - next.depth;
+    return Math.atan2(((next.y - camera.cy) / nd - (current.y - camera.cy) / d) / ASPECT,
+      (next.x - camera.cx) / nd - (current.x - camera.cx) / d);
+  }
   const r = point.radius,
     a = point.angle,
     dr = -INFLOW / (2 * r);
@@ -247,6 +262,7 @@ export function horizonOutline(camera, segments = 64) {
 // Photographs resolve differently across the disk's depth. Inner material
 // shrinks, aligns with the flow and darkens before reaching the hard horizon.
 export function photoDepthAt(point, camera) {
+  point = lensedOrbit(point, camera);
   const depth = camera.distance - point.depth;
   const far = ease((depth / camera.distance - 0.98) / 0.36);
   const infall = ease((point.radius - 0.108) / 0.082);

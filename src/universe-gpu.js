@@ -9,6 +9,7 @@ import {
 } from "./universe-camera.js";
 import { createOrbitComposition, compositionAt } from "./orbit-composition.js";
 import { assignOrbitPhotos, planPhotoAtlas } from "./photo-textures.js";
+import { lensGLSL } from "./accretion-lens.js";
 
 // A photographic halo plus 32,768 persistent orbiting photo sprites. No engine dependency.
 const vertex = `
@@ -46,23 +47,31 @@ void main(){
   float radius=length(polar),theta=atan(polar.y,polar.x);
   float shadowGuard=smoothstep(1.0,1.32,length((uv-vec2(.5,.458))/vec2(.12,.22)));
   float annulus=smoothstep(.64,.86,radius)*(1.0-smoothstep(1.2,1.65,radius))*shadowGuard;
-  float angle=theta-time*.095/(radius+.65);
+  // The upper arc is the optically bent rear disk. The inverse texture flow
+  // uses the same positive angular velocity as the photograph orbits.
+  float sourceRadius=clamp((radius*.17-.112)/.13,.14,.64);
+  float angularRate=.115*pow(.28/sourceRadius,1.5);
+  float angle=theta-time*angularRate;
   vec2 spun=center+vec2(cos(angle),sin(angle))*radius*radii;
-  vec2 ringUV=mix(uv,spun,annulus*.78);
+  vec2 ringUV=mix(uv,spun,annulus*.18);
 
-  // The near side of a rotating, inclined disk moves sideways across the view.
-  // The physical photo particles rotate separately with radius-dependent speed.
-  float drift=.017*sin(time*.82+diskD*47.0)+.007*sin(time*1.31+uv.x*17.0-diskD*71.0);
+  // Positive orbital rotation moves the near-side stream to the left, just
+  // like the resolved photos. Fine turbulence rides on that common flow.
+  float phase=fract(time*.115),otherPhase=fract(phase+.5);
+  float flowBlend=1.0-abs(phase*2.0-1.0);
+  float turbulence=.003*sin(time*.82+diskD*47.0);
   float diskMask=(1.0-smoothstep(.035,.13,abs(diskD)))*mix(shadowGuard,1.0,smoothstep(-.04,.012,diskD));
-  vec2 diskUV=uv+vec2(drift,.26*drift);
-  vec2 mapped=mix(ringUV,diskUV,diskMask);
+  vec2 flow=vec2(.14,.26*.14);
+  vec3 diskFlow=mix(wide(uv+flow*otherPhase).rgb,wide(uv+flow*phase).rgb,flowBlend);
+  vec2 mapped=ringUV+diskMask*vec2(turbulence,.26*turbulence);
   vec3 original=wide(uv).rgb;
-  vec3 plasma=mix(original,wide(mapped).rgb,.65*smoothstep(.04,.3,luminance(original)));
+  vec3 moving=mix(wide(mapped).rgb,diskFlow,diskMask);
+  vec3 plasma=mix(original,moving,.35*smoothstep(.04,.3,luminance(original)));
   vec2 detailUV=(mapped-vec2(.513,.360))*3.0;
   vec4 detail=texture2D(uDetail,detailUV);
   float detailInside=step(0.0,detailUV.x)*step(detailUV.x,1.0)*step(0.0,detailUV.y)*step(detailUV.y,1.0);
   plasma=mix(plasma,detail.rgb,detail.a*detailInside*uState.w*smoothstep(.025,.10,luminance(original)));
-  float orbitLight=1.0+.09*sin(theta*13.0-time*1.7+radius*23.0)*annulus;
+  float orbitLight=1.0+.06*sin((theta-time*angularRate)*13.0+radius*23.0)*annulus;
   plasma*=orbitLight;
 
   // The unresolved plasma radiance falls away as individual cards become
@@ -103,6 +112,7 @@ float softstep(float a,float b,float x){
   float t=clamp((x-a)/(b-a),0.0,1.0);
   return t*t*t*(t*(t*6.0-15.0)+10.0);
 }
+${lensGLSL}
 void main(){
   vPhotoId=aPhoto.x;
   vAspect=aPhoto.y;
@@ -115,6 +125,8 @@ void main(){
     (sqrt(aOrbit.x)-sqrt(r)-cycles*(sqrt(.64)-sqrt(${PLUNGE_RADIUS.toFixed(8)})));
   float x=cos(theta)*r,z=sin(theta)*r;
   float y=.26*x+.19*z+aOrbit.z;
+  vec3 apparent=lensedOrbit(vec3(x,y,z),r,theta,uFlight.xyz);
+  x=apparent.x;y=apparent.y;
   float fadeIn=clamp((r-.098)/.036,0.0,1.0);
   fadeIn=fadeIn*fadeIn*fadeIn*(fadeIn*(fadeIn*6.0-15.0)+10.0);
   float fadeOut=clamp((r-.61)/.03,0.0,1.0);
@@ -136,7 +148,7 @@ void main(){
     if(uLayer<1.5)mask*=step(.90,grain)*(1.0-uComposition);
     else if(uLayer>2.5){
       worldSize=(.0032+seed*.0016)*(uViewport.x<700.0?1.3:1.0);
-      mask*=step(.82,grain)*uPhotoField;
+      mask*=step(.76,grain)*uPhotoField;
     }
     else {
       worldSize*=1.35;
@@ -162,17 +174,23 @@ void main(){
   // through perspective magnification, with no new grid or new positions.
   float readable=uLayer>2.5?smoothstep(1.5,5.0,size):smoothstep(2.0,mix(28.0,12.0,uShowcase),size);
   if(uLayer>.5)readable*=(1.0-.3*far)*infall;
-  float dr=-${INFLOW.toFixed(8)}/(2.0*r),omega=.115*pow(.28/r,1.5);
-  float vx=cos(theta)*dr-sin(theta)*r*omega;
-  float vz=sin(theta)*dr+cos(theta)*r*omega;
-  float tangent=atan(((.26*vx+.19*vz)*distance+(y-uFlight.y)*vz)/${ASPECT.toFixed(8)},
-    vx*distance+(x-uFlight.x)*vz);
+  float omega=.115*pow(.28/r,1.5);
+  // Follow the derivative of the bent optical path, not a screen-space spin.
+  float nr=sqrt(r*r-${INFLOW.toFixed(8)}*.001),nt=theta+omega*.001;
+  vec3 ns=vec3(cos(nt)*nr,0.0,sin(nt)*nr);
+  ns.y=.26*ns.x+.19*ns.z+aOrbit.z;
+  vec3 next=lensedOrbit(ns,nr,nt,uFlight.xyz);
+  vec2 velocity=(next.xy-uFlight.xy)/(uFlight.z-next.z)-(apparent.xy-uFlight.xy)/distance;
+  float tangent=atan(velocity.y/${ASPECT.toFixed(8)},velocity.x);
   vPhoto=vec4(seed,size,mix(tangent,(seed-.5)*.18,readable),mask);
   vHeat=(1.0-smoothstep(.14,.64,r))*.36+seed*.20;
 }
 `;
 const orbitFragment = `
 precision highp float;
+uniform sampler2D uWide;
+uniform vec4 uCamera;
+uniform float uPlateReady;
 uniform vec4 uFlight;
 uniform vec2 uCenter;
 varying float vPhotoId;
@@ -246,6 +264,15 @@ void main(){
   opacity*=mix(1.0-smoothstep(.20,.5,edge),1.0,readable);
   if(uLayer<.5)opacity*=mix(1.0,.60,uComposition);
   if(uLayer>2.5)opacity*=.78;
+  // Photographs inherit the very same local light as the unresolved disk.
+  // In shadow they recede into its dust; on the luminous arc they pick up its
+  // amber glow. Fade this optical coupling as the camera reaches the portraits.
+  vec2 uv=(pixel-uCamera.xy)/uCamera.zw;
+  vec3 diskLight=texture2D(uWide,clamp(uv,0.0,1.0)).rgb;
+  float light=dot(diskLight,vec3(.2126,.7152,.0722));
+  float coupled=uPlateReady*(1.0-softstep(.07,.25,abs(uFlight.x)/uFlight.z));
+  opacity*=mix(1.0,.24+.76*smoothstep(.025,.55,light),coupled);
+  color=mix(color,mix(color*.72,vec3(1.0,.78,.49),.22+.18*light),coupled*.65);
   if(opacity<.025)discard;
   vec2 screen=gl_FragCoord.xy/(uViewport*uDpr);
   float shade=uShade*(.65+.25*length(screen-.5));
@@ -368,6 +395,9 @@ export function createUniverseGPU(canvas) {
         "uDpr",
         "uPointLimit",
         "uPhotos",
+        "uWide",
+        "uCamera",
+        "uPlateReady",
         "uAtlas",
         "uShade",
         "uCover",
@@ -447,6 +477,9 @@ export function createUniverseGPU(canvas) {
     gl.enableVertexAttribArray(particles.photoAttribute);
     gl.vertexAttribPointer(particles.photoAttribute, 2, gl.FLOAT, false, 0, 0);
     u = particles.uniforms;
+    gl.uniform1i(u.uWide, 0);
+    gl.uniform1f(u.uPlateReady, sources.wide ? 1 : 0);
+    gl.uniform4f(u.uCamera, camera.x, camera.y, camera.width, camera.height);
     gl.uniform2f(u.uViewport, width, height);
     gl.uniform4f(
       u.uFlight,
@@ -472,8 +505,8 @@ export function createUniverseGPU(canvas) {
     gl.vertexAttrib1f(particles.fadeAttribute, 1);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-    // Only physical photo orbits are drawn. The reference supplies the optical
-    // halo; duplicate photo arcs must not orbit in a separate screen layout.
+    // One source population, including its bent rear image. Never overlay a
+    // second ring or leave an unbent copy of the same rear photograph behind.
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL);
     gl.drawArrays(gl.POINTS, 0, PARTICLE_COUNT);

@@ -126,6 +126,7 @@ test("GPU clips a rear photo's corners at the horizon while retaining real foreg
     const { cameraAt, HORIZON, ASPECT, occludedByHole } = await import(
       "/src/universe-camera.js"
     );
+    const { lensedOrbit } = await import("/src/accretion-lens.js");
     const canvas = document.createElement("canvas"),
       width = 1200,
       height = 800;
@@ -201,9 +202,22 @@ test("GPU clips a rear photo's corners at the horizon while retaining real foreg
       [limb + 40, -0.2],
       [limb + 90, -0.2],
     ]) {
-      const p = world(x, centerY, z),
-        radius = Math.hypot(p.x, z),
-        angle = Math.atan2(z, p.x);
+      const target = world(x, centerY, z);
+      // Invert the optical mapping so this probe still straddles the actual
+      // horizon. Rear sources now appear on a bent path instead of a flat disk.
+      let low = -2, high = 2;
+      const source = (sx, sy) => ({ x: sx, y: sy, depth: z,
+        radius: Math.hypot(sx, z), angle: Math.atan2(z, sx) });
+      for (let n = 0; n < 60; n++) {
+        const mid = (low + high) / 2;
+        if (lensedOrbit(source(mid, 0), camera).x < target.x) low = mid;
+        else high = mid;
+      }
+      const sx = (low + high) / 2;
+      const zero = lensedOrbit(source(sx, 0), camera).y;
+      const unit = lensedOrbit(source(sx, 1), camera).y;
+      const p = source(sx, (target.y - zero) / (unit - zero));
+      const radius = p.radius, angle = p.angle;
       gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
       gl.bufferData(
         gl.ARRAY_BUFFER,
