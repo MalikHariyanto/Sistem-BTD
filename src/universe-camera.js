@@ -1,9 +1,13 @@
 const FLIGHT_MS = 8600;
-const PHOTO_REVEAL_MS = 2600;
+const PHOTO_REVEAL_MS = 3600;
 export const JOURNEY_MS = FLIGHT_MS + PHOTO_REVEAL_MS;
 export const DISK = { slope: 0.26, intercept: 0.35 };
 export const PARTICLE_COUNT = 32768;
 export const ORBIT = { inner: 0.14, outer: 0.64, tilt: 0.19, centerY: 0.475 };
+export const ASPECT = 1672 / 941;
+export const HORIZON = { x: 0, y: -0.045 / ASPECT, z: 0, radius: 0.095 };
+export const INFLOW = 0.0018;
+export const PLUNGE_RADIUS = 0.075;
 export const clamp = (n) => Math.max(0, Math.min(1, n));
 export const ease = (n) => {
   const x = clamp(n);
@@ -21,17 +25,17 @@ export function journeyProgress(elapsedMs) {
     high = 1;
   for (let i = 0; i < 24; i++) {
     const p = (low + high) / 2;
-    const elapsed = FLIGHT_MS * p + PHOTO_REVEAL_MS * ease((p - 0.4) / 0.22);
+    const elapsed = FLIGHT_MS * p + PHOTO_REVEAL_MS * ease((p - 0.24) / 0.12);
     if (elapsed < elapsedMs) low = p;
     else high = p;
   }
   return (low + high) / 2;
 }
 export const photoShowcaseAt = (p) =>
-  ease((p - 0.37) / 0.07) * (1 - ease((p - 0.6) / 0.1));
+  ease((p - 0.22) / 0.04) * (1 - ease((p - 0.34) / 0.08));
 export const orbitRateAt = (p) =>
   (0.025 + 0.975 * (1 - ease((p - 0.7) / 0.3))) *
-  (1 - 0.55 * photoShowcaseAt(p));
+  (1 - 0.15 * photoShowcaseAt(p));
 
 // Stable particle identities: an uploaded image changes the texture, never its
 // orbit. A single packed buffer is shared by the GPU and the Canvas fallback.
@@ -52,8 +56,19 @@ export function createOrbit(count = PARTICLE_COUNT) {
 }
 export function orbitAt(data, index, time) {
   const offset = index * 4,
-    radius = data[offset];
-  const angle = data[offset + 1] + time * 0.115 * (0.28 / radius) ** 1.5;
+    initial = data[offset];
+  // r² drains steadily. Integrate the changing angular speed rather than
+  // snapping photos onto a smaller ring or multiplying their angle each frame.
+  const span = ORBIT.outer ** 2 - PLUNGE_RADIUS ** 2;
+  const radial = initial ** 2 - PLUNGE_RADIUS ** 2 - INFLOW * time;
+  const cycles = Math.floor(radial / span);
+  const radius = Math.sqrt(PLUNGE_RADIUS ** 2 + radial - cycles * span);
+  const angle =
+    data[offset + 1] +
+    ((4 * 0.115 * 0.28 ** 1.5) / INFLOW) *
+      (Math.sqrt(initial) -
+        Math.sqrt(radius) -
+        cycles * (Math.sqrt(ORBIT.outer) - Math.sqrt(PLUNGE_RADIUS)));
   const x = Math.cos(angle) * radius,
     depth = Math.sin(angle) * radius;
   return {
@@ -62,6 +77,8 @@ export function orbitAt(data, index, time) {
     y: 0.26 * x + ORBIT.tilt * depth + data[offset + 2],
     radius,
     angle,
+    opacity:
+      ease((radius - 0.098) / 0.036) * (1 - ease((radius - 0.61) / 0.03)),
     seed: data[offset + 3],
   };
 }
@@ -112,13 +129,14 @@ export function cameraAt(progress, width, height, aspect = 1672 / 941) {
     // resolve from their apparent pixel size, not a progress-driven crossfade.
     photoMix: ease((zoom - 3) / 12),
     shade: 0.035 + 0.2 * ease((p - 0.86) / 0.14),
+    showcase: photoShowcaseAt(p),
   };
 }
 
 // Most of the disk is fine photographic dust; a sparse population of larger
 // cards can be read without covering all the distant orbits. Stable at all zooms.
 export function orbitPhotoSize(seed) {
-  return (seed * 97.13) % 1 > 0.88
+  return (seed * 97.13) % 1 > 0.9
     ? 0.003 + seed * 0.0018
     : 0.00018 + seed * 0.00038;
 }
@@ -132,6 +150,11 @@ export function projectOrbit(
   height,
   worldSize = orbitPhotoSize(point.seed),
 ) {
+  if (point.opacity < 0.005 || occludedByHole(point, camera)) return null;
+  return projectWorld(point, camera, width, height, worldSize);
+}
+
+export function projectWorld(point, camera, width, height, worldSize = 0) {
   const depth = camera.distance - point.depth;
   if (depth <= 0.028) return null;
   const scale = (camera.baseWidth * 5) / depth;
@@ -140,12 +163,66 @@ export function projectOrbit(
   const y = camera.centerY + ((point.y - camera.cy) * scale) / (1672 / 941);
   if (x < -size || x > width + size || y < -size || y > height + size)
     return null;
-  const u = 0.5 + (point.x * 5) / (5 - point.depth);
-  const v = ORBIT.centerY + (point.y * 5) / (5 - point.depth);
-  if (
-    point.depth < 0 &&
-    ((u - 0.5) / 0.112) ** 2 + ((v - 0.43) / 0.205) ** 2 < 1.05
-  )
-    return null;
   return { x, y, size, depth };
+}
+
+// Ray/sphere depth, evaluated in the same world coordinates as the photo disk.
+// Photos in front can cross the silhouette; photos behind are hidden by it.
+export function occludedByHole(point, camera) {
+  const eye = [camera.cx, camera.cy / ASPECT, camera.distance];
+  const ray = [
+    point.x - eye[0],
+    point.y / ASPECT - eye[1],
+    point.depth - eye[2],
+  ];
+  const distance = Math.hypot(...ray),
+    dir = ray.map((v) => v / distance);
+  const origin = [eye[0] - HORIZON.x, eye[1] - HORIZON.y, eye[2] - HORIZON.z];
+  const dot = (a, b) => a.reduce((s, v, i) => s + v * b[i], 0);
+  const b = dot(origin, dir),
+    d = b * b - dot(origin, origin) + HORIZON.radius ** 2;
+  if (d <= 0) return false;
+  const hit = -b - Math.sqrt(d);
+  return hit > 0 && hit < distance;
+}
+
+export function orbitTangent(point, camera) {
+  const r = point.radius,
+    a = point.angle,
+    dr = -INFLOW / (2 * r);
+  const omega = 0.115 * (0.28 / r) ** 1.5;
+  const vx = Math.cos(a) * dr - Math.sin(a) * r * omega;
+  const vz = Math.sin(a) * dr + Math.cos(a) * r * omega;
+  const depth = camera.distance - point.depth;
+  return Math.atan2(
+    (0.26 * vx + ORBIT.tilt * vz) * depth + (point.y - camera.cy) * vz,
+    ASPECT * (vx * depth + (point.x - camera.cx) * vz),
+  );
+}
+
+// Exact tangent cone of the sphere, projected to a reusable Canvas clip path.
+export function horizonOutline(camera, segments = 64) {
+  const eye = [camera.cx, camera.cy / ASPECT, camera.distance];
+  const offset = [eye[0] - HORIZON.x, eye[1] - HORIZON.y, eye[2] - HORIZON.z];
+  const length = Math.hypot(...offset),
+    n = offset.map((v) => v / length);
+  const u = [n[2], 0, -n[0]],
+    ul = Math.hypot(...u);
+  for (let i = 0; i < 3; i++) u[i] /= ul;
+  const v = [n[1] * u[2], n[2] * u[0] - n[0] * u[2], -n[1] * u[0]];
+  const radius = HORIZON.radius * Math.sqrt(1 - (HORIZON.radius / length) ** 2);
+  return Array.from({ length: segments }, (_, i) => {
+    const a = (i * Math.PI * 2) / segments;
+    const p = [HORIZON.x, HORIZON.y, HORIZON.z].map(
+      (c, j) =>
+        c +
+        (n[j] * HORIZON.radius ** 2) / length +
+        radius * (u[j] * Math.cos(a) + v[j] * Math.sin(a)),
+    );
+    const scale = (camera.baseWidth * 5) / (eye[2] - p[2]);
+    return [
+      camera.centerX + (p[0] - eye[0]) * scale,
+      camera.centerY + (p[1] - eye[1]) * scale,
+    ];
+  });
 }

@@ -4,6 +4,7 @@ import {
   orbitDustSize,
   orbitPhotoSize,
   projectOrbit,
+  mix,
 } from "./universe-camera.js";
 
 // Only the camera-facing arc carries readable portraits in the close-up. The
@@ -15,14 +16,14 @@ export function frontArc(point, camera) {
     point.radius;
   return ease((facing - 0.012) / 0.045);
 }
-export const compositionAt = (zoom) => ease((zoom - 18) / 20);
+export const compositionAt = (zoom) => ease((zoom - 1.15) / 0.5);
 export function focusProjection(point, camera, width, height) {
   return projectOrbit(
     point,
     camera,
     width,
     height,
-    (0.003 + point.seed * 0.0018) * 1.35,
+    (0.003 + point.seed * 0.0018) * 1.35 * (1 + 0.8 * (camera.showcase || 0)),
   );
 }
 
@@ -63,7 +64,7 @@ export function createOrbitComposition(orbit) {
       now,
       reduced = false,
     }) {
-      if (camera.zoom < 8) {
+      if (camera.zoom < 1.4) {
         active.clear();
         previous = now;
         return [];
@@ -78,8 +79,14 @@ export function createOrbitComposition(orbit) {
       for (const index of candidates) {
         const point = orbitAt(orbit, index, time);
         const projected = focusProjection(point, camera, width, height);
-        if (!projected || projected.size < (width < 700 ? 34 : 55)) continue;
+        const minimum = mix(
+          width < 700 ? 34 : 55,
+          width < 700 ? 18 : 24,
+          camera.showcase || 0,
+        );
+        if (!projected || projected.size < minimum) continue;
         const existing = active.has(index);
+        if (!existing && point.opacity < 0.8) continue;
         if (
           !existing &&
           (projected.x < 0 ||
@@ -95,7 +102,11 @@ export function createOrbitComposition(orbit) {
           (projected.x / width - 0.5) / 0.42,
           (projected.y / height - 0.45) / 0.24,
         );
-        const quiet = ease((radius - 0.8) / 0.45);
+        const quiet = mix(
+          1,
+          ease((radius - 0.8) / 0.45),
+          ease((camera.zoom - 18) / 20),
+        );
         if (quiet < (existing ? 0.01 : 0.5)) continue;
         const id = photoIds[index],
           ratio = ratios[id] || 0.8;
@@ -122,11 +133,15 @@ export function createOrbitComposition(orbit) {
           projected,
           target: front * quiet,
           id,
+          innerArc: (camera.showcase || 0) > 0.5 && point.radius < 0.24,
           rect: bounds(projected, ratio, gap),
           future: bounds(future, ratio, gap),
           priority:
             (active.has(index) ? 1000 : 0) +
             (active.get(index)?.alpha || 0) * 1000 +
+            100 *
+              (camera.showcase || 0) *
+              (1 - ease(Math.abs(point.radius - 0.14) / 0.06)) +
             projected.size * quiet * front +
             point.seed * 10,
         });
@@ -136,8 +151,21 @@ export function createOrbitComposition(orbit) {
         usage = new Map();
       const available = ratios.length || 6;
       const perPhoto = Math.max(1, Math.ceil(limit / available));
+      // Keep a few real inner orbits visible, so the plunge/fade can be seen.
+      // The remaining slots retain the wider stream and its sense of depth.
+      const innerLimit =
+        (camera.showcase || 0) > 0.5 ? (width < 700 ? 2 : 5) : 0;
+      let innerCount = 0,
+        outerCount = 0;
       for (const record of records) {
         if (selected.length >= limit) break;
+        if (
+          innerLimit &&
+          (record.innerArc
+            ? innerCount >= innerLimit
+            : outerCount >= limit - innerLimit)
+        )
+          continue;
         if ((usage.get(record.id) || 0) >= perPhoto) continue;
         if (
           selected.some(
@@ -148,6 +176,8 @@ export function createOrbitComposition(orbit) {
         )
           continue;
         selected.push(record);
+        if (record.innerArc) innerCount++;
+        else outerCount++;
         usage.set(record.id, (usage.get(record.id) || 0) + 1);
       }
       const targets = new Map(selected.map((record) => [record.index, record]));

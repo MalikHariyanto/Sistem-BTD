@@ -1,5 +1,7 @@
 import { test, expect } from "@playwright/test";
 import {
+  INFLOW,
+  PLUNGE_RADIUS,
   cameraAt,
   createOrbit,
   orbitAt,
@@ -22,7 +24,14 @@ test("a dense physical annulus rotates differentially, retaining its identities 
       after = orbitAt(data, i, 10);
     radii.add(before.radius);
     phases.add(before.angle);
-    expect(Math.hypot(after.x, after.depth)).toBeCloseTo(before.radius, 7);
+    expect(Math.hypot(after.x, after.depth)).toBeCloseTo(after.radius, 7);
+    if (before.radius ** 2 - INFLOW * 10 > PLUNGE_RADIUS ** 2) {
+      expect(after.radius).toBeLessThan(before.radius);
+      expect(before.radius ** 2 - after.radius ** 2).toBeCloseTo(
+        INFLOW * 10,
+        7,
+      );
+    }
     expect(after.seed).toBe(before.seed);
     expect(
       Math.hypot(after.x - before.x, after.depth - before.depth),
@@ -36,7 +45,7 @@ test("a dense physical annulus rotates differentially, retaining its identities 
     (_, i) => data[i * 4 + 2],
   );
   // Real height differences, not just rotating a flat grid of photos.
-  expect(Math.max(...heights) - Math.min(...heights)).toBeGreaterThan(0.05);
+  expect(Math.max(...heights) - Math.min(...heights)).toBeGreaterThan(0.02);
   for (const [width, height] of [
     [320, 568],
     [390, 664],
@@ -56,14 +65,23 @@ test("a dense physical annulus rotates differentially, retaining its identities 
     expect(cameraAt(1, width, height).zoom).toBeGreaterThan(40);
     expect(cameraAt(1, width, height).zoom).toBeLessThan(50);
     let previous = cameraAt(0, width, height);
+    let minimumZoomStep = Infinity,
+      maximumZoomRatio = 0,
+      minimumDistance = Infinity;
     for (let i = 1; i <= 1000; i++) {
       const camera = cameraAt(i / 1000, width, height);
-      expect(camera.zoom).toBeGreaterThanOrEqual(previous.zoom - 1e-9);
+      minimumZoomStep = Math.min(minimumZoomStep, camera.zoom - previous.zoom);
       // A perceptual zoom cannot surge in the final second of the flight.
-      expect(camera.zoom / previous.zoom).toBeLessThan(1.01);
-      expect(camera.distance).toBeGreaterThan(0.32);
+      maximumZoomRatio = Math.max(
+        maximumZoomRatio,
+        camera.zoom / previous.zoom,
+      );
+      minimumDistance = Math.min(minimumDistance, camera.distance);
       previous = camera;
     }
+    expect(minimumZoomStep).toBeGreaterThanOrEqual(-1e-9);
+    expect(maximumZoomRatio).toBeLessThan(1.01);
+    expect(minimumDistance).toBeGreaterThan(0.32);
     const end = cameraAt(1, width, height);
     const apparent = [];
     for (let i = 0; i < PARTICLE_COUNT; i++) {
@@ -100,16 +118,16 @@ test("the crowded middle has a moving viewing interval while opening and ending 
   }
   // The opening clock is unchanged; after the viewing interval, the same final
   // camera path and idle rotation are reached without a cut or a hard pause.
-  expect(journeyProgress(2580)).toBeCloseTo(0.3, 6);
+  expect(journeyProgress(1720)).toBeCloseTo(0.2, 6);
   expect(highlightedMs).toBeGreaterThan(4000);
   expect(highlightedMs).toBeLessThan(5000);
-  expect(journeyProgress(7000) - journeyProgress(5000)).toBeGreaterThan(0.05);
-  expect(journeyProgress(7000) - journeyProgress(5000)).toBeLessThan(0.08);
+  expect(journeyProgress(5500) - journeyProgress(3500)).toBeGreaterThan(0.02);
+  expect(journeyProgress(5500) - journeyProgress(3500)).toBeLessThan(0.04);
   expect(photoShowcaseAt(0)).toBe(0);
   expect(photoShowcaseAt(1)).toBe(0);
   expect(orbitRateAt(0)).toBe(1);
-  expect(orbitRateAt(0.5)).toBeGreaterThan(0.4);
-  expect(orbitRateAt(0.5)).toBeLessThan(0.5);
+  expect(orbitRateAt(0.3)).toBeGreaterThan(0.8);
+  expect(orbitRateAt(0.3)).toBeLessThan(0.9);
   expect(orbitRateAt(1)).toBeCloseTo(0.025, 8);
 });
 

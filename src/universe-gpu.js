@@ -1,4 +1,11 @@
-import { createOrbit, PARTICLE_COUNT, ease } from "./universe-camera.js";
+import {
+  createOrbit,
+  PARTICLE_COUNT,
+  INFLOW,
+  PLUNGE_RADIUS,
+  HORIZON,
+  ASPECT,
+} from "./universe-camera.js";
 import { createOrbitComposition, compositionAt } from "./orbit-composition.js";
 import { assignOrbitPhotos, planPhotoAtlas } from "./photo-textures.js";
 
@@ -85,34 +92,29 @@ uniform vec2 uCenter;
 uniform float uTime;
 uniform float uDpr;
 uniform float uPointLimit;
-uniform float uLens;
-uniform float uLensFade;
 varying vec4 vPhoto; // id, apparent size, rotation, opacity
 varying float vHeat;
 varying vec2 vOffset;
+varying float vDepth;
 void main(){
   vPhotoId=aPhoto.x;
   vAspect=aPhoto.y;
-  float r=aOrbit.x, seed=aOrbit.w;
-  float theta=aOrbit.y+uTime*.115*pow(.28/r,1.5);
-  float x=cos(theta)*r, z=sin(theta)*r;
+  float seed=aOrbit.w;
+  float radial=aOrbit.x*aOrbit.x-${(PLUNGE_RADIUS ** 2).toFixed(8)}-${INFLOW.toFixed(8)}*uTime;
+  float span=.64*.64-${(PLUNGE_RADIUS ** 2).toFixed(8)};
+  float cycles=floor(radial/span);
+  float r=sqrt(${(PLUNGE_RADIUS ** 2).toFixed(8)}+radial-cycles*span);
+  float theta=aOrbit.y+4.0*.115*pow(.28,1.5)/${INFLOW.toFixed(8)}*
+    (sqrt(aOrbit.x)-sqrt(r)-cycles*(sqrt(.64)-sqrt(${PLUNGE_RADIUS.toFixed(8)})));
+  float x=cos(theta)*r,z=sin(theta)*r;
   float y=.26*x+.19*z+aOrbit.z;
-  float originalU=.5+x*5.0/(5.0-z);
-  float originalV=.475+y*5.0/(5.0-z);
-  float mask=1.0;
-  float shadow=length((vec2(originalU,originalV)-vec2(.5,.43))/vec2(.112,.205));
-  if(z<0.0)mask*=smoothstep(1.0,1.07,shadow);
-  // Secondary images of the far disk bend above and below the shadow. These
-  // reuse the same particle identity and angular velocity as the physical disk.
-  if(uLens>.5){
-    mask=(1.0-smoothstep(-.035,.0,z))*.32*uLensFade;
-    float band=(r-.14)/.50;
-    x=cos(theta)*(.112+.085*band);
-    y=sin(theta)*(.20+.15*band)+.10*x-.025;
-    if(uLens>1.5)y=-y*.62+.032;
-    z=-.01;
-  }
+  float fadeIn=clamp((r-.098)/.036,0.0,1.0);
+  fadeIn=fadeIn*fadeIn*fadeIn*(fadeIn*(fadeIn*6.0-15.0)+10.0);
+  float fadeOut=clamp((r-.61)/.03,0.0,1.0);
+  fadeOut=fadeOut*fadeOut*fadeOut*(fadeOut*(fadeOut*6.0-15.0)+10.0);
+  float mask=fadeIn*(1.0-fadeOut);
   float distance=uFlight.z-z;
+  vDepth=distance;
   float scale=uFlight.w*5.0/max(.028,distance);
   vec2 pixel=uCenter+vec2(x-uFlight.x,(y-uFlight.y)/1.776833)*scale;
   float grain=fract(seed*97.13);
@@ -120,15 +122,14 @@ void main(){
   float heroSize=.003+seed*.0018;
   float worldSize=dustSize;
   if(uLayer>.5){
-    worldSize=heroSize;
-    if(uLayer<1.5)mask*=step(.88,grain)*(1.0-uComposition);
+    worldSize=heroSize*(1.0+.8*uShowcase);
+    if(uLayer<1.5)mask*=step(.90,grain)*(1.0-uComposition);
     else {
       worldSize*=1.35;
       mask*=aFade*uComposition;
     }
   }
   float size=min(min(190.0,uViewport.x*.36),worldSize*scale);
-  if(uLens>.5)size*=.60;
   mask*=smoothstep(.028,.075,distance);
   if(distance<=.028||pixel.x < -size||pixel.x>uViewport.x+size||pixel.y < -size||pixel.y>uViewport.y+size)mask=0.0;
   // Keep partially visible cards alive when their centers leave the viewport.
@@ -141,14 +142,20 @@ void main(){
   gl_PointSize=mask>.001?min(uPointLimit,footprint*uDpr):1.0;
   // Tiny tilted cards merge into light filaments. The same cards become legible
   // through perspective magnification, with no new grid or new positions.
-  float readable=smoothstep(2.0,mix(28.0,20.0,uShowcase),size);
-  float tangent=atan(.19*cos(theta)-.26*sin(theta),-sin(theta));
+  float readable=smoothstep(2.0,mix(28.0,12.0,uShowcase),size);
+  float dr=-${INFLOW.toFixed(8)}/(2.0*r),omega=.115*pow(.28/r,1.5);
+  float vx=cos(theta)*dr-sin(theta)*r*omega;
+  float vz=sin(theta)*dr+cos(theta)*r*omega;
+  float tangent=atan(((.26*vx+.19*vz)*distance+(y-uFlight.y)*vz)/${ASPECT.toFixed(8)},
+    vx*distance+(x-uFlight.x)*vz);
   vPhoto=vec4(seed,size,mix(tangent,(seed-.5)*.18,readable),mask);
   vHeat=(1.0-smoothstep(.14,.64,r))*.36+seed*.20;
 }
 `;
 const orbitFragment = `
 precision highp float;
+uniform vec4 uFlight;
+uniform vec2 uCenter;
 varying float vPhotoId;
 varying float vAspect;
 uniform sampler2D uPhotos;
@@ -163,9 +170,23 @@ uniform vec2 uViewport;
 varying vec4 vPhoto;
 varying float vHeat;
 varying vec2 vOffset;
+varying float vDepth;
 void main(){
   if(vPhoto.w<.001)discard;
-  float size=vPhoto.y, readable=smoothstep(2.0,mix(28.0,20.0,uShowcase),size);
+  // Per-fragment depth also clips a photo whose center is outside the shadow
+  // but whose corners cross behind it. Foreground material stays in front.
+  vec2 pixel=vec2(gl_FragCoord.x/uDpr,uViewport.y-gl_FragCoord.y/uDpr);
+  vec3 ray=normalize(vec3((pixel-uCenter)/(uFlight.w*5.0),-1.0));
+  vec3 origin=vec3(uFlight.x,uFlight.y/${ASPECT.toFixed(8)},uFlight.z)-
+    vec3(${HORIZON.x.toFixed(8)},${HORIZON.y.toFixed(8)},${HORIZON.z.toFixed(8)});
+  float along=dot(origin,ray);
+  float discriminant=along*along-dot(origin,origin)+${(HORIZON.radius ** 2).toFixed(8)};
+  if(discriminant>0.0){
+    float hit=-along-sqrt(discriminant);
+    if(hit>0.0&&hit*(-ray.z)<vDepth-.00001)discard;
+  }
+
+  float size=vPhoto.y, readable=smoothstep(2.0,mix(28.0,12.0,uShowcase),size);
   vec2 p=(gl_PointCoord-vec2(.5)+vOffset)*1.3;
   float c=cos(vPhoto.z),s=sin(vPhoto.z);
   p=mat2(c,-s,s,c)*p;
@@ -305,8 +326,6 @@ export function createUniverseGPU(canvas) {
         "uTime",
         "uDpr",
         "uPointLimit",
-        "uLens",
-        "uLensFade",
         "uPhotos",
         "uAtlas",
         "uShade",
@@ -410,18 +429,10 @@ export function createUniverseGPU(canvas) {
     gl.vertexAttrib1f(particles.fadeAttribute, 1);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-    // The lens images are behind the physical near side; the particles then
-    // occlude each other by their actual depth instead of array order.
-    gl.uniform1f(u.uLensFade, 1 - ease((camera.zoom - 5) / 7));
-    if (camera.zoom < 12) {
-      gl.uniform1f(u.uLens, 1);
-      gl.drawArrays(gl.POINTS, 0, 4096);
-      gl.uniform1f(u.uLens, 2);
-      gl.drawArrays(gl.POINTS, 0, 4096);
-    }
+    // Only physical photo orbits are drawn. The reference supplies the optical
+    // halo; duplicate photo arcs must not orbit in a separate screen layout.
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL);
-    gl.uniform1f(u.uLens, 0);
     gl.drawArrays(gl.POINTS, 0, PARTICLE_COUNT);
     gl.uniform1f(u.uLayer, 1);
     if (compositionAt(camera.zoom) < 1)
@@ -462,7 +473,7 @@ export function createUniverseGPU(canvas) {
     gl.clear(gl.DEPTH_BUFFER_BIT);
     gl.drawArrays(gl.POINTS, 0, focused.length);
     canvas.dataset.focusPhotos = String(
-      focused.filter((p) => p.alpha > 0.5).length,
+      focused.filter((p) => p.alpha * p.point.opacity > 0.5).length,
     );
     gl.disableVertexAttribArray(particles.fadeAttribute);
     gl.disableVertexAttribArray(particles.attribute);

@@ -8,6 +8,9 @@ import {
   PARTICLE_COUNT,
   createOrbit,
   orbitAt,
+  orbitTangent,
+  horizonOutline,
+  HORIZON,
   projectOrbit,
   orbitDustSize,
   orbitPhotoSize,
@@ -77,6 +80,7 @@ export function createUniverse(canvas) {
   }
   function drawMaterial(camera) {
     const points = [];
+    const shadow = horizonOutline(camera);
     const blend = compositionAt(camera.zoom);
     const showcase = photoShowcaseAt(progress);
     for (let i = 0; i < orbit.length / 4; i++) {
@@ -87,17 +91,26 @@ export function createUniverse(canvas) {
     }
     points.sort((a, b) => b.depth - a.depth);
     function paint(point, opacity = 1) {
-      const { x, y, size, seed, angle, depth } = point;
-      const readable = ease((size - 2) / (26 - 8 * showcase));
+      const { x, y, size, seed, depth } = point;
+      const readable = ease((size - 2) / (26 - 16 * showcase));
       ctx.save();
+      if (depth >= camera.distance - HORIZON.z - HORIZON.radius) {
+        ctx.beginPath();
+        ctx.rect(-1, -1, width + 2, height + 2);
+        shadow.forEach(([sx, sy], i) =>
+          i ? ctx.lineTo(sx, sy) : ctx.moveTo(sx, sy),
+        );
+        ctx.closePath();
+        ctx.clip("evenodd");
+      }
       ctx.translate(x, y);
-      const tangent = Math.atan2(
-        0.19 * Math.cos(angle) - 0.26 * Math.sin(angle),
-        -Math.sin(angle),
-      );
+      const tangent = orbitTangent(point, camera);
       ctx.rotate(tangent * (1 - readable) + (seed - 0.5) * 0.18 * readable);
       ctx.globalAlpha =
-        opacity * (0.38 + readable * 0.6) * ease((depth - 0.028) / 0.047);
+        opacity *
+        point.opacity *
+        (0.38 + readable * 0.6) *
+        ease((depth - 0.028) / 0.047);
       const image = images[point.photoId];
       const ratio = image ? image.width / image.height : 0.8;
       const cardWidth = size * Math.min(ratio, 1);
@@ -159,7 +172,7 @@ export function createUniverse(canvas) {
         alpha * blend,
       );
     canvas.dataset.focusPhotos = String(
-      focused.filter((p) => p.alpha > 0.5).length,
+      focused.filter((p) => p.alpha * p.point.opacity > 0.5).length,
     );
     return points.length;
   }
