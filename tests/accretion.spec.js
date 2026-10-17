@@ -197,6 +197,9 @@ test("GPU clips a rear photo's corners at the horizon while retaining real foreg
     for (const [x, z] of [
       [limb + 5, -0.2],
       [centerX, 0.3],
+      [limb + 20, -0.2],
+      [limb + 40, -0.2],
+      [limb + 90, -0.2],
     ]) {
       const p = world(x, centerY, z),
         radius = Math.hypot(p.x, z),
@@ -225,7 +228,8 @@ test("GPU clips a rear photo's corners at the horizon while retaining real foreg
       gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
       let cyan = 0,
         leaks = 0,
-        forbidden = 0;
+        forbidden = 0,
+        signal = 0;
       for (
         let py = Math.floor(centerY) - 35;
         py <= Math.ceil(centerY) + 35;
@@ -236,6 +240,7 @@ test("GPU clips a rear photo's corners at the horizon while retaining real foreg
           const i = ((height - 1 - py) * width + px) * 4;
           const lit =
             pixels[i + 1] > pixels[i] + 70 && pixels[i + 2] > pixels[i] + 70;
+          signal += Math.max(0, Math.min(pixels[i + 1] - pixels[i], pixels[i + 2] - pixels[i]));
           const hidden = occludedByHole(world(px + 0.5, py + 0.5, z), camera);
           if (hidden) forbidden++;
           if (lit) {
@@ -243,13 +248,18 @@ test("GPU clips a rear photo's corners at the horizon while retaining real foreg
             if (hidden) leaks++;
           }
         }
-      outputs.push({ cyan, leaks, forbidden, layers, error: gl.getError() });
+      outputs.push({ cyan, leaks, forbidden, signal, layers, error: gl.getError() });
     }
     return outputs;
   });
   expect(result[0].layers).toEqual([0, 3, 2]);
   expect(result[0].forbidden).toBeGreaterThan(300);
-  expect(result[0].cyan).toBeGreaterThan(50);
+  // The near limb now dissolves a rear photo before the sphere cuts it.
+  // Four actual GPU probes verify a gradual fade instead of a binary cutoff.
+  const rim = [result[0], result[2], result[3], result[4]];
+  for (let i = 1; i < rim.length; i++)
+    expect(rim[i].signal).toBeGreaterThan(rim[i - 1].signal + 10);
+  expect(result[4].cyan).toBeGreaterThan(50);
   expect(result[0].leaks).toBe(0);
   expect(result[1].cyan).toBeGreaterThan(100);
   expect(result[1].leaks).toBe(0);

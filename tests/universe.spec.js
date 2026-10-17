@@ -56,7 +56,7 @@ test("a dense physical annulus rotates differentially, retaining its identities 
     // Preserve the opening's original pull into Gargantua, then approach a
     // closer ending than the wide revision without overshooting or pulling back.
     for (const p of [0, 0.15, 0.3, 0.35]) {
-      expect(cameraAt(p, width, height).zoom).toBeCloseTo(
+      expect(cameraAt(p, width, height, 1672 / 941, 0).zoom).toBeCloseTo(
         Math.exp(Math.log(5 / 0.052) * ease(p)),
         8,
       );

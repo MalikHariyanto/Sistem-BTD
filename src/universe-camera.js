@@ -94,7 +94,7 @@ export function orbitAt(data, index, time) {
 // A camera dollies into the near side of the SAME 3D disk. The background is
 // the z=0 plane; particles have their own perspective, parallax and near clip.
 // No interpolation of particle positions into a second layout takes place.
-export function cameraAt(progress, width, height, aspect = 1672 / 941) {
+export function cameraAt(progress, width, height, aspect = 1672 / 941, immersion = ease(progress / 0.16)) {
   const p = clamp(progress),
     travel = ease(p),
     mobile = width < 700;
@@ -111,7 +111,10 @@ export function cameraAt(progress, width, height, aspect = 1672 / 941) {
   // Both paths and the blend have zero endpoint velocity and acceleration.
   const closeUp = ease((p - 0.35) / 0.65);
   const logZoom = mix(Math.log(5 / 0.052), Math.log(5 / clearance), closeUp);
-  const zoom = Math.exp(logZoom * travel);
+  const opticalZoom = Math.exp(logZoom * travel);
+  // Fill the phone's freed text area with a gentle push-in. Its additive
+  // magnification merges into the existing dolly without a pull-back or jump.
+  const zoom = opticalZoom + (mobile ? 0.35 * clamp(immersion) * (1 - ease(p / 0.45)) : 0);
   const distance = focusDepth * focus + 5 / zoom;
   const cx = focusX * focus,
     cy =
@@ -119,6 +122,11 @@ export function cameraAt(progress, width, height, aspect = 1672 / 941) {
       focus;
   const imageWidth = (baseWidth * 5) / distance,
     imageHeight = imageWidth / aspect;
+  const centerY = mix(
+    height * (mobile ? mix(0.32, 0.54, clamp(immersion)) : 0.38),
+    height * 0.5,
+    travel,
+  );
   return {
     progress: p,
     zoom,
@@ -128,12 +136,12 @@ export function cameraAt(progress, width, height, aspect = 1672 / 941) {
     baseWidth,
     x: width * 0.5 - (0.5 + cx) * imageWidth,
     y:
-      mix(height * (mobile ? 0.32 : 0.38), height * 0.5, travel) -
+      centerY -
       (ORBIT.centerY + cy) * imageHeight,
     width: imageWidth,
     height: imageHeight,
     centerX: width * 0.5,
-    centerY: mix(height * (mobile ? 0.32 : 0.38), height * 0.5, travel),
+    centerY,
     // Only for reporting and the final gentle text vignette. Individual photos
     // resolve from their apparent pixel size, not a progress-driven crossfade.
     photoMix: ease((zoom - 3) / 12),
@@ -234,4 +242,25 @@ export function horizonOutline(camera, segments = 64) {
       camera.centerY + (p[1] - eye[1]) * scale,
     ];
   });
+}
+
+// Photographs resolve differently across the disk's depth. Inner material
+// shrinks, aligns with the flow and darkens before reaching the hard horizon.
+export function photoDepthAt(point, camera) {
+  const depth = camera.distance - point.depth;
+  const far = ease((depth / camera.distance - 0.98) / 0.36);
+  const infall = ease((point.radius - 0.108) / 0.082);
+  const origin = [camera.cx - HORIZON.x, camera.cy / ASPECT - HORIZON.y, camera.distance - HORIZON.z];
+  const ray = [point.x - camera.cx, (point.y - camera.cy) / ASPECT, -depth];
+  const length = Math.hypot(...ray);
+  const along = origin.reduce((sum, value, i) => sum + value * ray[i] / length, 0);
+  const closest = Math.sqrt(Math.max(0, origin.reduce((sum, value) => sum + value * value, 0) - along * along));
+  const rear = ease((depth - (camera.distance - 0.035)) / 0.075);
+  const limb = mix(1, ease((closest - HORIZON.radius - 0.001) / 0.022), rear);
+  return {
+    opacity: (1 - 0.38 * far) * infall * limb,
+    brightness: (1 - 0.4 * far) * (0.68 + 0.32 * infall),
+    detail: (1 - 0.3 * far) * infall,
+    scale: 0.6 + 0.4 * infall,
+  };
 }

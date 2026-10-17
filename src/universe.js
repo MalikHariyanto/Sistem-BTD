@@ -1,5 +1,6 @@
 import {
   cameraAt,
+  photoDepthAt,
   JOURNEY_MS,
   journeyProgress,
   photoShowcaseAt,
@@ -42,6 +43,7 @@ export function createUniverse(canvas) {
       ready: Promise.resolve(false),
       travel: async () => {},
       settle: () => {},
+      prepare: () => {},
       reset: () => {},
       setPaused: () => {},
     };
@@ -54,6 +56,7 @@ export function createUniverse(canvas) {
     suspended = false,
     frame = 0,
     last = 0;
+  let immersion = 0, immersionStarted;
   let flowSeconds = 0,
     lastSimulationFrame = 0;
   let traveling = false,
@@ -101,11 +104,13 @@ export function createUniverse(canvas) {
         points.push({ ...point, ...projected, index: i, photoId: photoIds[i] });
     }
     points.sort((a, b) => b.depth - a.depth);
-    function paint(point, opacity = 1, maskRear = true, photographic = false) {
-      const { x, y, size, seed, depth } = point;
-      const readable = photographic
+    function paint(point, opacity = 1, maskRear = true, photographic = false, isPhoto = true) {
+      const { x, y, seed, depth } = point;
+      const atmosphere = isPhoto ? photoDepthAt(point, camera) : { opacity: 1, brightness: 1, detail: 1, scale: 1 };
+      const size = point.size * atmosphere.scale;
+      const readable = (photographic
         ? ease((size - 1.5) / 3.5)
-        : ease((size - 2) / (26 - 16 * showcase));
+        : ease((size - 2) / (26 - 16 * showcase))) * atmosphere.detail;
       ctx.save();
       if (maskRear && depth >= rearDepth) ctx.clip(shadowMask, "evenodd");
       ctx.translate(x, y);
@@ -113,6 +118,7 @@ export function createUniverse(canvas) {
       ctx.rotate(tangent * (1 - readable) + (seed - 0.5) * 0.18 * readable);
       ctx.globalAlpha =
         opacity *
+        atmosphere.opacity *
         point.opacity *
         (0.38 + readable * 0.6) *
         ease((depth - 0.028) / 0.047);
@@ -136,6 +142,10 @@ export function createUniverse(canvas) {
         );
         ctx.fillStyle = `rgba(227,161,77,${(1 - readable) * 0.85 + integration * 0.16})`;
         ctx.fillRect(-cardWidth / 2, -cardHeight / 2, cardWidth, cardHeight);
+        if (atmosphere.brightness < 1) {
+          ctx.fillStyle = `rgba(0,0,0,${1 - atmosphere.brightness})`;
+          ctx.fillRect(-cardWidth / 2, -cardHeight / 2, cardWidth, cardHeight);
+        }
       } else {
         ctx.fillStyle = readable > 0.1 ? "#b8a68e" : "#f4c58e";
         ctx.fillRect(
@@ -169,7 +179,7 @@ export function createUniverse(canvas) {
         height,
         orbitDustSize(point.seed),
       );
-      if (dust) paint({ ...point, ...dust }, 1 - 0.4 * blend, false);
+      if (dust) paint({ ...point, ...dust }, 1 - 0.4 * blend, false, false, false);
       const fieldSize = field > 0 ? orbitFieldSize(point.seed, width) : 0;
       if (fieldSize) {
         const photo = projectOrbit(point, camera, width, height, fieldSize);
@@ -208,7 +218,7 @@ export function createUniverse(canvas) {
 
   function draw() {
     if (!width || !height || suspended || !visible || document.hidden) return;
-    const camera = cameraAt(progress, width, height, aspect);
+    const camera = cameraAt(progress, width, height, aspect, immersion);
     const detailMix = detailPlate
       ? ease((camera.zoom - 2.8) / 3.2) *
         ease((performance.now() - detailArrived) / 600)
@@ -220,7 +230,7 @@ export function createUniverse(canvas) {
         height,
         time: flowSeconds,
         detail: detailMix,
-        cover: 1 - ease(progress / 0.18),
+        cover: (1 - ease(progress / 0.18)) * (1 - immersion),
         reduced: motion.matches,
         showcase: photoShowcaseAt(progress),
       });
@@ -289,7 +299,7 @@ export function createUniverse(canvas) {
     ctx.fillRect(0, 0, width, height);
     // A soft fade belongs to the distant cover only, so the greeting remains
     // readable without putting text in front of the zoomed accretion disk.
-    const cover = 1 - ease(progress / 0.18);
+    const cover = (1 - ease(progress / 0.18)) * (1 - immersion);
     if (cover > 0) {
       ctx.globalAlpha = cover;
       const bottom = ctx.createLinearGradient(0, height * 0.44, 0, height);
@@ -313,6 +323,8 @@ export function createUniverse(canvas) {
     canvas.dataset.photoShowcase = photoShowcaseAt(progress).toFixed(4);
     canvas.dataset.photoField = photoFieldAt(progress).toFixed(4);
     canvas.dataset.flow = flowSeconds.toFixed(4);
+    canvas.dataset.immersion = immersion.toFixed(4);
+    canvas.dataset.framingY = (camera.centerY / height).toFixed(4);
   }
 
   function fallbackPlate() {
@@ -413,7 +425,7 @@ export function createUniverse(canvas) {
   });
 
   function shouldAnimate() {
-    return !suspended && (traveling || !motion.matches);
+    return !suspended && (traveling || !motion.matches || (immersionStarted !== undefined && immersion < 1));
   }
   function tick(now) {
     frame = 0;
@@ -426,6 +438,8 @@ export function createUniverse(canvas) {
         ? Math.min((now - lastSimulationFrame) / 1000, 0.1)
         : 0;
       lastSimulationFrame = now;
+      if (immersionStarted !== undefined)
+        immersion = motion.matches ? 1 : ease((now - immersionStarted) / 1000);
       if (traveling)
         progress = motion.matches
           ? clamp((now - started) / duration)
@@ -563,6 +577,8 @@ export function createUniverse(canvas) {
   }
   resize();
   function settle() {
+    immersion = 1;
+    immersionStarted = undefined;
     progress = 1;
     traveling = false;
     cancelAnimationFrame(frame);
@@ -576,6 +592,11 @@ export function createUniverse(canvas) {
     get ready() {
       return Promise.all([ready, photosReady]);
     },
+    prepare() {
+      immersionStarted = performance.now();
+      if (motion.matches) immersion = 1;
+      resume();
+    },
     setPaused(value) {
       suspended = value;
       cancelAnimationFrame(frame);
@@ -588,6 +609,7 @@ export function createUniverse(canvas) {
         finish?.();
         finish = resolve;
         progress = 0;
+        immersionStarted ??= performance.now();
         traveling = true;
         started = performance.now();
         if (document.hidden) hiddenAt = started;
@@ -602,6 +624,8 @@ export function createUniverse(canvas) {
       finish?.();
       finish = undefined;
       progress = 0;
+      immersion = 0;
+      immersionStarted = undefined;
       draw();
       resume();
     },

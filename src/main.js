@@ -284,6 +284,7 @@ async function beginIntro() {
   if (introPhase !== "idle") return;
   const token = ++introRun;
   phase("countdown");
+  universe.prepare();
   $("#cover-copy").inert = true;
   $("#skip-intro").hidden = false;
   await animate($("#cover-copy"), [{ opacity: 1 }, { opacity: 0 }], 450);

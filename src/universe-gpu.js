@@ -98,6 +98,11 @@ varying vec4 vPhoto; // id, apparent size, rotation, opacity
 varying float vHeat;
 varying vec2 vOffset;
 varying float vDepth;
+varying vec2 vAtmosphere; // far-side veil, inward material dissolution
+float softstep(float a,float b,float x){
+  float t=clamp((x-a)/(b-a),0.0,1.0);
+  return t*t*t*(t*(t*6.0-15.0)+10.0);
+}
 void main(){
   vPhotoId=aPhoto.x;
   vAspect=aPhoto.y;
@@ -117,6 +122,9 @@ void main(){
   float mask=fadeIn*(1.0-fadeOut);
   float distance=uFlight.z-z;
   vDepth=distance;
+  float far=softstep(.98,1.34,distance/uFlight.z);
+  float infall=softstep(.108,.190,r);
+  vAtmosphere=vec2(far,infall);
   float scale=uFlight.w*5.0/max(.028,distance);
   vec2 pixel=uCenter+vec2(x-uFlight.x,(y-uFlight.y)/1.776833)*scale;
   float grain=fract(seed*97.13);
@@ -135,6 +143,10 @@ void main(){
       mask*=aFade*uComposition;
     }
   }
+  if(uLayer>.5){
+    mask*=(1.0-.38*far)*infall;
+    worldSize*=.6+.4*infall;
+  }
   float size=min(uLayer>2.5?24.0:min(190.0,uViewport.x*.36),worldSize*scale);
   mask*=smoothstep(.028,.075,distance);
   if(distance<=.028||pixel.x < -size||pixel.x>uViewport.x+size||pixel.y < -size||pixel.y>uViewport.y+size)mask=0.0;
@@ -149,6 +161,7 @@ void main(){
   // Tiny tilted cards merge into light filaments. The same cards become legible
   // through perspective magnification, with no new grid or new positions.
   float readable=uLayer>2.5?smoothstep(1.5,5.0,size):smoothstep(2.0,mix(28.0,12.0,uShowcase),size);
+  if(uLayer>.5)readable*=(1.0-.3*far)*infall;
   float dr=-${INFLOW.toFixed(8)}/(2.0*r),omega=.115*pow(.28/r,1.5);
   float vx=cos(theta)*dr-sin(theta)*r*omega;
   float vz=sin(theta)*dr+cos(theta)*r*omega;
@@ -178,6 +191,11 @@ varying vec4 vPhoto;
 varying float vHeat;
 varying vec2 vOffset;
 varying float vDepth;
+varying vec2 vAtmosphere; // far-side veil, inward material dissolution
+float softstep(float a,float b,float x){
+  float t=clamp((x-a)/(b-a),0.0,1.0);
+  return t*t*t*(t*(t*6.0-15.0)+10.0);
+}
 void main(){
   if(vPhoto.w<.001)discard;
   // Per-fragment depth also clips a photo whose center is outside the shadow
@@ -193,7 +211,14 @@ void main(){
     if(hit>0.0&&hit*(-ray.z)<vDepth-.00001)discard;
   }
 
+  float limb=1.0;
+  if(uLayer>.5){
+    float closest=sqrt(max(0.0,dot(origin,origin)-along*along));
+    float rear=softstep(uFlight.z-.035,uFlight.z+.040,vDepth);
+    limb=mix(1.0,softstep(${(HORIZON.radius + 0.001).toFixed(8)},${(HORIZON.radius + 0.023).toFixed(8)},closest),rear);
+  }
   float size=vPhoto.y, readable=uLayer>2.5?smoothstep(1.5,5.0,size):smoothstep(2.0,mix(28.0,12.0,uShowcase),size);
+  if(uLayer>.5)readable*=(1.0-.3*vAtmosphere.x)*vAtmosphere.y;
   vec2 p=(gl_PointCoord-vec2(.5)+vOffset)*1.3;
   float c=cos(vPhoto.z),s=sin(vPhoto.z);
   p=mat2(c,-s,s,c)*p;
@@ -216,7 +241,8 @@ void main(){
   float lum=dot(photo,vec3(.2126,.7152,.0722));
   vec3 ember=mix(vec3(.68,.30,.095),vec3(1.0,.90,.66),vHeat+.22)*(.65+lum*.75);
   vec3 color=mix(ember,photo,readable);
-  float opacity=mix(.72,.98,readable)*vPhoto.w;
+  if(uLayer>.5)color*=(1.0-.4*vAtmosphere.x)*(.68+.32*vAtmosphere.y);
+  float opacity=mix(.72,.98,readable)*vPhoto.w*limb;
   opacity*=mix(1.0-smoothstep(.20,.5,edge),1.0,readable);
   if(uLayer<.5)opacity*=mix(1.0,.60,uComposition);
   if(uLayer>2.5)opacity*=.78;
