@@ -47,6 +47,7 @@ test("camera move contains no greeting or countdown; dense photos settle before 
           p: Number(canvas.dataset.progress),
           showcase: Number(canvas.dataset.photoShowcase),
           eye: canvas.dataset.cameraPosition.split(",").map(Number),
+          cameraTime: Number(canvas.dataset.cameraTime),
           wordsHidden:
             document.querySelector("#cover-copy").hidden &&
             document.querySelector("#reveal-copy").hidden &&
@@ -65,7 +66,8 @@ test("camera move contains no greeting or countdown; dense photos settle before 
   );
   const samples = await page.evaluate(() => window.__flightSamples);
   expect(samples.length).toBeGreaterThan(10);
-  expect(samples.every((s) => s.wordsHidden && s.fragments === 5000)).toBe(
+  expect(samples[0].cameraTime).toBeLessThan(0.25);
+  expect(samples.every((s) => s.wordsHidden && s.fragments === 32768)).toBe(
     true,
   );
   const middle = samples.filter((s) => s.showcase > 0.95);

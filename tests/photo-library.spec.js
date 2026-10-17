@@ -1,17 +1,17 @@
 import { finishIntro } from "./helpers.js";
 import { test, expect } from "@playwright/test";
 import { content, ORBIT_PHOTO_COUNT } from "../src/content.js";
-import { createPhotoOrbits, photoPosition } from "../src/gargantua-model.js";
-import { assignPhotoIds, planPhotoAtlas } from "../src/photo-textures.js";
+import { createOrbit, orbitAt } from "../src/universe-camera.js";
+import { assignOrbitPhotos, planPhotoAtlas } from "../src/photo-textures.js";
 
 // The old renderer sampled with replacement, producing duplicates side by side.
 function neighborRepeats(orbit, ids, time) {
   const buckets = new Map(),
-    cell = 0.24;
+    cell = 0.012;
   let pairs = 0,
     repeats = 0;
   for (let i = 0; i < ids.length; i++) {
-    const { x, z } = photoPosition(orbit, i, time),
+    const { x, depth: z } = orbitAt(orbit, i, time),
       cx = Math.floor((x + 1) / cell),
       cz = Math.floor((z + 1) / cell);
     for (let dx = -1; dx <= 1; dx++)
@@ -34,8 +34,8 @@ test("photo assignment reduces close duplicates, balances the full library and s
   expect(Object.keys(content.photos)).toHaveLength(129);
   expect(content.photos).toHaveProperty("orbit24");
   expect(content.photos).toHaveProperty("orbit120");
-  const orbit = createPhotoOrbits(),
-    assigned = assignPhotoIds(orbit, 129);
+  const orbit = createOrbit(),
+    assigned = assignOrbitPhotos(orbit, 129);
   const old = Float32Array.from({ length: assigned.length }, (_, i) =>
     Math.floor(orbit[i * 4 + 3] * 129),
   );
@@ -46,11 +46,11 @@ test("photo assignment reduces close duplicates, balances the full library and s
   for (const time of [0, 10, 25]) {
     const baseline = neighborRepeats(orbit, old, time),
       current = neighborRepeats(orbit, assigned, time);
-    expect(baseline.repeats).toBeGreaterThan(30);
+    expect(baseline.repeats).toBeGreaterThan(100);
     expect(current.repeats).toBeLessThan(baseline.repeats * 0.35);
   }
-  expect(assignPhotoIds(orbit, 129)).toEqual(assigned);
-  expect([...assignPhotoIds(createPhotoOrbits(32), 1)]).toEqual(
+  expect(assignOrbitPhotos(orbit, 129)).toEqual(assigned);
+  expect([...assignOrbitPhotos(createOrbit(32), 1)]).toEqual(
     new Array(32).fill(0),
   );
   for (const maxSize of [1024, 2048, 4096, 8192]) {
@@ -109,7 +109,7 @@ test("all 120 orbit inputs upload in a batch, persist and fit a valid WebGL atla
   );
   expect(
     await page.locator("#universe").evaluate((c) => {
-      const gl = c.getContext("webgl2");
+      const gl = c.getContext("webgl");
       return {
         error: gl.getError(),
         size: gl.getParameter(gl.MAX_TEXTURE_SIZE),
@@ -135,10 +135,10 @@ test("all 120 orbit inputs upload in a batch, persist and fit a valid WebGL atla
   expect(
     await page
       .locator("#universe")
-      .evaluate((c) => c.getContext("webgl2").getError()),
+      .evaluate((c) => c.getContext("webgl").getError()),
   ).toBe(0);
   const hueBins = await page.locator("#universe").evaluate((c) => {
-    const gl = c.getContext("webgl2"),
+    const gl = c.getContext("webgl"),
       pixels = new Uint8Array(c.width * c.height * 4);
     gl.readPixels(0, 0, c.width, c.height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
     const bins = new Set();

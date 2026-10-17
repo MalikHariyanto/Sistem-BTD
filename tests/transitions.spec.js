@@ -119,7 +119,7 @@ test("disk texture orbits at rest, the central shadow stays fixed, and reduced m
     page.locator("#universe").evaluate(
       (c, center) => {
         const ctx = c.getContext("2d"),
-          gl = ctx ? null : c.getContext("webgl2");
+          gl = ctx ? null : c.getContext("webgl");
         let pixels;
         if (ctx) pixels = ctx.getImageData(0, 0, c.width, c.height).data;
         else {
