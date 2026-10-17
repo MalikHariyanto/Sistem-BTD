@@ -1,0 +1,57 @@
+/* One shared transparent botanical image; decoration never captures a tap. */
+.romance-flower {
+  position: absolute;
+  display: block;
+  height: auto;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+  z-index: 5;
+}
+
+.flower-memory-left {
+  width: 35%;
+  left: -9%;
+  bottom: 0;
+  transform: rotate(-24deg);
+}
+
+.flower-memory-right {
+  width: 28%;
+  right: -9%;
+  top: -10%;
+  transform: rotate(24deg) scaleX(-1);
+}
+
+.flower-poem {
+  width: 40%;
+  left: -15%;
+  bottom: 0;
+  transform: rotate(-22deg);
+}
+
+.flower-letter {
+  width: 43%;
+  right: -19%;
+  bottom: -10%;
+  transform: rotate(20deg);
+}
+
+.editor-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) clamp(64px, 18vw, 100px);
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.editor-heading h2 {
+  font-size: clamp(38px, 7vw, 50px);
+  margin-bottom: 0;
+}
+
+.editor-heading .flower-editor {
+  position: static;
+  width: 100%;
+  transform: rotate(10deg);
+}

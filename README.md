@@ -36,6 +36,8 @@ Database lokal dari versi sebelumnya dipertahankan. Kegagalan penyimpanan ditamp
 - **Lilin:** layar khusus dengan kue besar → Aku siap buat harapan → Tiup lilinnya → ucapan perayaan. Tidak memerlukan mikrofon atau meniup layar. Bisa diulang.
 - **Aksesibilitas:** fokus keyboard, `inert` pada bab yang tidak aktif, ukuran tombol utama minimal 48 px, reduced motion, audio berdasarkan tindakan pengguna. Layar sangat pendek dapat menggulir bab aktif agar isi tetap terbaca. Canvas berhenti ketika tak terlihat/tab tersembunyi; DPR maksimal 2 (dibatasi 3840×2160 pixel) dan 30 fps. Reduced motion menghentikan gerak orbit.
 
+Ornamen mawar dusty rose, mawar ivory, dan baby’s breath memakai satu ilustrasi transparan hasil image generation di `public/art/romantic-roses.webp` (512×768, sekitar 90 KB). Aset ini dipakai ulang pada kolase kenangan, puisi, surat, dan header editor. Bunga dimuat saat diperlukan, mengikuti transisi adegan, dan tidak menangkap klik atau ikut terganti ketika foto diunggah.
+
 ## Pengujian
 
 ```sh
