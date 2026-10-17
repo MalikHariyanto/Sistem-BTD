@@ -1,4 +1,3 @@
-import { finishIntro } from "./helpers.js";
 import { test, expect } from "@playwright/test";
 import {
   cameraAt,
@@ -23,9 +22,7 @@ test("a dense physical annulus rotates differentially, retaining its identities 
       after = orbitAt(data, i, 10);
     radii.add(before.radius);
     phases.add(before.angle);
-    expect(after.radius).toBeLessThan(before.radius);
-    expect(before.radius ** 2 - after.radius ** 2).toBeCloseTo(0.007, 7);
-    expect(Math.hypot(after.x, after.depth)).toBeCloseTo(after.radius, 7);
+    expect(Math.hypot(after.x, after.depth)).toBeCloseTo(before.radius, 7);
     expect(after.seed).toBe(before.seed);
     expect(
       Math.hypot(after.x - before.x, after.depth - before.depth),
@@ -49,13 +46,13 @@ test("a dense physical annulus rotates differentially, retaining its identities 
   ]) {
     // Preserve the opening's original pull into Gargantua, then approach a
     // closer ending than the wide revision without overshooting or pulling back.
-    for (const p of [0, 0.1, 0.2]) {
+    for (const p of [0, 0.15, 0.3, 0.35]) {
       expect(cameraAt(p, width, height).zoom).toBeCloseTo(
         Math.exp(Math.log(5 / 0.052) * ease(p)),
         8,
       );
     }
-    expect(cameraAt(0.5, width, height).zoom).toBeGreaterThan(7);
+    expect(cameraAt(0.5, width, height).zoom).toBeGreaterThan(9);
     expect(cameraAt(1, width, height).zoom).toBeGreaterThan(40);
     expect(cameraAt(1, width, height).zoom).toBeLessThan(50);
     let previous = cameraAt(0, width, height);
@@ -64,10 +61,6 @@ test("a dense physical annulus rotates differentially, retaining its identities 
       expect(camera.zoom).toBeGreaterThanOrEqual(previous.zoom - 1e-9);
       // A perceptual zoom cannot surge in the final second of the flight.
       expect(camera.zoom / previous.zoom).toBeLessThan(1.01);
-      // Focal widening must not quietly reverse the apparent zoom even when
-      // the underlying camera distance continues to decrease.
-      expect(camera.width).toBeGreaterThanOrEqual(previous.width - 1e-7);
-      expect(camera.width / previous.width).toBeLessThan(1.012);
       expect(camera.distance).toBeGreaterThan(0.32);
       previous = camera;
     }
@@ -107,32 +100,17 @@ test("the crowded middle has a moving viewing interval while opening and ending 
   }
   // The opening clock is unchanged; after the viewing interval, the same final
   // camera path and idle rotation are reached without a cut or a hard pause.
-  expect(journeyProgress(1720)).toBeCloseTo(0.2, 6);
+  expect(journeyProgress(2580)).toBeCloseTo(0.3, 6);
   expect(highlightedMs).toBeGreaterThan(4000);
   expect(highlightedMs).toBeLessThan(5000);
-  expect(journeyProgress(5500) - journeyProgress(3500)).toBeGreaterThan(0.02);
-  expect(journeyProgress(5500) - journeyProgress(3500)).toBeLessThan(0.04);
+  expect(journeyProgress(7000) - journeyProgress(5000)).toBeGreaterThan(0.05);
+  expect(journeyProgress(7000) - journeyProgress(5000)).toBeLessThan(0.08);
   expect(photoShowcaseAt(0)).toBe(0);
   expect(photoShowcaseAt(1)).toBe(0);
   expect(orbitRateAt(0)).toBe(1);
-  expect(orbitRateAt(0.3)).toBe(1);
+  expect(orbitRateAt(0.5)).toBeGreaterThan(0.4);
+  expect(orbitRateAt(0.5)).toBeLessThan(0.5);
   expect(orbitRateAt(1)).toBeCloseTo(0.025, 8);
-  for (const [width, height] of [
-    [390, 664],
-    [1440, 900],
-  ]) {
-    for (const p of [0.26, 0.3, 0.34, 0.36]) {
-      const camera = cameraAt(p, width, height);
-      expect(camera.x + camera.width * 0.5).toBeGreaterThan(0);
-      expect(camera.x + camera.width * 0.5).toBeLessThan(width);
-      expect(camera.y + camera.height * 0.43).toBeGreaterThan(0);
-      expect(camera.y + camera.height * 0.43).toBeLessThan(height);
-    }
-    expect(
-      cameraAt(0.36, width, height).viewAngle -
-        cameraAt(0.24, width, height).viewAngle,
-    ).toBeGreaterThan(0.5);
-  }
 });
 
 test("uploaded photos form the live accretion disk and resolve through perspective on approach", async ({
@@ -199,7 +177,7 @@ test("uploaded photos form the live accretion disk and resolve through perspecti
   await page.keyboard.press("Escape");
   expect(await fingerprint()).toEqual(expect.any(Number));
   await page.locator("#begin").click();
-  await finishIntro(page);
+  await page.locator("#skip-intro").click();
   await expect(page.locator("#universe")).toHaveAttribute(
     "data-photo-mix",
     "1.0000",
@@ -234,7 +212,7 @@ test("missing art has a non-blocking fallback, and the gift still opens", async 
     "fallback",
   );
   await page.locator("#begin").click();
-  await finishIntro(page);
+  await page.locator("#skip-intro").click();
   await expect(page.locator("#reveal-copy")).toBeVisible();
   await page.locator("#enter-story").click();
   await expect(page.locator('[data-scene="1"]')).toHaveClass(/is-active/);
@@ -294,7 +272,7 @@ for (const renderer of ["webgl", "canvas2d"]) {
       "2",
     );
     await page.locator("#begin").click();
-    await finishIntro(page);
+    await page.locator("#skip-intro").click();
     await expect(page.locator("#reveal-title")).toBeVisible();
     const result = await page.locator("#universe").evaluate((c) => {
       const ctx = c.getContext("2d"),

@@ -11,7 +11,7 @@ import {
 // dust. Fade before the projected tangent reverses direction, never wrap x.
 export function frontArc(point, camera) {
   const facing =
-    (camera.eye[0] * point.x + camera.eye[2] * point.depth) / point.radius -
+    (camera.cx * point.x + camera.distance * point.depth) / point.radius -
     point.radius;
   return ease((facing - 0.012) / 0.045);
 }
@@ -46,7 +46,6 @@ export function createOrbitComposition(orbit) {
   const candidates = [];
   for (let i = 0; i < orbit.length / 4; i++)
     if (
-      orbit.length / 4 <= 8192 ||
       i % 4 === 0 ||
       orbitPhotoSize(orbit[i * 4 + 3]) > orbitDustSize(orbit[i * 4 + 3])
     )
@@ -172,7 +171,7 @@ export function createOrbitComposition(orbit) {
             index,
             point,
             projected,
-            alpha: state.alpha * frontArc(point, camera) * point.opacity,
+            alpha: state.alpha * frontArc(point, camera),
           });
       }
       return result;

@@ -1,10 +1,9 @@
-import { finishIntro } from "./helpers.js";
 import { test, expect } from "@playwright/test";
 
 async function enterGarden(page) {
   await page.goto("/");
   await page.locator("#begin").click();
-  await finishIntro(page);
+  await page.locator("#skip-intro").click();
   await page.locator("#enter-story").click();
   await expect(page.locator('[data-scene="1"]')).toHaveClass(/is-active/);
   await page.getByRole("button", { name: "Ke Tiga doa", exact: true }).click();
@@ -14,23 +13,7 @@ async function enterGarden(page) {
 test("garden wishes bloom in any order and accumulate without replacing the earlier wish", async ({
   page,
 }) => {
-  test.setTimeout(60000);
   await enterGarden(page);
-  await expect(page.locator(".garden-flower-art")).toHaveCount(3);
-  await expect
-    .poll(() =>
-      page
-        .locator(".garden-flower-art")
-        .evaluateAll((images) =>
-          images.every((image) => image.complete && image.naturalWidth > 0),
-        ),
-    )
-    .toBe(true);
-  expect(
-    await page
-      .locator("[data-bloom]")
-      .evaluateAll((buttons) => buttons.map((button) => button.dataset.flower)),
-  ).toEqual(["rose", "tulip", "anemone"]);
   await expect(page.locator(".garden-note:not([hidden])")).toHaveCount(0);
   await expect(
     page.locator("#next-quote, #prev-quote, #quote-position"),
@@ -65,7 +48,7 @@ test("garden wishes bloom in any order and accumulate without replacing the earl
   await page.locator("#home-link").click();
   await expect(page.locator('[data-scene="0"]')).toHaveClass(/is-active/);
   await page.locator("#begin").click();
-  await finishIntro(page);
+  await page.locator("#skip-intro").click();
   await page.locator("#enter-story").click();
   await expect(page.locator('[data-scene="1"]')).toHaveClass(/is-active/);
   await page.getByRole("button", { name: "Ke Tiga doa", exact: true }).click();
@@ -104,7 +87,7 @@ test("garden works with keyboard and reduced motion, with sourced quotes and no 
   }
   expect(
     await page
-      .locator(".garden-flower-art")
+      .locator(".garden-petals > span")
       .first()
       .evaluate((e) => getComputedStyle(e).transitionDuration),
   ).toBe("0s");

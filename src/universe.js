@@ -1,8 +1,5 @@
 import {
   cameraAt,
-  projectWorld,
-  HORIZON,
-  ASPECT,
   JOURNEY_MS,
   journeyProgress,
   photoShowcaseAt,
@@ -11,7 +8,6 @@ import {
   PARTICLE_COUNT,
   createOrbit,
   orbitAt,
-  orbitTangent,
   projectOrbit,
   orbitDustSize,
   orbitPhotoSize,
@@ -54,7 +50,6 @@ export function createUniverse(canvas) {
     frame = 0,
     last = 0;
   let flowSeconds = 0,
-    cameraSeconds = 0,
     lastSimulationFrame = 0;
   let traveling = false,
     started = 0,
@@ -92,17 +87,17 @@ export function createUniverse(canvas) {
     }
     points.sort((a, b) => b.depth - a.depth);
     function paint(point, opacity = 1) {
-      const { x, y, size, seed, depth } = point;
-      const readable = ease((size - 2) / (26 - 16 * showcase));
+      const { x, y, size, seed, angle, depth } = point;
+      const readable = ease((size - 2) / (26 - 8 * showcase));
       ctx.save();
       ctx.translate(x, y);
-      const tangent = orbitTangent(point, camera);
+      const tangent = Math.atan2(
+        0.19 * Math.cos(angle) - 0.26 * Math.sin(angle),
+        -Math.sin(angle),
+      );
       ctx.rotate(tangent * (1 - readable) + (seed - 0.5) * 0.18 * readable);
       ctx.globalAlpha =
-        opacity *
-        point.opacity *
-        (0.38 + readable * 0.6) *
-        ease((depth - 0.028) / 0.047);
+        opacity * (0.38 + readable * 0.6) * ease((depth - 0.028) / 0.047);
       const image = images[point.photoId];
       const ratio = image ? image.width / image.height : 0.8;
       const cardWidth = size * Math.min(ratio, 1);
@@ -146,19 +141,7 @@ export function createUniverse(canvas) {
       );
       if (dust) paint({ ...point, ...dust }, 1 - 0.4 * blend);
       if (blend < 1 && orbitPhotoSize(point.seed) > orbitDustSize(point.seed))
-        paint(
-          {
-            ...point,
-            ...projectOrbit(
-              orbitAt(orbit, point.index, flowSeconds),
-              camera,
-              width,
-              height,
-              orbitPhotoSize(point.seed) * (1 + 0.25 * showcase),
-            ),
-          },
-          1 - blend,
-        );
+        paint(point, 1 - blend);
     }
     const focused = composition.update({
       camera,
@@ -183,7 +166,7 @@ export function createUniverse(canvas) {
 
   function draw() {
     if (!width || !height || suspended || !visible || document.hidden) return;
-    const camera = cameraAt(progress, width, height, aspect, cameraSeconds);
+    const camera = cameraAt(progress, width, height, aspect);
     const detailMix = detailPlate
       ? ease((camera.zoom - 2.8) / 3.2) *
         ease((performance.now() - detailArrived) / 600)
@@ -211,25 +194,6 @@ export function createUniverse(canvas) {
       (1 - 0.9 * ease((camera.zoom - 4) / 14)) *
       (1 - 0.25 * photoShowcaseAt(progress));
     ctx.globalAlpha = radiance;
-    // The fallback follows the same moving world-space camera. Anchor the lens
-    // plate to the projected sphere, rather than leaving a static backdrop.
-    if (camera.orbitBlend > 0) {
-      const hole = projectWorld(
-        { x: HORIZON.x, y: HORIZON.y * ASPECT, depth: 0 },
-        camera,
-        width,
-        height,
-        0,
-      );
-      if (hole) {
-        const scale = camera.focal / hole.depth;
-        camera.x += (hole.x - 0.5 * scale - camera.x) * camera.orbitBlend;
-        camera.y +=
-          (hole.y - (0.43 * scale) / ASPECT - camera.y) * camera.orbitBlend;
-        camera.width += (scale - camera.width) * camera.orbitBlend;
-        camera.height = camera.width / ASPECT;
-      }
-    }
     if (plate)
       ctx.drawImage(plate, camera.x, camera.y, camera.width, camera.height);
     // A separately reconstructed close-up resolves the disk filaments before
@@ -302,16 +266,10 @@ export function createUniverse(canvas) {
     canvas.dataset.visibilityCount = gpu ? "sampled-estimate" : "exact";
     canvas.dataset.photoMix = camera.photoMix.toFixed(4);
     canvas.dataset.zoom = camera.zoom.toFixed(4);
-    canvas.dataset.viewAngle = camera.viewAngle.toFixed(4);
-    canvas.dataset.cameraPosition = camera.eye
-      .map((v) => v.toFixed(5))
-      .join(",");
     canvas.dataset.detailMix = detailMix.toFixed(4);
     canvas.dataset.progress = progress.toFixed(4);
     canvas.dataset.photoShowcase = photoShowcaseAt(progress).toFixed(4);
     canvas.dataset.flow = flowSeconds.toFixed(4);
-    canvas.dataset.middleMotion = camera.middleMotion.toFixed(4);
-    canvas.dataset.cameraTime = cameraSeconds.toFixed(4);
   }
 
   function fallbackPlate() {
@@ -364,7 +322,6 @@ export function createUniverse(canvas) {
       gpu?.setPlate(plate);
       canvas.dataset.plate = ok ? "ready" : "fallback";
       canvas.dataset.plateWidth = String(plate.width);
-      canvas.dataset.ready = "true";
       draw();
       resolve(ok);
     };
@@ -430,11 +387,7 @@ export function createUniverse(canvas) {
         progress = motion.matches
           ? clamp((now - started) / duration)
           : journeyProgress(now - started);
-      if (!motion.matches) {
-        const elapsed = dt * orbitRateAt(progress);
-        flowSeconds += elapsed;
-        if (traveling) cameraSeconds += elapsed;
-      }
+      if (!motion.matches) flowSeconds += dt * orbitRateAt(progress);
       draw();
       if (traveling && progress >= 1) {
         traveling = false;
@@ -577,8 +530,6 @@ export function createUniverse(canvas) {
         finish?.();
         finish = resolve;
         progress = 0;
-        // Idle time and earlier visits must not amplify the middle camera arc.
-        cameraSeconds = 0;
         traveling = true;
         started = performance.now();
         if (document.hidden) hiddenAt = started;

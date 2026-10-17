@@ -1,4 +1,3 @@
-import { finishIntro } from "./helpers.js";
 import { test, expect } from "@playwright/test";
 import { content, ORBIT_PHOTO_COUNT } from "../src/content.js";
 import { createOrbit, orbitAt } from "../src/universe-camera.js";
@@ -130,7 +129,7 @@ test("all 120 orbit inputs upload in a batch, persist and fit a valid WebGL atla
   );
   await page.keyboard.press("Escape");
   await page.locator("#begin").click();
-  await finishIntro(page);
+  await page.locator("#skip-intro").click();
   await expect(page.locator("#reveal-title")).toBeVisible();
   expect(
     await page
