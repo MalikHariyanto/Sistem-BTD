@@ -26,6 +26,12 @@ test("a dense physical annulus rotates differentially, retaining its identities 
   }
   expect(radii.size).toBeGreaterThan(200);
   expect(phases.size).toBeGreaterThan(200);
+  const heights = Array.from(
+    { length: PARTICLE_COUNT },
+    (_, i) => data[i * 4 + 2],
+  );
+  // Real height differences, not just rotating a flat grid of photos.
+  expect(Math.max(...heights) - Math.min(...heights)).toBeGreaterThan(0.05);
   for (const [width, height] of [
     [320, 568],
     [390, 664],
@@ -48,10 +54,15 @@ test("a dense physical annulus rotates differentially, retaining its identities 
       const point = projectOrbit(orbitAt(data, i, 10), end, width, height);
       if (point) apparent.push(point);
     }
-    expect(apparent.length).toBeGreaterThan(30);
-    expect(apparent.some((p) => p.size > 75)).toBe(true);
+    // The ending must remain a deep, busy disk instead of a few huge cards.
+    expect(apparent.length).toBeGreaterThan(1500);
+    expect(apparent.filter((p) => p.size < 16).length).toBeGreaterThan(1000);
+    expect(apparent.filter((p) => p.size > 24).length).toBeGreaterThan(15);
+    expect(Math.max(...apparent.map((p) => p.size))).toBeLessThanOrEqual(
+      Math.min(190, width * 0.36),
+    );
     const sizes = apparent.map((p) => p.size);
-    expect(Math.max(...sizes) / Math.min(...sizes)).toBeGreaterThan(2); // depth, not one wall
+    expect(Math.max(...sizes) / Math.min(...sizes)).toBeGreaterThan(8); // depth, not one wall
     expect(cameraAt(0.001, width, height).zoom - 1).toBeLessThan(0.00001);
     expect(end.zoom - cameraAt(0.999, width, height).zoom).toBeLessThan(
       0.00001,
@@ -163,3 +174,171 @@ test("missing art has a non-blocking fallback, and the gift still opens", async 
   await page.locator("#enter-story").click();
   await expect(page.locator('[data-scene="1"]')).toHaveClass(/is-active/);
 });
+
+for (const renderer of ["webgl", "canvas2d"]) {
+  test(`${renderer}: original photo edges, orientation and distinct colors survive the close-up`, async ({
+    page,
+  }) => {
+    if (renderer === "canvas2d")
+      await page.addInitScript(() => {
+        const get = HTMLCanvasElement.prototype.getContext;
+        HTMLCanvasElement.prototype.getContext = function (kind, ...args) {
+          return kind === "webgl" || kind === "webgl2"
+            ? null
+            : get.call(this, kind, ...args);
+        };
+      });
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.goto("/");
+    await expect(page.locator("#universe")).toHaveAttribute(
+      "data-renderer",
+      renderer,
+    );
+    await expect(page.locator("#universe")).toHaveAttribute(
+      "data-photo-sources",
+      "0",
+    );
+    await page.evaluate(() => {
+      const sources = [
+        [300, 100, "#00ffff"],
+        [100, 300, "#ff00ff"],
+      ].map(([width, height, color]) => {
+        const c = document.createElement("canvas");
+        c.width = width;
+        c.height = height;
+        const ctx = c.getContext("2d");
+        ctx.fillStyle = color;
+        ctx.fillRect(0, 0, width, height);
+        // These outer edges disappeared entirely under the old centered crop.
+        ctx.fillStyle = "#00ff00";
+        if (width > height) {
+          ctx.fillRect(0, 0, 24, height);
+          ctx.fillRect(width - 24, 0, 24, height);
+        } else {
+          ctx.fillRect(0, 0, width, 24);
+          ctx.fillRect(0, height - 24, width, 24);
+        }
+        return c.toDataURL();
+      });
+      window.dispatchEvent(
+        new CustomEvent("photoschanged", { detail: sources }),
+      );
+    });
+    await expect(page.locator("#universe")).toHaveAttribute(
+      "data-photo-sources",
+      "2",
+    );
+    await page.locator("#begin").click();
+    await page.locator("#skip-intro").click();
+    await expect(page.locator("#reveal-title")).toBeVisible();
+    const result = await page.locator("#universe").evaluate((c) => {
+      const ctx = c.getContext("2d"),
+        gl = ctx ? null : c.getContext("webgl");
+      let pixels,
+        edgeSamples = [];
+      if (ctx) pixels = ctx.getImageData(0, 0, c.width, c.height).data;
+      else {
+        pixels = new Uint8Array(c.width * c.height * 4);
+        gl.readPixels(
+          0,
+          0,
+          c.width,
+          c.height,
+          gl.RGBA,
+          gl.UNSIGNED_BYTE,
+          pixels,
+        );
+        const binding = gl.getParameter(gl.FRAMEBUFFER_BINDING);
+        const framebuffer = gl.createFramebuffer();
+        gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+        gl.framebufferTexture2D(
+          gl.FRAMEBUFFER,
+          gl.COLOR_ATTACHMENT0,
+          gl.TEXTURE_2D,
+          gl.getParameter(gl.TEXTURE_BINDING_2D),
+          0,
+        );
+        const tile = Number(c.dataset.atlasTile),
+          tileHeight = tile * 1.25;
+        for (const [x, y] of [
+          [tile * 0.04, tileHeight * 0.5],
+          [tile * 0.96, tileHeight * 0.5],
+          [tile * 1.5, tileHeight * 0.04],
+          [tile * 1.5, tileHeight * 0.96],
+        ]) {
+          const sample = new Uint8Array(4);
+          gl.readPixels(
+            Math.floor(x),
+            Math.floor(y),
+            1,
+            1,
+            gl.RGBA,
+            gl.UNSIGNED_BYTE,
+            sample,
+          );
+          edgeSamples.push([...sample]);
+        }
+        gl.bindFramebuffer(gl.FRAMEBUFFER, binding);
+        gl.deleteFramebuffer(framebuffer);
+      }
+      const width = c.width,
+        height = c.height,
+        labels = new Uint8Array(width * height);
+      for (let i = 0; i < labels.length; i++) {
+        const [r, g, b] = pixels.subarray(i * 4, i * 4 + 3);
+        if (g > r + 50 && b > r + 50 && g > 80) labels[i] = 1;
+        else if (r > g + 50 && b > g + 50 && r > 80) labels[i] = 2;
+      }
+      const queue = new Uint32Array(labels.length),
+        shapes = [];
+      for (let i = 0; i < labels.length; i++) {
+        const color = labels[i];
+        if (!color) continue;
+        let head = 0,
+          tail = 1,
+          minX = width,
+          maxX = 0,
+          minY = height,
+          maxY = 0;
+        queue[0] = i;
+        labels[i] = 0;
+        while (head < tail) {
+          const index = queue[head++],
+            x = index % width,
+            y = Math.floor(index / width);
+          minX = Math.min(minX, x);
+          maxX = Math.max(maxX, x);
+          minY = Math.min(minY, y);
+          maxY = Math.max(maxY, y);
+          const neighbors = [];
+          if (x) neighbors.push(index - 1);
+          if (x < width - 1) neighbors.push(index + 1);
+          if (y) neighbors.push(index - width);
+          if (y < height - 1) neighbors.push(index + width);
+          for (const next of neighbors)
+            if (labels[next] === color) {
+              labels[next] = 0;
+              queue[tail++] = next;
+            }
+        }
+        if (tail > 30)
+          shapes.push({ color, ratio: (maxX - minX + 1) / (maxY - minY + 1) });
+      }
+      return { shapes, edgeSamples, error: gl?.getError() };
+    });
+    expect(
+      result.shapes.filter((s) => s.color === 1 && s.ratio > 1.5).length,
+    ).toBeGreaterThan(3);
+    expect(
+      result.shapes.filter((s) => s.color === 2 && s.ratio < 1 / 1.5).length,
+    ).toBeGreaterThan(3);
+    if (renderer === "webgl") {
+      expect(result.error).toBe(0);
+      for (const [r, g, b] of result.edgeSamples) {
+        expect(g).toBeGreaterThan(200);
+        expect(r).toBeLessThan(30);
+        expect(b).toBeLessThan(30);
+      }
+    }
+  });
+}

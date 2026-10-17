@@ -20,13 +20,10 @@ export function createOrbit(count = PARTICLE_COUNT) {
   };
   const data = new Float32Array(count * 4);
   for (let i = 0; i < count; i++) {
-    // Narrow spiral filaments within a broad annulus, not rows of a mosaic.
-    const lane = Math.floor(random() * 192);
-    const radius =
-      ORBIT.inner +
-      ((lane + random() * 0.72) / 192) ** 1.22 * (ORBIT.outer - ORBIT.inner);
+    // Continuous radii and a thicker, irregular vertical spread avoid rows.
+    const radius = ORBIT.inner + random() ** 1.22 * (ORBIT.outer - ORBIT.inner);
     const phase = random() * Math.PI * 2;
-    data.set([radius, phase, (random() - 0.5) * 0.013, random()], i * 4);
+    data.set([radius, phase, (random() - 0.5) * 0.064, random()], i * 4);
   }
   return data;
 }
@@ -57,14 +54,17 @@ export function cameraAt(progress, width, height, aspect = 1672 / 941) {
     ? Math.max(width * 1.9, height * 0.82)
     : Math.max(Math.min(width * 1.06, height * 1.7), height * 0.95);
   const focusDepth = 0.32,
-    focusX = 0.24;
+    focusX = 0.24,
+    clearance = 0.31,
+    heightAboveDisk = 0.033;
   const focus = ease(p / 0.94);
+  // Stop above the near-side stream, leaving depth and distant orbits visible.
   // Exponential apparent magnification avoids a slow opening followed by a
   // violent jump in the last second when perspective distance becomes small.
-  const zoom = Math.exp(Math.log(5 / 0.052) * travel);
+  const zoom = Math.exp(Math.log(5 / clearance) * travel);
   const distance = focusDepth * focus + 5 / zoom;
   const cx = focusX * focus,
-    cy = (0.26 * focusX + ORBIT.tilt * focusDepth) * focus;
+    cy = (0.26 * focusX + ORBIT.tilt * focusDepth - heightAboveDisk) * focus;
   const imageWidth = (baseWidth * 5) / distance,
     imageHeight = imageWidth / aspect;
   return {
@@ -83,16 +83,28 @@ export function cameraAt(progress, width, height, aspect = 1672 / 941) {
     centerY: mix(height * (mobile ? 0.32 : 0.38), height * 0.5, travel),
     // Only for reporting and the final gentle text vignette. Individual photos
     // resolve from their apparent pixel size, not a progress-driven crossfade.
-    photoMix: ease((zoom - 3) / 70),
-    shade: 0.035 + 0.36 * ease((p - 0.86) / 0.14),
+    photoMix: ease((zoom - 3) / 12),
+    shade: 0.035 + 0.2 * ease((p - 0.86) / 0.14),
   };
 }
+
+// Most of the disk is fine photographic dust; a sparse population of larger
+// cards can be read without covering all the distant orbits. Stable at all zooms.
+export function orbitPhotoSize(seed) {
+  return (seed * 97.13) % 1 > 0.88
+    ? 0.003 + seed * 0.0018
+    : 0.00018 + seed * 0.00038;
+}
+export const photoSizeLimit = (width) => Math.min(190, width * 0.36);
 
 export function projectOrbit(point, camera, width, height) {
   const depth = camera.distance - point.depth;
   if (depth <= 0.028) return null;
   const scale = (camera.baseWidth * 5) / depth;
-  const size = Math.min(360, (0.0018 + point.seed * 0.0016) * scale);
+  const size = Math.min(
+    photoSizeLimit(width),
+    orbitPhotoSize(point.seed) * scale,
+  );
   const x = camera.centerX + (point.x - camera.cx) * scale;
   const y = camera.centerY + ((point.y - camera.cy) * scale) / (1672 / 941);
   if (x < -size || x > width + size || y < -size || y > height + size)

@@ -79,38 +79,45 @@ export function createUniverse(canvas) {
     points.sort((a, b) => b.depth - a.depth);
     for (const point of points) {
       const { x, y, size, seed, angle, depth } = point;
-      const readable = ease((size - 4) / 66);
+      const readable = ease((size - 2) / 26);
       ctx.save();
       ctx.translate(x, y);
       const tangent = Math.atan2(
         0.19 * Math.cos(angle) - 0.26 * Math.sin(angle),
         -Math.sin(angle),
       );
-      ctx.rotate(tangent * (1 - readable) + (seed - 0.5) * 0.32 * readable);
+      ctx.rotate(tangent * (1 - readable) + (seed - 0.5) * 0.55 * readable);
       ctx.globalAlpha = (0.38 + readable * 0.6) * ease((depth - 0.028) / 0.047);
-      if (readable > 0.1 && images.length) {
+      const image = images[point.photoId];
+      const ratio = image ? image.width / image.height : 0.8;
+      const cardWidth = size * Math.min(ratio, 1);
+      const cardHeight =
+        size *
+        Math.min(1 / ratio, 1) *
+        (0.28 + 0.72 * ease((size - 1.5) / 10.5));
+      if (image && readable > 0.01) {
         ctx.drawImage(
-          images[point.photoId],
-          -size * 0.395,
-          -size * 0.5,
-          size * 0.79,
-          size,
+          image,
+          -cardWidth / 2,
+          -cardHeight / 2,
+          cardWidth,
+          cardHeight,
         );
         ctx.fillStyle = `rgba(227,161,77,${(1 - readable) * 0.85})`;
-        ctx.fillRect(-size * 0.395, -size * 0.5, size * 0.79, size);
+        ctx.fillRect(-cardWidth / 2, -cardHeight / 2, cardWidth, cardHeight);
       } else {
         ctx.fillStyle = readable > 0.1 ? "#b8a68e" : "#f4c58e";
         ctx.fillRect(
-          -size * 0.395,
-          -size * 0.5,
-          Math.max(0.8, size * 0.79),
-          Math.max(0.8, size),
+          -cardWidth / 2,
+          -cardHeight / 2,
+          Math.max(0.8, cardWidth),
+          Math.max(0.8, cardHeight),
         );
       }
       if (readable > 0.65) {
         ctx.strokeStyle = "#e7dcc9";
-        ctx.lineWidth = Math.max(1, size * 0.018);
-        ctx.strokeRect(-size * 0.37, -size * 0.475, size * 0.74, size * 0.95);
+        ctx.lineWidth = Math.max(0.5, size * 0.009);
+        ctx.strokeRect(-cardWidth / 2, -cardHeight / 2, cardWidth, cardHeight);
       }
       ctx.restore();
     }
@@ -141,7 +148,7 @@ export function createUniverse(canvas) {
     ctx.fillRect(0, 0, width, height);
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = "high";
-    const radiance = 1 - 0.965 * ease((camera.zoom - 8) / 47);
+    const radiance = 1 - 0.9 * ease((camera.zoom - 4) / 14);
     ctx.globalAlpha = radiance;
     if (plate)
       ctx.drawImage(plate, camera.x, camera.y, camera.width, camera.height);
@@ -407,22 +414,12 @@ export function createUniverse(canvas) {
       const im = new Image();
       im.onload = () => {
         const thumb = document.createElement("canvas");
-        thumb.width = 256;
-        thumb.height = 320;
-        const unit = Math.min(im.width / 4, im.height / 5);
-        thumb
-          .getContext("2d")
-          .drawImage(
-            im,
-            (im.width - unit * 4) / 2,
-            (im.height - unit * 5) / 2,
-            unit * 4,
-            unit * 5,
-            0,
-            0,
-            256,
-            320,
-          );
+        // Preserve the whole image and its original orientation. The atlas may
+        // pack rectangles uniformly, but each sprite restores this aspect ratio.
+        const scale = Math.min(1, 320 / Math.max(im.width, im.height));
+        thumb.width = Math.max(1, Math.round(im.width * scale));
+        thumb.height = Math.max(1, Math.round(im.height * scale));
+        thumb.getContext("2d").drawImage(im, 0, 0, thumb.width, thumb.height);
         thumbnails.set(src, thumb);
         im.onload = im.onerror = null;
         im.src = "";

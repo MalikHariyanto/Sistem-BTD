@@ -57,7 +57,7 @@ void main(){
 
   // The unresolved plasma radiance falls away as individual cards become
   // optically resolvable. Geometry and photo positions remain unchanged.
-  vec3 color=plasma*mix(1.0,.035,smoothstep(8.0,55.0,uZoom));
+  vec3 color=plasma*mix(1.0,.10,smoothstep(4.0,18.0,uZoom));
   float vignette=smoothstep(.12,.83,length((pixel-uViewport*vec2(.5,.45))/max(uViewport.x,uViewport.y)));
   float shade=mix(uState.z*.65,min(.84,uState.z+.24),vignette);
   color=mix(color,vec3(.031,.035,.043),shade);
@@ -70,7 +70,8 @@ void main(){
 const orbitVertex = `
 precision highp float;
 attribute vec4 aOrbit; // radius, initial phase, thickness, stable identity
-attribute float aPhoto;
+attribute vec2 aPhoto; // stable image id and original width/height
+varying float vAspect;
 varying float vPhotoId;
 uniform vec2 uViewport;
 uniform vec4 uFlight; // camera x, y, distance, base image width
@@ -84,7 +85,8 @@ varying vec4 vPhoto; // id, apparent size, rotation, opacity
 varying float vHeat;
 varying vec2 vOffset;
 void main(){
-  vPhotoId=aPhoto;
+  vPhotoId=aPhoto.x;
+  vAspect=aPhoto.y;
   float r=aOrbit.x, seed=aOrbit.w;
   float theta=aOrbit.y+uTime*.115*pow(.28/r,1.5);
   float x=cos(theta)*r, z=sin(theta)*r;
@@ -107,7 +109,9 @@ void main(){
   float distance=uFlight.z-z;
   float scale=uFlight.w*5.0/max(.028,distance);
   vec2 pixel=uCenter+vec2(x-uFlight.x,(y-uFlight.y)/1.776833)*scale;
-  float size=min(360.0,(.0018+seed*.0016)*scale);
+  float grain=fract(seed*97.13);
+  float worldSize=grain>.88 ? .003+seed*.0018 : .00018+seed*.00038;
+  float size=min(min(190.0,uViewport.x*.36),worldSize*scale);
   if(uLens>.5)size*=.60;
   mask*=smoothstep(.028,.075,distance);
   if(distance<=.028||pixel.x < -size||pixel.x>uViewport.x+size||pixel.y < -size||pixel.y>uViewport.y+size)mask=0.0;
@@ -121,15 +125,16 @@ void main(){
   gl_PointSize=mask>.001?min(uPointLimit,footprint*uDpr):1.0;
   // Tiny tilted cards merge into light filaments. The same cards become legible
   // through perspective magnification, with no new grid or new positions.
-  float readable=smoothstep(4.0,70.0,size);
+  float readable=smoothstep(2.0,28.0,size);
   float tangent=atan(.19*cos(theta)-.26*sin(theta),-sin(theta));
-  vPhoto=vec4(seed,size,mix(tangent,(seed-.5)*.32,readable),mask);
+  vPhoto=vec4(seed,size,mix(tangent,(seed-.5)*.55,readable),mask);
   vHeat=(1.0-smoothstep(.14,.64,r))*.36+seed*.20;
 }
 `;
 const orbitFragment = `
 precision highp float;
 varying float vPhotoId;
+varying float vAspect;
 uniform sampler2D uPhotos;
 uniform vec3 uAtlas;
 uniform float uShade;
@@ -141,19 +146,19 @@ varying float vHeat;
 varying vec2 vOffset;
 void main(){
   if(vPhoto.w<.001)discard;
-  float size=vPhoto.y, readable=smoothstep(4.0,70.0,size);
+  float size=vPhoto.y, readable=smoothstep(2.0,28.0,size);
   vec2 p=(gl_PointCoord-vec2(.5)+vOffset)*1.3;
   float c=cos(vPhoto.z),s=sin(vPhoto.z);
   p=mat2(c,-s,s,c)*p;
-  p.x/=.79;
-  p.y/=mix(.28,1.0,readable);
+  p.x/=min(vAspect,1.0);
+  p.y/=min(1.0/vAspect,1.0)*mix(.28,1.0,smoothstep(1.5,12.0,size));
   float edge=max(abs(p.x),abs(p.y));
   if(edge>.5)discard;
   vec2 local=p+vec2(.5);
   float id=clamp(floor(vPhotoId+.5),0.0,uAtlas.z-1.0);
   vec2 tile=vec2(mod(id,uAtlas.x),floor(id/uAtlas.x));
   vec3 photo=texture2D(uPhotos,(tile+mix(vec2(.006),vec2(.994),local))/uAtlas.xy).rgb;
-  float border=smoothstep(.455,.48,edge)*readable;
+  float border=smoothstep(.48,.495,edge)*readable;
   photo=mix(photo,vec3(.91,.87,.79),border*.9);
   float lum=dot(photo,vec3(.2126,.7152,.0722));
   vec3 ember=mix(vec3(.68,.30,.095),vec3(1.0,.90,.66),vHeat+.22)*(.65+lum*.75);
@@ -188,6 +193,7 @@ export function createUniverseGPU(canvas) {
   const sources = { wide: null, detail: null, photos: null };
   const orbit = createOrbit();
   let photoIds = new Float32Array(PARTICLE_COUNT);
+  let photoAttributes = new Float32Array(PARTICLE_COUNT * 2);
   const maxTextureSize = Math.min(4096, gl.getParameter(gl.MAX_TEXTURE_SIZE));
   let atlas = [1, 1, 1];
   const pointLimit = gl.getParameter(gl.ALIASED_POINT_SIZE_RANGE)[1];
@@ -286,7 +292,7 @@ export function createUniverseGPU(canvas) {
     );
     photoBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, photoBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, photoIds, gl.STATIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, photoAttributes, gl.STATIC_DRAW);
     orbitBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, orbitBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, orbit, gl.STATIC_DRAW);
@@ -341,7 +347,7 @@ export function createUniverseGPU(canvas) {
     gl.vertexAttribPointer(particles.attribute, 4, gl.FLOAT, false, 0, 0);
     gl.bindBuffer(gl.ARRAY_BUFFER, photoBuffer);
     gl.enableVertexAttribArray(particles.photoAttribute);
-    gl.vertexAttribPointer(particles.photoAttribute, 1, gl.FLOAT, false, 0, 0);
+    gl.vertexAttribPointer(particles.photoAttribute, 2, gl.FLOAT, false, 0, 0);
     u = particles.uniforms;
     gl.uniform2f(u.uViewport, width, height);
     gl.uniform4f(
@@ -426,8 +432,14 @@ export function createUniverseGPU(canvas) {
     photoIds = images.length
       ? assignOrbitPhotos(orbit, count)
       : Float32Array.from({ length: PARTICLE_COUNT }, (_, i) => i % count);
+    photoAttributes = new Float32Array(PARTICLE_COUNT * 2);
+    for (let i = 0; i < PARTICLE_COUNT; i++) {
+      const image = images[photoIds[i]];
+      photoAttributes[i * 2] = photoIds[i];
+      photoAttributes[i * 2 + 1] = image ? image.width / image.height : 0.8;
+    }
     gl.bindBuffer(gl.ARRAY_BUFFER, photoBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, photoIds, gl.STATIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, photoAttributes, gl.STATIC_DRAW);
     canvas.dataset.atlasWidth = String(width);
     canvas.dataset.atlasHeight = String(height);
     canvas.dataset.atlasTile = String(tileWidth);
