@@ -5,6 +5,7 @@ import {
   PLUNGE_RADIUS,
   HORIZON,
   ASPECT,
+  photoFieldAt,
 } from "./universe-camera.js";
 import { createOrbitComposition, compositionAt } from "./orbit-composition.js";
 import { assignOrbitPhotos, planPhotoAtlas } from "./photo-textures.js";
@@ -84,6 +85,7 @@ attribute float aFade;
 uniform float uLayer;
 uniform float uComposition;
 uniform float uShowcase;
+uniform float uPhotoField;
 varying float vAspect;
 varying float vPhotoId;
 uniform vec2 uViewport;
@@ -124,12 +126,16 @@ void main(){
   if(uLayer>.5){
     worldSize=heroSize*(1.0+.8*uShowcase);
     if(uLayer<1.5)mask*=step(.90,grain)*(1.0-uComposition);
+    else if(uLayer>2.5){
+      worldSize=(.0032+seed*.0016)*(uViewport.x<700.0?1.3:1.0);
+      mask*=step(.82,grain)*uPhotoField;
+    }
     else {
       worldSize*=1.35;
       mask*=aFade*uComposition;
     }
   }
-  float size=min(min(190.0,uViewport.x*.36),worldSize*scale);
+  float size=min(uLayer>2.5?24.0:min(190.0,uViewport.x*.36),worldSize*scale);
   mask*=smoothstep(.028,.075,distance);
   if(distance<=.028||pixel.x < -size||pixel.x>uViewport.x+size||pixel.y < -size||pixel.y>uViewport.y+size)mask=0.0;
   // Keep partially visible cards alive when their centers leave the viewport.
@@ -142,7 +148,7 @@ void main(){
   gl_PointSize=mask>.001?min(uPointLimit,footprint*uDpr):1.0;
   // Tiny tilted cards merge into light filaments. The same cards become legible
   // through perspective magnification, with no new grid or new positions.
-  float readable=smoothstep(2.0,mix(28.0,12.0,uShowcase),size);
+  float readable=uLayer>2.5?smoothstep(1.5,5.0,size):smoothstep(2.0,mix(28.0,12.0,uShowcase),size);
   float dr=-${INFLOW.toFixed(8)}/(2.0*r),omega=.115*pow(.28/r,1.5);
   float vx=cos(theta)*dr-sin(theta)*r*omega;
   float vz=sin(theta)*dr+cos(theta)*r*omega;
@@ -186,12 +192,12 @@ void main(){
     if(hit>0.0&&hit*(-ray.z)<vDepth-.00001)discard;
   }
 
-  float size=vPhoto.y, readable=smoothstep(2.0,mix(28.0,12.0,uShowcase),size);
+  float size=vPhoto.y, readable=uLayer>2.5?smoothstep(1.5,5.0,size):smoothstep(2.0,mix(28.0,12.0,uShowcase),size);
   vec2 p=(gl_PointCoord-vec2(.5)+vOffset)*1.3;
   float c=cos(vPhoto.z),s=sin(vPhoto.z);
   p=mat2(c,-s,s,c)*p;
   p.x/=min(vAspect,1.0);
-  p.y/=min(1.0/vAspect,1.0)*mix(.28,1.0,smoothstep(1.5,12.0,size));
+  p.y/=min(1.0/vAspect,1.0)*(uLayer>2.5?1.0:mix(.28,1.0,smoothstep(1.5,12.0,size)));
   float edge=max(abs(p.x),abs(p.y));
   if(edge>.5)discard;
   vec2 local=p+vec2(.5);
@@ -319,6 +325,7 @@ export function createUniverseGPU(canvas) {
       [
         "uViewport",
         "uLayer",
+        "uPhotoField",
         "uComposition",
         "uShowcase",
         "uFlight",
@@ -423,6 +430,8 @@ export function createUniverseGPU(canvas) {
     gl.uniform1f(u.uShade, camera.shade);
     gl.uniform1f(u.uCover, cover);
     gl.uniform1f(u.uComposition, compositionAt(camera.zoom));
+    const field = photoFieldAt(camera.progress ?? 0);
+    gl.uniform1f(u.uPhotoField, field);
     gl.uniform1f(u.uShowcase, showcase);
     gl.uniform1f(u.uLayer, 0);
     gl.disableVertexAttribArray(particles.fadeAttribute);
@@ -434,6 +443,10 @@ export function createUniverseGPU(canvas) {
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL);
     gl.drawArrays(gl.POINTS, 0, PARTICLE_COUNT);
+    if (field > 0) {
+      gl.uniform1f(u.uLayer, 3);
+      gl.drawArrays(gl.POINTS, 0, PARTICLE_COUNT);
+    }
     gl.uniform1f(u.uLayer, 1);
     if (compositionAt(camera.zoom) < 1)
       gl.drawArrays(gl.POINTS, 0, PARTICLE_COUNT);

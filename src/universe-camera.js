@@ -33,6 +33,14 @@ export function journeyProgress(elapsedMs) {
 }
 export const photoShowcaseAt = (p) =>
   ease((p - 0.22) / 0.04) * (1 - ease((p - 0.34) / 0.08));
+// A photographic middle distance resolves the disk itself, between tiny
+// light grains and the sparse, readable foreground portraits.
+export const photoFieldAt = (p) =>
+  ease((p - 0.14) / 0.12) * (1 - ease((p - 0.4) / 0.18));
+export const orbitFieldSize = (seed, width) =>
+  (seed * 97.13) % 1 > 0.82
+    ? (0.0032 + seed * 0.0016) * (width < 700 ? 1.3 : 1)
+    : 0;
 export const orbitRateAt = (p) =>
   (0.025 + 0.975 * (1 - ease((p - 0.7) / 0.3))) *
   (1 - 0.15 * photoShowcaseAt(p));
@@ -112,6 +120,7 @@ export function cameraAt(progress, width, height, aspect = 1672 / 941) {
   const imageWidth = (baseWidth * 5) / distance,
     imageHeight = imageWidth / aspect;
   return {
+    progress: p,
     zoom,
     distance,
     cx,

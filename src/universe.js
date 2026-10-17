@@ -3,6 +3,8 @@ import {
   JOURNEY_MS,
   journeyProgress,
   photoShowcaseAt,
+  photoFieldAt,
+  orbitFieldSize,
   orbitRateAt,
   DISK,
   PARTICLE_COUNT,
@@ -90,6 +92,7 @@ export function createUniverse(canvas) {
     const rearDepth = camera.distance - HORIZON.z - HORIZON.radius;
     const blend = compositionAt(camera.zoom);
     const showcase = photoShowcaseAt(progress);
+    const field = photoFieldAt(progress);
     for (let i = 0; i < orbit.length / 4; i++) {
       const point = orbitAt(orbit, i, flowSeconds);
       const projected = projectOrbit(point, camera, width, height);
@@ -97,9 +100,11 @@ export function createUniverse(canvas) {
         points.push({ ...point, ...projected, index: i, photoId: photoIds[i] });
     }
     points.sort((a, b) => b.depth - a.depth);
-    function paint(point, opacity = 1, maskRear = true) {
+    function paint(point, opacity = 1, maskRear = true, photographic = false) {
       const { x, y, size, seed, depth } = point;
-      const readable = ease((size - 2) / (26 - 16 * showcase));
+      const readable = photographic
+        ? ease((size - 1.5) / 3.5)
+        : ease((size - 2) / (26 - 16 * showcase));
       ctx.save();
       if (maskRear && depth >= rearDepth) ctx.clip(shadowMask, "evenodd");
       ctx.translate(x, y);
@@ -116,7 +121,7 @@ export function createUniverse(canvas) {
       const cardHeight =
         size *
         Math.min(1 / ratio, 1) *
-        (0.28 + 0.72 * ease((size - 1.5) / 10.5));
+        (photographic ? 1 : 0.28 + 0.72 * ease((size - 1.5) / 10.5));
       if (image && readable > 0.01) {
         ctx.drawImage(
           image,
@@ -161,6 +166,17 @@ export function createUniverse(canvas) {
         orbitDustSize(point.seed),
       );
       if (dust) paint({ ...point, ...dust }, 1 - 0.4 * blend, false);
+      const fieldSize = field > 0 ? orbitFieldSize(point.seed, width) : 0;
+      if (fieldSize) {
+        const photo = projectOrbit(point, camera, width, height, fieldSize);
+        if (photo)
+          paint(
+            { ...point, ...photo, size: Math.min(24, photo.size) },
+            field,
+            false,
+            true,
+          );
+      }
       if (blend < 1 && orbitPhotoSize(point.seed) > orbitDustSize(point.seed))
         paint(point, 1 - blend, false);
     }
@@ -291,6 +307,7 @@ export function createUniverse(canvas) {
     canvas.dataset.detailMix = detailMix.toFixed(4);
     canvas.dataset.progress = progress.toFixed(4);
     canvas.dataset.photoShowcase = photoShowcaseAt(progress).toFixed(4);
+    canvas.dataset.photoField = photoFieldAt(progress).toFixed(4);
     canvas.dataset.flow = flowSeconds.toFixed(4);
   }
 

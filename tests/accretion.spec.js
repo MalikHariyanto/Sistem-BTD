@@ -247,7 +247,7 @@ test("GPU clips a rear photo's corners at the horizon while retaining real foreg
     }
     return outputs;
   });
-  expect(result[0].layers).toEqual([0, 2]);
+  expect(result[0].layers).toEqual([0, 3, 2]);
   expect(result[0].forbidden).toBeGreaterThan(300);
   expect(result[0].cyan).toBeGreaterThan(50);
   expect(result[0].leaks).toBe(0);
