@@ -1,4 +1,5 @@
 import { createOrbit, PARTICLE_COUNT, ease } from "./universe-camera.js";
+import { assignOrbitPhotos, planPhotoAtlas } from "./photo-textures.js";
 
 // A photographic halo plus 32,768 persistent orbiting photo sprites. No engine dependency.
 const vertex = `
@@ -69,6 +70,8 @@ void main(){
 const orbitVertex = `
 precision highp float;
 attribute vec4 aOrbit; // radius, initial phase, thickness, stable identity
+attribute float aPhoto;
+varying float vPhotoId;
 uniform vec2 uViewport;
 uniform vec4 uFlight; // camera x, y, distance, base image width
 uniform vec2 uCenter;
@@ -81,6 +84,7 @@ varying vec4 vPhoto; // id, apparent size, rotation, opacity
 varying float vHeat;
 varying vec2 vOffset;
 void main(){
+  vPhotoId=aPhoto;
   float r=aOrbit.x, seed=aOrbit.w;
   float theta=aOrbit.y+uTime*.115*pow(.28/r,1.5);
   float x=cos(theta)*r, z=sin(theta)*r;
@@ -125,6 +129,7 @@ void main(){
 `;
 const orbitFragment = `
 precision highp float;
+varying float vPhotoId;
 uniform sampler2D uPhotos;
 uniform vec3 uAtlas;
 uniform float uShade;
@@ -145,7 +150,7 @@ void main(){
   float edge=max(abs(p.x),abs(p.y));
   if(edge>.5)discard;
   vec2 local=p+vec2(.5);
-  float id=floor(vPhoto.x*uAtlas.z);
+  float id=clamp(floor(vPhotoId+.5),0.0,uAtlas.z-1.0);
   vec2 tile=vec2(mod(id,uAtlas.x),floor(id/uAtlas.x));
   vec3 photo=texture2D(uPhotos,(tile+mix(vec2(.006),vec2(.994),local))/uAtlas.xy).rgb;
   float border=smoothstep(.455,.48,edge)*readable;
@@ -173,9 +178,17 @@ export function createUniverseGPU(canvas) {
     powerPreference: "low-power",
   });
   if (!gl) return null;
-  let background, particles, textures, quadBuffer, orbitBuffer, last;
+  let background,
+    particles,
+    textures,
+    quadBuffer,
+    orbitBuffer,
+    photoBuffer,
+    last;
   const sources = { wide: null, detail: null, photos: null };
   const orbit = createOrbit();
+  let photoIds = new Float32Array(PARTICLE_COUNT);
+  const maxTextureSize = Math.min(4096, gl.getParameter(gl.MAX_TEXTURE_SIZE));
   let atlas = [1, 1, 1];
   const pointLimit = gl.getParameter(gl.ALIASED_POINT_SIZE_RANGE)[1];
   function compile(type, code) {
@@ -267,6 +280,13 @@ export function createUniverseGPU(canvas) {
       new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]),
       gl.STATIC_DRAW,
     );
+    particles.photoAttribute = gl.getAttribLocation(
+      particles.program,
+      "aPhoto",
+    );
+    photoBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, photoBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, photoIds, gl.STATIC_DRAW);
     orbitBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, orbitBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, orbit, gl.STATIC_DRAW);
@@ -319,6 +339,9 @@ export function createUniverseGPU(canvas) {
     gl.bindBuffer(gl.ARRAY_BUFFER, orbitBuffer);
     gl.enableVertexAttribArray(particles.attribute);
     gl.vertexAttribPointer(particles.attribute, 4, gl.FLOAT, false, 0, 0);
+    gl.bindBuffer(gl.ARRAY_BUFFER, photoBuffer);
+    gl.enableVertexAttribArray(particles.photoAttribute);
+    gl.vertexAttribPointer(particles.photoAttribute, 1, gl.FLOAT, false, 0, 0);
     u = particles.uniforms;
     gl.uniform2f(u.uViewport, width, height);
     gl.uniform4f(
@@ -352,21 +375,28 @@ export function createUniverseGPU(canvas) {
     gl.uniform1f(u.uLens, 0);
     gl.drawArrays(gl.POINTS, 0, PARTICLE_COUNT);
     gl.disableVertexAttribArray(particles.attribute);
+    gl.disableVertexAttribArray(particles.photoAttribute);
     gl.disable(gl.BLEND);
     gl.disable(gl.DEPTH_TEST);
   }
   function setPhotos(images) {
     const count = images.length || 6;
-    const cols = Math.min(8, count),
-      rows = Math.ceil(count / cols);
+    const {
+      columns: cols,
+      rows,
+      tileWidth,
+      tileHeight,
+      width,
+      height,
+    } = planPhotoAtlas(count, maxTextureSize);
     const sheet = document.createElement("canvas");
-    sheet.width = cols * 256;
-    sheet.height = rows * 320;
+    sheet.width = width;
+    sheet.height = height;
     const ctx = sheet.getContext("2d");
     for (let i = 0; i < count; i++) {
-      const x = (i % cols) * 256,
-        y = Math.floor(i / cols) * 320;
-      if (images.length) ctx.drawImage(images[i], x, y, 256, 320);
+      const x = (i % cols) * tileWidth,
+        y = Math.floor(i / cols) * tileHeight;
+      if (images.length) ctx.drawImage(images[i], x, y, tileWidth, tileHeight);
       else {
         // Blank, warm photo mounts until the owner supplies personal images.
         ctx.fillStyle = [
@@ -393,6 +423,14 @@ export function createUniverseGPU(canvas) {
         ctx.stroke();
       }
     }
+    photoIds = images.length
+      ? assignOrbitPhotos(orbit, count)
+      : Float32Array.from({ length: PARTICLE_COUNT }, (_, i) => i % count);
+    gl.bindBuffer(gl.ARRAY_BUFFER, photoBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, photoIds, gl.STATIC_DRAW);
+    canvas.dataset.atlasWidth = String(width);
+    canvas.dataset.atlasHeight = String(height);
+    canvas.dataset.atlasTile = String(tileWidth);
     atlas = [cols, rows, count];
     sources.photos = sheet;
     upload(2, sheet);

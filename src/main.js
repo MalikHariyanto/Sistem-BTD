@@ -2,7 +2,7 @@ import "./style.css";
 import "./florals.css";
 import "./wish-garden.css";
 import { createWishGarden } from "./wish-garden.js";
-import { content } from "./content.js";
+import { content, ORBIT_PHOTO_COUNT } from "./content.js";
 import { quotes } from "./quotes.js";
 import { createUniverse } from "./universe.js";
 import { openMemories, optimizePhoto } from "./memories.js";
@@ -110,7 +110,7 @@ $("#app").innerHTML = `
 </div></main>
 <nav class="story-nav" id="story-nav" aria-label="Halaman cerita" hidden><button id="previous-scene" class="nav-back">← <span>Sebelumnya</span></button><div class="chapter-progress"><span id="chapter-name"></span><div class="progress-lines">${chapters.map((name, i) => `<button data-chapter="${i}" aria-label="Ke ${name}" ${i === 0 ? 'aria-current="step"' : ""}><span></span></button>`).join("")}</div></div><button id="next-scene" class="nav-next"></button></nav>
 <button class="edit-trigger" id="open-editor">Isi kenangan →</button><p class="sr-only" id="scene-announcement" role="status"></p>
-<dialog id="editor-dialog" aria-labelledby="editor-title"><button class="editor-close" id="close-editor">Tutup ×</button><div class="editor-heading"><div><p class="eyebrow">DI BALIK CERITA INI</p><h2 id="editor-title">Isi <em>kenangan.</em></h2></div>${flowers("flower-editor")}</div><p>33 tempat untuk foto milikmu. Unggahan di sini hanya tersimpan di browser ini. Untuk dibagikan, isi <code>src/content.js</code> dan simpan file di <code>public/photos/</code>.</p><form id="editor-form"><label>Nama panggilan<input name="recipient" maxlength="60" placeholder="Kamu"></label><label>Tanggal ulang tahun <small>(opsional, waktu perangkat)</small><input name="birthday" type="datetime-local"></label><button class="primary" type="submit">Simpan nama & tanggal →</button><div class="bulk-upload"><label>Isi banyak foto sekaligus<small>Foto akan mengisi tempat kosong di semesta, sampai 24 foto.</small><input id="bulk-photos" type="file" accept="image/jpeg,image/png,image/webp" multiple></label><p id="photo-count"></p></div><details><summary>Atur masing-masing foto</summary><div class="editor-photo-grid">${photoKeys.map((k) => `<label>${photoLabel(k)}<input type="file" accept="image/jpeg,image/png,image/webp" data-upload="${k}"><button class="remove-photo" type="button" data-remove="${k}">Hapus foto lokal</button></label>`).join("")}</div></details><label>Lagu pilihan pertama <small>(maks. 15 MB)</small><input type="file" id="audio-upload" accept="audio/mpeg,audio/mp4,audio/ogg,audio/wav"></label><p id="editor-status" role="status"></p><button class="text-button" type="button" id="reset-local">Hapus semua isian lokal</button></form></dialog>`;
+<dialog id="editor-dialog" aria-labelledby="editor-title"><button class="editor-close" id="close-editor">Tutup ×</button><div class="editor-heading"><div><p class="eyebrow">DI BALIK CERITA INI</p><h2 id="editor-title">Isi <em>kenangan.</em></h2></div>${flowers("flower-editor")}</div><p>${photoKeys.length} tempat untuk foto milikmu. Unggahan di sini hanya tersimpan di browser ini. Untuk dibagikan, isi <code>src/content.js</code> dan simpan file di <code>public/photos/</code>.</p><form id="editor-form"><label>Nama panggilan<input name="recipient" maxlength="60" placeholder="Kamu"></label><label>Tanggal ulang tahun <small>(opsional, waktu perangkat)</small><input name="birthday" type="datetime-local"></label><button class="primary" type="submit">Simpan nama & tanggal →</button><div class="bulk-upload"><label>Isi banyak foto sekaligus<small>Foto akan mengisi tempat kosong di semesta, sampai ${ORBIT_PHOTO_COUNT} foto.</small><input id="bulk-photos" type="file" accept="image/jpeg,image/png,image/webp" multiple></label><p id="photo-count"></p></div><details><summary>Atur masing-masing foto</summary><div class="editor-photo-grid">${photoKeys.map((k) => `<label>${photoLabel(k)}<input type="file" accept="image/jpeg,image/png,image/webp" data-upload="${k}"><button class="remove-photo" type="button" data-remove="${k}">Hapus foto lokal</button></label>`).join("")}</div></details><label>Lagu pilihan pertama <small>(maks. 15 MB)</small><input type="file" id="audio-upload" accept="audio/mpeg,audio/mp4,audio/ogg,audio/wav"></label><p id="editor-status" role="status"></p><button class="text-button" type="button" id="reset-local">Hapus semua isian lokal</button></form></dialog>`;
 
 const universe = createUniverse($("#universe"));
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -665,7 +665,7 @@ function applyPhotos() {
   ];
   window.dispatchEvent(new CustomEvent("photoschanged", { detail: photos }));
   $("#photo-count").textContent =
-    `${photos.length} foto terisi · ${photoKeys.length} tempat tersedia`;
+    `${photos.length} foto terisi · ${photoKeys.filter((key) => !localPhotos.has(key) && !content.photos[key]).length} tempat kosong`;
 }
 function applySettings() {
   $$("[data-recipient]").forEach(

@@ -10,6 +10,7 @@ import {
   ease,
 } from "./universe-camera.js";
 
+import { assignOrbitPhotos } from "./photo-textures.js";
 import { createUniverseGPU } from "./universe-gpu.js";
 
 const PLATE_URL = `${import.meta.env.BASE_URL}art/gargantua.webp`;
@@ -55,8 +56,10 @@ export function createUniverse(canvas) {
     generation = 0,
     signature;
   const thumbnails = new Map();
+  let photosReady = Promise.resolve();
   const aspect = 1672 / 941;
   const orbit = createOrbit(gpu ? PARTICLE_COUNT : 8192);
+  let photoIds = new Float32Array(orbit.length / 4);
 
   function visibleEstimate(camera) {
     let visible = 0;
@@ -70,7 +73,8 @@ export function createUniverse(canvas) {
     for (let i = 0; i < orbit.length / 4; i++) {
       const point = orbitAt(orbit, i, flowSeconds);
       const projected = projectOrbit(point, camera, width, height);
-      if (projected) points.push({ ...point, ...projected });
+      if (projected)
+        points.push({ ...point, ...projected, photoId: photoIds[i] });
     }
     points.sort((a, b) => b.depth - a.depth);
     for (const point of points) {
@@ -86,7 +90,7 @@ export function createUniverse(canvas) {
       ctx.globalAlpha = (0.38 + readable * 0.6) * ease((depth - 0.028) / 0.047);
       if (readable > 0.1 && images.length) {
         ctx.drawImage(
-          images[Math.floor(seed * images.length)],
+          images[point.photoId],
           -size * 0.395,
           -size * 0.5,
           size * 0.79,
@@ -403,8 +407,8 @@ export function createUniverse(canvas) {
       const im = new Image();
       im.onload = () => {
         const thumb = document.createElement("canvas");
-        thumb.width = 384;
-        thumb.height = 480;
+        thumb.width = 256;
+        thumb.height = 320;
         const unit = Math.min(im.width / 4, im.height / 5);
         thumb
           .getContext("2d")
@@ -416,8 +420,8 @@ export function createUniverse(canvas) {
             unit * 5,
             0,
             0,
-            384,
-            480,
+            256,
+            320,
           );
         thumbnails.set(src, thumb);
         im.onload = im.onerror = null;
@@ -428,11 +432,14 @@ export function createUniverse(canvas) {
       im.src = src;
     });
   }
-  window.addEventListener("photoschanged", async (e) => {
+  window.addEventListener("photoschanged", (e) => {
     const sources = e.detail,
       nextSignature = JSON.stringify(sources);
     if (signature === nextSignature) return;
     signature = nextSignature;
+    photosReady = loadPhotos(sources);
+  });
+  async function loadPhotos(sources) {
     const current = ++generation,
       loaded = new Array(sources.length);
     let next = 0;
@@ -446,12 +453,13 @@ export function createUniverse(canvas) {
     );
     if (current !== generation) return;
     images = loaded.filter(Boolean);
-    gpu?.setPhotos(images);
+    if (gpu) gpu.setPhotos(images);
+    else photoIds = assignOrbitPhotos(orbit, images.length);
     canvas.dataset.photoSources = String(images.length);
     for (const key of thumbnails.keys())
       if (!sources.includes(key)) thumbnails.delete(key);
     draw();
-  });
+  }
   resize();
   function settle() {
     progress = 1;
@@ -464,7 +472,9 @@ export function createUniverse(canvas) {
     resume();
   }
   return {
-    ready,
+    get ready() {
+      return Promise.all([ready, photosReady]);
+    },
     setPaused(value) {
       suspended = value;
       cancelAnimationFrame(frame);

@@ -204,13 +204,13 @@ test("replay cancels an unfinished celebration and resets the story", async ({
   await expect(page.locator("#wish-result")).toBeHidden();
 });
 
-test("33 photo slots and bulk uploads persist, with old photo keys preserved", async ({
+test("129 photo slots and bulk uploads persist, with old photo keys preserved", async ({
   page,
 }) => {
   test.setTimeout(45000); // Multiple uploads, reloads, and scene transitions on software GPU.
   await page.goto("/");
   await page.locator("#open-editor").click();
-  await expect(page.locator("[data-upload]")).toHaveCount(33);
+  await expect(page.locator("[data-upload]")).toHaveCount(129);
   await page.getByRole("textbox", { name: "Nama panggilan" }).fill("Sayang");
   await page.locator('input[name="birthday"]').fill("2099-02-14T00:00");
   await page.getByRole("button", { name: "Simpan nama & tanggal" }).click();
