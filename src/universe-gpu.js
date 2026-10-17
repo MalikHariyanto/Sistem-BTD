@@ -36,6 +36,13 @@ vec4 wide(vec2 uv){
   float inside=step(0.0,uv.x)*step(uv.x,1.0)*step(0.0,uv.y)*step(uv.y,1.0);
   return mix(vec4(.031,.035,.043,1.0),texture2D(uWide,uv),inside);
 }
+vec3 radianceAt(vec2 uv){
+  vec3 base=wide(uv).rgb;
+  vec2 detailUV=(uv-vec2(.513,.360))*3.0;
+  vec4 detail=texture2D(uDetail,detailUV);
+  float inside=step(0.0,detailUV.x)*step(detailUV.x,1.0)*step(0.0,detailUV.y)*step(detailUV.y,1.0);
+  return mix(base,detail.rgb,detail.a*inside*uState.w*smoothstep(.025,.10,luminance(base)));
+}
 void main(){
   vec2 pixel=vScreen*uViewport;
   vec2 uv=(pixel-uCamera.xy)/uCamera.zw;
@@ -73,6 +80,18 @@ void main(){
   vec4 detail=texture2D(uDetail,detailUV);
   float detailInside=step(0.0,detailUV.x)*step(detailUV.x,1.0)*step(0.0,detailUV.y)*step(detailUV.y,1.0);
   plasma=mix(plasma,detail.rgb,detail.a*detailInside*uState.w*smoothstep(.025,.10,luminance(original)));
+  // The lower, camera-facing optical arc travels clockwise too: at its
+  // bottom, both light filaments and photos move left. Advect the HD detail
+  // along with the wide image; a static detail overlay used to pin it in place.
+  // Inverse sampling gives continuous positive orbital motion, with the same
+  // differential angular rate as the photos. Cap the compressed inner optical
+  // image at the reference speed so its narrow texels do not shear into folds.
+  // There is no oscillation or phase reset.
+  float lowerAngle=theta-time*min(angularRate,${ORBIT_SPEED.toFixed(8)});
+  vec3 lowerFlow=radianceAt(center+vec2(cos(lowerAngle),sin(lowerAngle))*radius*radii);
+  float lowerAnnulus=smoothstep(.58,.82,radius)*(1.0-smoothstep(1.35,1.75,radius));
+  float lowerMask=lowerAnnulus*smoothstep(.025,.10,diskD)*smoothstep(.018,.20,luminance(original));
+  plasma=mix(plasma,lowerFlow,lowerMask*.82);
   float orbitLight=1.0+.06*sin((theta-time*angularRate)*13.0+radius*23.0)*annulus;
   plasma*=orbitLight;
 

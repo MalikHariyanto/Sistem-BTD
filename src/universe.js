@@ -68,6 +68,8 @@ export function createUniverse(canvas) {
     detailArrived = 0;
   let plate,
     lightField,
+    lowerMask,
+    lowerFrame,
     images = [],
     generation = 0,
     signature;
@@ -281,9 +283,33 @@ export function createUniverse(canvas) {
       ctx.arc(0, 0, 1.3, 0, Math.PI * 2);
       ctx.arc(0, 0, 0.72, 0, Math.PI * 2, true);
       ctx.clip("evenodd");
+      ctx.beginPath();
+      ctx.rect(-4, -4, 8, 4.15);
+      ctx.clip();
       ctx.rotate(flowSeconds * ORBIT_SPEED);
       ctx.drawImage(plate, -0.5 / 0.17, -0.445 / 0.3, 1 / 0.17, 1 / 0.3);
       ctx.restore();
+    }
+    if (lowerFrame && !motion.matches) {
+      const lower = lowerFrame.getContext("2d");
+      lower.clearRect(0, 0, lowerFrame.width, lowerFrame.height);
+      lower.save();
+      lower.translate(lowerFrame.width * 0.5, lowerFrame.height * 0.445);
+      lower.scale(lowerFrame.width * 0.17, lowerFrame.height * 0.30);
+      // Same clockwise source motion as the GPU's lower optical arc. The
+      // lightweight fallback uses its representative radius for this image.
+      lower.rotate(flowSeconds * ORBIT_SPEED * (0.28 / 0.44) ** 1.5);
+      lower.drawImage(plate, -0.5 / 0.17, -0.445 / 0.30, 1 / 0.17, 1 / 0.30);
+      if (detailMix > 0) {
+        lower.globalAlpha = detailMix;
+        lower.drawImage(detailPlate, (0.513 - 0.5) / 0.17, (0.360 - 0.445) / 0.30, 1 / (3 * 0.17), 1 / (3 * 0.30));
+      }
+      lower.restore();
+      lower.globalCompositeOperation = "destination-in";
+      lower.drawImage(lowerMask, 0, 0);
+      lower.globalCompositeOperation = "source-over";
+      ctx.globalAlpha = radiance;
+      ctx.drawImage(lowerFrame, camera.x, camera.y, camera.width, camera.height);
     }
     const drawn = drawMaterial(camera);
     // Only subtle edge falloff during the move. Text contrast is added after
@@ -392,6 +418,24 @@ export function createUniverse(canvas) {
         const pixels = context.getImageData(0, 0, 128, 72).data;
         lightField = Float32Array.from({ length: 128 * 72 }, (_, i) =>
           (pixels[i * 4] * 0.2126 + pixels[i * 4 + 1] * 0.7152 + pixels[i * 4 + 2] * 0.0722) / 255);
+        // Cache a luminance-gated lower arc mask once, keeping both the black
+        // center and the star field untouched by the moving light image.
+        lowerMask = document.createElement("canvas");
+        lowerMask.width = 836; lowerMask.height = 470;
+        const mask = lowerMask.getContext("2d", { willReadFrequently: true });
+        mask.drawImage(plate, 0, 0, lowerMask.width, lowerMask.height);
+        const field = mask.getImageData(0, 0, lowerMask.width, lowerMask.height);
+        for (let y = 0; y < lowerMask.height; y++) for (let x = 0; x < lowerMask.width; x++) {
+          const u = x / lowerMask.width, v = y / lowerMask.height;
+          const i = (y * lowerMask.width + x) * 4;
+          const radius = Math.hypot((u - 0.5) / 0.17, (v - 0.445) / 0.30);
+          const light = (field.data[i] * 0.2126 + field.data[i + 1] * 0.7152 + field.data[i + 2] * 0.0722) / 255;
+          field.data[i + 3] = 255 * 0.82 * ease((radius - 0.58) / 0.24) *
+            (1 - ease((radius - 1.35) / 0.40)) * ease((v - 0.35 - 0.26 * u - 0.025) / 0.075) * ease((light - 0.018) / 0.182);
+        }
+        mask.putImageData(field, 0, 0);
+        lowerFrame = document.createElement("canvas");
+        lowerFrame.width = lowerMask.width; lowerFrame.height = lowerMask.height;
       }
       canvas.dataset.plate = ok ? "ready" : "fallback";
       canvas.dataset.plateWidth = String(plate.width);
