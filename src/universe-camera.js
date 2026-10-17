@@ -55,16 +55,20 @@ export function cameraAt(progress, width, height, aspect = 1672 / 941) {
     : Math.max(Math.min(width * 1.06, height * 1.7), height * 0.95);
   const focusDepth = 0.32,
     focusX = 0.24,
-    clearance = 0.31,
+    clearance = 0.115,
     heightAboveDisk = 0.033;
   const focus = ease(p / 0.94);
-  // Stop above the near-side stream, leaving depth and distant orbits visible.
-  // Exponential apparent magnification avoids a slow opening followed by a
-  // violent jump in the last second when perspective distance becomes small.
-  const zoom = Math.exp(Math.log(5 / clearance) * travel);
+  // Recover the original approach exactly in the opening. Gradually soften its
+  // final magnification so the ending feels intimate without entering the disk.
+  // Both paths and the blend have zero endpoint velocity and acceleration.
+  const closeUp = ease((p - 0.35) / 0.65);
+  const logZoom = mix(Math.log(5 / 0.052), Math.log(5 / clearance), closeUp);
+  const zoom = Math.exp(logZoom * travel);
   const distance = focusDepth * focus + 5 / zoom;
   const cx = focusX * focus,
-    cy = (0.26 * focusX + ORBIT.tilt * focusDepth - heightAboveDisk) * focus;
+    cy =
+      (0.26 * focusX + ORBIT.tilt * focusDepth - heightAboveDisk * closeUp) *
+      focus;
   const imageWidth = (baseWidth * 5) / distance,
     imageHeight = imageWidth / aspect;
   return {

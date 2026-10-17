@@ -5,6 +5,7 @@ import {
   orbitAt,
   projectOrbit,
   PARTICLE_COUNT,
+  ease,
 } from "../src/universe-camera.js";
 
 test("a dense physical annulus rotates differentially, retaining its identities through a smooth camera flight", () => {
@@ -39,6 +40,17 @@ test("a dense physical annulus rotates differentially, retaining its identities 
     [1440, 900],
     [2560, 1080],
   ]) {
+    // Preserve the opening's original pull into Gargantua, then approach a
+    // closer ending than the wide revision without overshooting or pulling back.
+    for (const p of [0, 0.15, 0.3, 0.35]) {
+      expect(cameraAt(p, width, height).zoom).toBeCloseTo(
+        Math.exp(Math.log(5 / 0.052) * ease(p)),
+        8,
+      );
+    }
+    expect(cameraAt(0.5, width, height).zoom).toBeGreaterThan(9);
+    expect(cameraAt(1, width, height).zoom).toBeGreaterThan(40);
+    expect(cameraAt(1, width, height).zoom).toBeLessThan(50);
     let previous = cameraAt(0, width, height);
     for (let i = 1; i <= 1000; i++) {
       const camera = cameraAt(i / 1000, width, height);
@@ -55,7 +67,7 @@ test("a dense physical annulus rotates differentially, retaining its identities 
       if (point) apparent.push(point);
     }
     // The ending must remain a deep, busy disk instead of a few huge cards.
-    expect(apparent.length).toBeGreaterThan(1500);
+    expect(apparent.length).toBeGreaterThan(1000);
     expect(apparent.filter((p) => p.size < 16).length).toBeGreaterThan(1000);
     expect(apparent.filter((p) => p.size > 24).length).toBeGreaterThan(15);
     expect(Math.max(...apparent.map((p) => p.size))).toBeLessThanOrEqual(
