@@ -12,6 +12,7 @@ import {
 import { createOrbitComposition, compositionAt } from "./orbit-composition.js";
 import { assignOrbitPhotos, planPhotoAtlas } from "./photo-textures.js";
 import { lensGLSL } from "./accretion-lens.js";
+import { DISK_STREAM } from "./disk-stream.js";
 
 // A photographic halo plus 32,768 persistent orbiting photo sprites. No engine dependency.
 const vertex = `
@@ -64,17 +65,9 @@ void main(){
   vec2 spun=center+vec2(cos(angle),sin(angle))*radius*radii;
   vec2 ringUV=mix(uv,spun,annulus*.18);
 
-  // Positive orbital rotation moves the near-side stream to the left, just
-  // like the resolved photos. Fine turbulence rides on that common flow.
-  float phase=fract(time*${ORBIT_SPEED.toFixed(8)}),otherPhase=fract(phase+.5);
-  float flowBlend=1.0-abs(phase*2.0-1.0);
-  float turbulence=.003*sin(time*.82+diskD*47.0);
-  float diskMask=(1.0-smoothstep(.035,.13,abs(diskD)))*mix(shadowGuard,1.0,smoothstep(-.04,.012,diskD));
-  vec2 flow=vec2(.14,.26*.14);
-  vec3 diskFlow=mix(wide(uv+flow*otherPhase).rgb,wide(uv+flow*phase).rgb,flowBlend);
-  vec2 mapped=ringUV+diskMask*vec2(turbulence,.26*turbulence);
+  vec2 mapped=ringUV;
   vec3 original=wide(uv).rgb;
-  vec3 moving=mix(wide(mapped).rgb,diskFlow,diskMask);
+  vec3 moving=wide(mapped).rgb;
   vec3 plasma=mix(original,moving,.35*smoothstep(.04,.3,luminance(original)));
   vec2 detailUV=(mapped-vec2(.513,.360))*3.0;
   vec4 detail=texture2D(uDetail,detailUV);
@@ -92,6 +85,20 @@ void main(){
   float lowerAnnulus=smoothstep(.58,.82,radius)*(1.0-smoothstep(1.35,1.75,radius));
   float lowerMask=lowerAnnulus*smoothstep(.025,.10,diskD)*smoothstep(.018,.20,luminance(original));
   plasma=mix(plasma,lowerFlow,lowerMask*.82);
+  // The central ribbon is the inclined foreground disk, not the curved halo.
+  // Scroll its material in disk coordinates so wide + HD filaments travel
+  // left/up with the front-side photographs. Feather only the tile seam;
+  // there are no two crossfading copies of the entire stream or a static HD cap.
+  float material=mod(uv.x-${DISK_STREAM.origin.toFixed(8)}+time*${DISK_STREAM.speed.toFixed(8)},${DISK_STREAM.period.toFixed(8)});
+  float sourceU=${DISK_STREAM.origin.toFixed(8)}+material;
+  vec2 middleA=vec2(sourceU,.35+.26*sourceU+diskD);
+  vec2 middleB=middleA-vec2(${DISK_STREAM.period.toFixed(8)},${(DISK_STREAM.period * 0.26).toFixed(8)});
+  float seam=smoothstep(${(DISK_STREAM.period - DISK_STREAM.feather).toFixed(8)},${DISK_STREAM.period.toFixed(8)},material);
+  vec3 middleFlow=mix(radianceAt(middleA),radianceAt(middleB),seam);
+  // The top silhouette remains the geometric rim. Keep transported material
+  // inside it, so a bright source halo cannot cut a square into the black core.
+  float middleMask=smoothstep(-.010,.012,diskD)*(1.0-smoothstep(.12,.22,diskD))*smoothstep(.035,.15,luminance(original));
+  plasma=mix(plasma,middleFlow,middleMask*.90);
   float orbitLight=1.0+.06*sin((theta-time*angularRate)*13.0+radius*23.0)*annulus;
   plasma*=orbitLight;
 

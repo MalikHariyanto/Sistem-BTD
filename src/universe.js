@@ -25,6 +25,7 @@ import {
 import { createOrbitComposition, compositionAt } from "./orbit-composition.js";
 import { assignOrbitPhotos } from "./photo-textures.js";
 import { createUniverseGPU } from "./universe-gpu.js";
+import { createDiskStream } from "./disk-stream.js";
 
 const PLATE_URL = `${import.meta.env.BASE_URL}art/gargantua.webp`;
 
@@ -70,6 +71,7 @@ export function createUniverse(canvas) {
     lightField,
     lowerMask,
     lowerFrame,
+    diskStream,
     images = [],
     generation = 0,
     signature;
@@ -311,6 +313,8 @@ export function createUniverse(canvas) {
       ctx.globalAlpha = radiance;
       ctx.drawImage(lowerFrame, camera.x, camera.y, camera.width, camera.height);
     }
+    if (diskStream && !motion.matches)
+      diskStream.draw(ctx, camera, flowSeconds, detailMix, radiance);
     const drawn = drawMaterial(camera);
     // Only subtle edge falloff during the move. Text contrast is added after
     // approaching the photographs, never as a flash that hides the transition.
@@ -410,6 +414,7 @@ export function createUniverse(canvas) {
       plate = ok ? image : fallbackPlate();
       gpu?.setPlate(plate);
       if (!gpu) {
+        diskStream = createDiskStream(plate);
         // Read a tiny irradiance map once, never the full image every frame.
         const sample = document.createElement("canvas");
         sample.width = 128; sample.height = 72;
@@ -475,6 +480,7 @@ export function createUniverse(canvas) {
     }
     detailPlate = c;
     gpu?.setDetail(c);
+    diskStream?.setDetail(c);
     detailArrived = performance.now();
     canvas.dataset.detail = "ready";
     draw();
