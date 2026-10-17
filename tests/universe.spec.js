@@ -338,12 +338,14 @@ for (const renderer of ["webgl", "canvas2d"]) {
       }
       return { shapes, edgeSamples, error: gl?.getError() };
     });
+    // Sparse portraits must preserve both original shapes and colors, without
+    // requiring repeated copies of the same photo to fill the screen.
     expect(
       result.shapes.filter((s) => s.color === 1 && s.ratio > 1.5).length,
-    ).toBeGreaterThan(3);
+    ).toBeGreaterThanOrEqual(1);
     expect(
       result.shapes.filter((s) => s.color === 2 && s.ratio < 1 / 1.5).length,
-    ).toBeGreaterThan(3);
+    ).toBeGreaterThanOrEqual(1);
     if (renderer === "webgl") {
       expect(result.error).toBe(0);
       for (const [r, g, b] of result.edgeSamples) {

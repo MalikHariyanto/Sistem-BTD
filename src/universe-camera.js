@@ -99,16 +99,20 @@ export function orbitPhotoSize(seed) {
     ? 0.003 + seed * 0.0018
     : 0.00018 + seed * 0.00038;
 }
+export const orbitDustSize = (seed) => 0.00018 + seed * 0.00038;
 export const photoSizeLimit = (width) => Math.min(190, width * 0.36);
 
-export function projectOrbit(point, camera, width, height) {
+export function projectOrbit(
+  point,
+  camera,
+  width,
+  height,
+  worldSize = orbitPhotoSize(point.seed),
+) {
   const depth = camera.distance - point.depth;
   if (depth <= 0.028) return null;
   const scale = (camera.baseWidth * 5) / depth;
-  const size = Math.min(
-    photoSizeLimit(width),
-    orbitPhotoSize(point.seed) * scale,
-  );
+  const size = Math.min(photoSizeLimit(width), worldSize * scale);
   const x = camera.centerX + (point.x - camera.cx) * scale;
   const y = camera.centerY + ((point.y - camera.cy) * scale) / (1672 / 941);
   if (x < -size || x > width + size || y < -size || y > height + size)

@@ -355,6 +355,21 @@ button {
   align-items: center;
   text-align: center;
   padding: 30px;
+  isolation: isolate;
+  text-shadow: 0 2px 22px #08090be0;
+}
+.reveal-copy::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 58% 42% at 50% 45%,
+    #08090bd9 0%,
+    #08090b99 45%,
+    #08090b00 100%
+  );
 }
 .reveal-copy h2 {
   font-size: clamp(63px, 8vw, 120px);

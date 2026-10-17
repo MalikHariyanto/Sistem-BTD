@@ -1,4 +1,5 @@
 import { createOrbit, PARTICLE_COUNT, ease } from "./universe-camera.js";
+import { createOrbitComposition, compositionAt } from "./orbit-composition.js";
 import { assignOrbitPhotos, planPhotoAtlas } from "./photo-textures.js";
 
 // A photographic halo plus 32,768 persistent orbiting photo sprites. No engine dependency.
@@ -71,6 +72,9 @@ const orbitVertex = `
 precision highp float;
 attribute vec4 aOrbit; // radius, initial phase, thickness, stable identity
 attribute vec2 aPhoto; // stable image id and original width/height
+attribute float aFade;
+uniform float uLayer;
+uniform float uComposition;
 varying float vAspect;
 varying float vPhotoId;
 uniform vec2 uViewport;
@@ -110,7 +114,17 @@ void main(){
   float scale=uFlight.w*5.0/max(.028,distance);
   vec2 pixel=uCenter+vec2(x-uFlight.x,(y-uFlight.y)/1.776833)*scale;
   float grain=fract(seed*97.13);
-  float worldSize=grain>.88 ? .003+seed*.0018 : .00018+seed*.00038;
+  float dustSize=.00018+seed*.00038;
+  float heroSize=.003+seed*.0018;
+  float worldSize=dustSize;
+  if(uLayer>.5){
+    worldSize=heroSize;
+    if(uLayer<1.5)mask*=step(.88,grain)*(1.0-uComposition);
+    else {
+      worldSize*=1.35;
+      mask*=aFade*uComposition;
+    }
+  }
   float size=min(min(190.0,uViewport.x*.36),worldSize*scale);
   if(uLens>.5)size*=.60;
   mask*=smoothstep(.028,.075,distance);
@@ -127,7 +141,7 @@ void main(){
   // through perspective magnification, with no new grid or new positions.
   float readable=smoothstep(2.0,28.0,size);
   float tangent=atan(.19*cos(theta)-.26*sin(theta),-sin(theta));
-  vPhoto=vec4(seed,size,mix(tangent,(seed-.5)*.55,readable),mask);
+  vPhoto=vec4(seed,size,mix(tangent,(seed-.5)*.18,readable),mask);
   vHeat=(1.0-smoothstep(.14,.64,r))*.36+seed*.20;
 }
 `;
@@ -138,6 +152,8 @@ varying float vAspect;
 uniform sampler2D uPhotos;
 uniform vec3 uAtlas;
 uniform float uShade;
+uniform float uLayer;
+uniform float uComposition;
 uniform float uDpr;
 uniform float uCover;
 uniform vec2 uViewport;
@@ -159,12 +175,13 @@ void main(){
   vec2 tile=vec2(mod(id,uAtlas.x),floor(id/uAtlas.x));
   vec3 photo=texture2D(uPhotos,(tile+mix(vec2(.006),vec2(.994),local))/uAtlas.xy).rgb;
   float border=smoothstep(.48,.495,edge)*readable;
-  photo=mix(photo,vec3(.91,.87,.79),border*.9);
+  photo=mix(photo,vec3(.91,.87,.79),border*.55);
   float lum=dot(photo,vec3(.2126,.7152,.0722));
   vec3 ember=mix(vec3(.68,.30,.095),vec3(1.0,.90,.66),vHeat+.22)*(.65+lum*.75);
   vec3 color=mix(ember,photo,readable);
   float opacity=mix(.72,.98,readable)*vPhoto.w;
   opacity*=mix(1.0-smoothstep(.20,.5,edge),1.0,readable);
+  if(uLayer<.5)opacity*=mix(1.0,.60,uComposition);
   if(opacity<.025)discard;
   vec2 screen=gl_FragCoord.xy/(uViewport*uDpr);
   float shade=uShade*(.65+.25*length(screen-.5));
@@ -189,9 +206,12 @@ export function createUniverseGPU(canvas) {
     quadBuffer,
     orbitBuffer,
     photoBuffer,
+    focusBuffer,
     last;
   const sources = { wide: null, detail: null, photos: null };
   const orbit = createOrbit();
+  const composition = createOrbitComposition(orbit);
+  let ratios = [];
   let photoIds = new Float32Array(PARTICLE_COUNT);
   let photoAttributes = new Float32Array(PARTICLE_COUNT * 2);
   const maxTextureSize = Math.min(4096, gl.getParameter(gl.MAX_TEXTURE_SIZE));
@@ -265,6 +285,8 @@ export function createUniverseGPU(canvas) {
       orbitFragment,
       [
         "uViewport",
+        "uLayer",
+        "uComposition",
         "uFlight",
         "uCenter",
         "uTime",
@@ -290,6 +312,8 @@ export function createUniverseGPU(canvas) {
       particles.program,
       "aPhoto",
     );
+    particles.fadeAttribute = gl.getAttribLocation(particles.program, "aFade");
+    focusBuffer = gl.createBuffer();
     photoBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, photoBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, photoAttributes, gl.STATIC_DRAW);
@@ -365,6 +389,10 @@ export function createUniverseGPU(canvas) {
     gl.uniform3fv(u.uAtlas, atlas);
     gl.uniform1f(u.uShade, camera.shade);
     gl.uniform1f(u.uCover, cover);
+    gl.uniform1f(u.uComposition, compositionAt(camera.zoom));
+    gl.uniform1f(u.uLayer, 0);
+    gl.disableVertexAttribArray(particles.fadeAttribute);
+    gl.vertexAttrib1f(particles.fadeAttribute, 1);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     // The lens images are behind the physical near side; the particles then
@@ -380,6 +408,48 @@ export function createUniverseGPU(canvas) {
     gl.depthFunc(gl.LEQUAL);
     gl.uniform1f(u.uLens, 0);
     gl.drawArrays(gl.POINTS, 0, PARTICLE_COUNT);
+    gl.uniform1f(u.uLayer, 1);
+    if (compositionAt(camera.zoom) < 1)
+      gl.drawArrays(gl.POINTS, 0, PARTICLE_COUNT);
+    const focused = composition.update({
+      camera,
+      width,
+      height,
+      time,
+      photoIds,
+      ratios,
+      now: performance.now(),
+      reduced: args.reduced,
+    });
+    const packed = new Float32Array(focused.length * 7);
+    for (let i = 0; i < focused.length; i++) {
+      const { index, alpha } = focused[i];
+      packed.set(orbit.subarray(index * 4, index * 4 + 4), i * 7);
+      packed[i * 7 + 4] = photoIds[index];
+      packed[i * 7 + 5] = ratios[photoIds[index]] || 0.8;
+      packed[i * 7 + 6] = alpha;
+    }
+    gl.bindBuffer(gl.ARRAY_BUFFER, focusBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, packed, gl.DYNAMIC_DRAW);
+    gl.vertexAttribPointer(particles.attribute, 4, gl.FLOAT, false, 28, 0);
+    gl.vertexAttribPointer(
+      particles.photoAttribute,
+      2,
+      gl.FLOAT,
+      false,
+      28,
+      16,
+    );
+    gl.enableVertexAttribArray(particles.fadeAttribute);
+    gl.vertexAttribPointer(particles.fadeAttribute, 1, gl.FLOAT, false, 28, 24);
+    gl.uniform1f(u.uLayer, 2);
+    // Keep the focal portraits clear of the ambient photographic dust.
+    gl.clear(gl.DEPTH_BUFFER_BIT);
+    gl.drawArrays(gl.POINTS, 0, focused.length);
+    canvas.dataset.focusPhotos = String(
+      focused.filter((p) => p.alpha > 0.5).length,
+    );
+    gl.disableVertexAttribArray(particles.fadeAttribute);
     gl.disableVertexAttribArray(particles.attribute);
     gl.disableVertexAttribArray(particles.photoAttribute);
     gl.disable(gl.BLEND);
@@ -387,6 +457,7 @@ export function createUniverseGPU(canvas) {
   }
   function setPhotos(images) {
     const count = images.length || 6;
+    ratios = images.map((image) => image.width / image.height);
     const {
       columns: cols,
       rows,

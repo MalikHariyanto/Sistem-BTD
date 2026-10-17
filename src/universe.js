@@ -6,10 +6,13 @@ import {
   createOrbit,
   orbitAt,
   projectOrbit,
+  orbitDustSize,
+  orbitPhotoSize,
   clamp,
   ease,
 } from "./universe-camera.js";
 
+import { createOrbitComposition, compositionAt } from "./orbit-composition.js";
 import { assignOrbitPhotos } from "./photo-textures.js";
 import { createUniverseGPU } from "./universe-gpu.js";
 
@@ -60,6 +63,7 @@ export function createUniverse(canvas) {
   const aspect = 1672 / 941;
   const orbit = createOrbit(gpu ? PARTICLE_COUNT : 8192);
   let photoIds = new Float32Array(orbit.length / 4);
+  const composition = createOrbitComposition(orbit);
 
   function visibleEstimate(camera) {
     let visible = 0;
@@ -70,14 +74,15 @@ export function createUniverse(canvas) {
   }
   function drawMaterial(camera) {
     const points = [];
+    const blend = compositionAt(camera.zoom);
     for (let i = 0; i < orbit.length / 4; i++) {
       const point = orbitAt(orbit, i, flowSeconds);
       const projected = projectOrbit(point, camera, width, height);
       if (projected)
-        points.push({ ...point, ...projected, photoId: photoIds[i] });
+        points.push({ ...point, ...projected, index: i, photoId: photoIds[i] });
     }
     points.sort((a, b) => b.depth - a.depth);
-    for (const point of points) {
+    function paint(point, opacity = 1) {
       const { x, y, size, seed, angle, depth } = point;
       const readable = ease((size - 2) / 26);
       ctx.save();
@@ -86,8 +91,9 @@ export function createUniverse(canvas) {
         0.19 * Math.cos(angle) - 0.26 * Math.sin(angle),
         -Math.sin(angle),
       );
-      ctx.rotate(tangent * (1 - readable) + (seed - 0.5) * 0.55 * readable);
-      ctx.globalAlpha = (0.38 + readable * 0.6) * ease((depth - 0.028) / 0.047);
+      ctx.rotate(tangent * (1 - readable) + (seed - 0.5) * 0.18 * readable);
+      ctx.globalAlpha =
+        opacity * (0.38 + readable * 0.6) * ease((depth - 0.028) / 0.047);
       const image = images[point.photoId];
       const ratio = image ? image.width / image.height : 0.8;
       const cardWidth = size * Math.min(ratio, 1);
@@ -121,6 +127,36 @@ export function createUniverse(canvas) {
       }
       ctx.restore();
     }
+    for (const point of points) {
+      const dust = projectOrbit(
+        orbitAt(orbit, point.index, flowSeconds),
+        camera,
+        width,
+        height,
+        orbitDustSize(point.seed),
+      );
+      if (dust) paint({ ...point, ...dust }, 1 - 0.4 * blend);
+      if (blend < 1 && orbitPhotoSize(point.seed) > orbitDustSize(point.seed))
+        paint(point, 1 - blend);
+    }
+    const focused = composition.update({
+      camera,
+      width,
+      height,
+      time: flowSeconds,
+      photoIds,
+      ratios: images.map((image) => image.width / image.height),
+      now: performance.now(),
+      reduced: motion.matches,
+    });
+    for (const { index, point, projected, alpha } of focused)
+      paint(
+        { ...point, ...projected, photoId: photoIds[index] },
+        alpha * blend,
+      );
+    canvas.dataset.focusPhotos = String(
+      focused.filter((p) => p.alpha > 0.5).length,
+    );
     return points.length;
   }
 
@@ -139,6 +175,7 @@ export function createUniverse(canvas) {
         time: flowSeconds,
         detail: detailMix,
         cover: 1 - ease(progress / 0.18),
+        reduced: motion.matches,
       });
       report(camera, visibleEstimate(camera), detailMix);
       return;
