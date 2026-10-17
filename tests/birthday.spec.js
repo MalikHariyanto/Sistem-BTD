@@ -56,21 +56,18 @@ test("camera move contains no greeting or countdown; dense photos settle before 
       { timeout: 8000 },
     )
     .toBeGreaterThan(0.95);
-  const middleStart = Number(
-    await page.locator("#universe").getAttribute("data-progress"),
-  );
-  const angleStart = Number(
-    await page.locator("#universe").getAttribute("data-view-angle"),
-  );
+  const readCamera = () =>
+    page.locator("#universe").evaluate((c) => ({
+      progress: Number(c.dataset.progress),
+      eye: c.dataset.cameraPosition.split(",").map(Number),
+    }));
+  const middleStart = await readCamera();
   await page.waitForTimeout(1000);
-  const angleEnd = Number(
-    await page.locator("#universe").getAttribute("data-view-angle"),
-  );
-  expect(angleEnd).toBeLessThan(angleStart);
-  const middleEnd = Number(
-    await page.locator("#universe").getAttribute("data-progress"),
-  );
-  expect(middleEnd).toBeGreaterThan(middleStart);
+  const middleEnd = await readCamera();
+  expect(middleEnd.progress).toBeGreaterThan(middleStart.progress);
+  expect(
+    Math.hypot(...middleEnd.eye.map((v, i) => v - middleStart.eye[i])),
+  ).toBeGreaterThan(0.01);
   // Clock dilation is checked by the deterministic timing test; browser round
   // trips may take longer than a second on software WebGL.
   await expect(page.locator("#reveal-copy")).toBeHidden();

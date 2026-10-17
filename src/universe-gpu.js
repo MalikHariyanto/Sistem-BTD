@@ -8,6 +8,29 @@ attribute vec2 aPosition;
 varying vec2 vScreen;
 void main(){vScreen=vec2((aPosition.x+1.0)*0.5,(1.0-aPosition.y)*0.5);gl_Position=vec4(aPosition,0.0,1.0);}
 `;
+// The background ray and every photo use one world-space camera. Camera yaw
+// changes position, parallax, disk perspective and shadow occlusion together.
+const cameraGLSL = `
+uniform vec3 uEye;
+uniform vec3 uRight;
+uniform vec3 uDown;
+uniform vec3 uBack;
+uniform float uFocal;
+uniform vec2 uCenter;
+vec3 cameraRay(vec2 pixel){
+  vec2 p=(pixel-uCenter)/uFocal;
+  return normalize(uRight*p.x+uDown*p.y-uBack);
+}
+float holeHit(vec3 ray){
+  vec3 origin=uEye-vec3(0.0,-.045/1.776833,0.0);
+  float b=dot(origin,ray);
+  float d=b*b-dot(origin,origin)+.088*.088;
+  if(d<=0.0)return 10000.0;
+  float hit=-b-sqrt(d);
+  return hit>0.0?hit:10000.0;
+}
+float smooth5(float x){x=clamp(x,0.0,1.0);return x*x*x*(x*(x*6.0-15.0)+10.0);}
+`;
 const fragment = `
 precision highp float;
 varying vec2 vScreen;
@@ -19,12 +42,73 @@ uniform vec4 uState; // simulation time, photo reveal, vignette, detail reveal
 uniform float uCover;
 uniform float uZoom;
 uniform float uViewAngle;
+uniform float uOrbitBlend;
 uniform float uShowcase;
+${cameraGLSL}
 
 float luminance(vec3 c){return dot(c,vec3(.2126,.7152,.0722));}
 vec4 wide(vec2 uv){
   float inside=step(0.0,uv.x)*step(uv.x,1.0)*step(0.0,uv.y)*step(uv.y,1.0);
   return mix(vec4(.031,.035,.043,1.0),texture2D(uWide,uv),inside);
+}
+// Analytic ray/tilted-plane intersections avoid a costly ray march. The same
+// photographic filaments remain on the disk as the camera travels around it.
+vec3 spatialScene(vec2 pixel,float time){
+  vec3 ray=cameraRay(pixel);
+  vec3 origin=uEye-vec3(0.0,-.045/1.776833,0.0);
+  float along=-dot(origin,ray);
+  float impact=length(origin+ray*along);
+  float shadow=holeHit(ray);
+  vec3 color=vec3(.025,.029,.037);
+  // Distant stars stay in world space, rather than following the photos.
+  vec2 sky=vec2(atan(ray.x,-ray.z),asin(ray.y))*900.0;
+  vec2 cell=floor(sky);
+  float star=fract(sin(dot(cell,vec2(127.1,311.7)))*43758.5453);
+  color+=vec3(.24,.26,.28)*step(.9984,star)*
+    (1.0-smoothstep(.03,.22,length(fract(sky)-.5)));
+  // A photon ring and the folded far-side light form the familiar high arch.
+  vec3 towards=vec3(0.0,-.045/1.776833,0.0)-uEye;
+  vec2 center=uCenter+vec2(dot(towards,uRight),dot(towards,uDown))*uFocal/
+    max(.028,-dot(towards,uBack));
+  float holeDepth=max(.028,-dot(towards,uBack));
+  vec2 delta=(pixel-center)*holeDepth/uFocal;
+  vec2 sourceUV=vec2(.5,.43)+delta*vec2(1.0,1.776833);
+  vec2 polar=delta/vec2(.17,.169);
+  float phi=atan(polar.y,polar.x),radius=length(polar);
+  float angle=phi-time*.075/(radius+.65);
+  vec2 spun=vec2(.5,.43)+vec2(cos(angle),sin(angle))*radius*vec2(.17,.30);
+  float guard=smoothstep(.088,.12,impact);
+  vec2 mapped=mix(sourceUV,spun,.28*guard);
+  vec3 lens=wide(mapped).rgb;
+  // Keep the photographic, turbulent high arch; the horizontal material is
+  // supplied by the actual 3D disk below, sharing depth with the photo stream.
+  float band=abs(sourceUV.y-(.35+.26*sourceUV.x));
+  float ringMask=smoothstep(.045,.11,band)*
+    (1.0-smoothstep(1.4,2.0,radius));
+  float photon=exp(-pow((impact-.090)/.0018,2.0))*.28;
+  color+=lens*ringMask+vec3(1.0,.87,.68)*photon;
+  if(shadow<9999.0)color=vec3(.008,.009,.012);
+  vec3 normal=vec3(-.26/1.776833,1.0,-.19/1.776833);
+  float denom=dot(ray,normal);
+  float t=-dot(uEye,normal)/denom;
+  if(abs(denom)>.00001 && t>0.0 && t<shadow){
+    vec3 point=uEye+ray*t;
+    float r=length(point.xz),theta=atan(point.z,point.x);
+    float edge=smoothstep(.087,.122,r)*(1.0-smoothstep(.58,.68,r));
+    float phase=theta-time*.115*pow(.28/max(.105,r),1.5);
+    // Flow the reference's surface detail along the actual plane, rather than
+    // spinning a rectangular black-hole image across the viewport.
+    vec2 samplePoint=vec2(cos(phase),sin(phase))*r;
+    vec2 uv=vec2(.5+samplePoint.x*5.0/(5.0-samplePoint.y),
+      .475+(.26*samplePoint.x+.19*samplePoint.y)*5.0/(5.0-samplePoint.y));
+    vec3 grain=wide(uv).rgb;
+    float filaments=.5+.5*sin(r*1700.0+sin(phase*19.0+r*130.0)*1.8);
+    float brightness=clamp((.15+luminance(grain)*.95+filaments*.035)*
+      (.55+.55*pow(.14/max(.14,r),.7)),.05,.90);
+    vec3 disk=mix(vec3(.60,.28,.12),vec3(1.0,.89,.69),brightness)*brightness;
+    color=mix(color,disk,edge*.9);
+  }
+  return color;
 }
 void main(){
   vec2 pixel=vScreen*uViewport;
@@ -60,7 +144,9 @@ void main(){
 
   // The unresolved plasma radiance falls away as individual cards become
   // optically resolvable. Geometry and photo positions remain unchanged.
-  vec3 color=plasma*mix(1.0,.10,smoothstep(4.0,18.0,uZoom))*(1.0-.25*uShowcase);
+  vec3 radiance=plasma;
+  if(uOrbitBlend>.001)radiance=mix(plasma,spatialScene(pixel,time),uOrbitBlend);
+  vec3 color=radiance*mix(1.0,.10,smoothstep(4.0,18.0,uZoom))*(1.0-.25*uShowcase);
   float vignette=smoothstep(.12,.83,length((pixel-uViewport*vec2(.5,.45))/max(uViewport.x,uViewport.y)));
   float shade=mix(uState.z*.65,min(.84,uState.z+.24),vignette);
   color=mix(color,vec3(.031,.035,.043),shade);
@@ -81,10 +167,9 @@ uniform float uShowcase;
 varying float vAspect;
 varying float vPhotoId;
 uniform vec2 uViewport;
-uniform vec4 uFlight; // camera x, y, distance, base image width
-uniform vec2 uCenter;
+${cameraGLSL}
+varying float vDepth;
 uniform float uTime;
-uniform float uViewAngle;
 uniform float uDpr;
 uniform float uPointLimit;
 uniform float uLens;
@@ -95,15 +180,16 @@ varying vec2 vOffset;
 void main(){
   vPhotoId=aPhoto.x;
   vAspect=aPhoto.y;
-  float r=aOrbit.x, seed=aOrbit.w;
-  float theta=aOrbit.y+uTime*.115*pow(.28/r,1.5)-uViewAngle;
-  float x=cos(theta)*r, z=sin(theta)*r;
+  float seed=aOrbit.w;
+  float radial=aOrbit.x*aOrbit.x-.075*.075-.0007*uTime;
+  float span=.64*.64-.075*.075;
+  float cycles=floor(radial/span);
+  float r=sqrt(.075*.075+radial-cycles*span);
+  float theta=aOrbit.y+4.0*.115*pow(.28,1.5)/.0007*
+    (sqrt(aOrbit.x)-sqrt(r)-cycles*(sqrt(.64)-sqrt(.075)));
+  float x=cos(theta)*r,z=sin(theta)*r;
   float y=.26*x+.19*z+aOrbit.z;
-  float originalU=.5+x*5.0/(5.0-z);
-  float originalV=.475+y*5.0/(5.0-z);
-  float mask=1.0;
-  float shadow=length((vec2(originalU,originalV)-vec2(.5,.43))/vec2(.112,.205));
-  if(z<0.0)mask*=smoothstep(1.0,1.07,shadow);
+  float mask=smooth5((r-.087)/.035)*(1.0-smooth5((r-.61)/.03));
   // Secondary images of the far disk bend above and below the shadow. These
   // reuse the same particle identity and angular velocity as the physical disk.
   if(uLens>.5){
@@ -114,9 +200,12 @@ void main(){
     if(uLens>1.5)y=-y*.62+.032;
     z=-.01;
   }
-  float distance=uFlight.z-z;
-  float scale=uFlight.w*5.0/max(.028,distance);
-  vec2 pixel=uCenter+vec2(x-uFlight.x,(y-uFlight.y)/1.776833)*scale;
+  vec3 relative=vec3(x,y/1.776833,z)-uEye;
+  float distance=-dot(relative,uBack);
+  float scale=uFocal/max(.028,distance);
+  vec2 pixel=uCenter+vec2(dot(relative,uRight),dot(relative,uDown))*scale;
+  vDepth=distance;
+
   float grain=fract(seed*97.13);
   float dustSize=.00018+seed*.00038;
   float heroSize=.003+seed*.0018;
@@ -144,7 +233,13 @@ void main(){
   // Tiny tilted cards merge into light filaments. The same cards become legible
   // through perspective magnification, with no new grid or new positions.
   float readable=smoothstep(2.0,mix(28.0,12.0,uShowcase),size);
-  float tangent=atan(.19*cos(theta)-.26*sin(theta),-sin(theta));
+  float radialSpeed=-.0007/(2.0*r),angularSpeed=.115*pow(.28/r,1.5);
+  float vx=cos(theta)*radialSpeed-sin(theta)*r*angularSpeed;
+  float vz=sin(theta)*radialSpeed+cos(theta)*r*angularSpeed;
+  vec3 velocity=vec3(vx,(.26*vx+.19*vz)/1.776833,vz);
+  vec2 tangentVector=vec2(dot(velocity,uRight),dot(velocity,uDown))*distance+
+    vec2(dot(relative,uRight),dot(relative,uDown))*dot(velocity,uBack);
+  float tangent=atan(tangentVector.y,tangentVector.x);
   vPhoto=vec4(seed,size,mix(tangent,(seed-.5)*.18,readable),mask);
   vHeat=(1.0-smoothstep(.14,.64,r))*.36+seed*.20;
 }
@@ -162,11 +257,18 @@ uniform float uShowcase;
 uniform float uDpr;
 uniform float uCover;
 uniform vec2 uViewport;
+${cameraGLSL}
+varying float vDepth;
 varying vec4 vPhoto;
 varying float vHeat;
 varying vec2 vOffset;
 void main(){
   if(vPhoto.w<.001)discard;
+  // Clip each fragment against the horizon. Cards pass behind the silhouette
+  // progressively, without disappearing whole when their centers cross it.
+  vec2 pixel=vec2(gl_FragCoord.x/uDpr,uViewport.y-gl_FragCoord.y/uDpr);
+  vec3 ray=cameraRay(pixel);
+  if(holeHit(ray)<vDepth/max(.001,dot(ray,-uBack)))discard;
   float size=vPhoto.y, readable=smoothstep(2.0,mix(28.0,12.0,uShowcase),size);
   vec2 p=(gl_PointCoord-vec2(.5)+vOffset)*1.3;
   float c=cos(vPhoto.z),s=sin(vPhoto.z);
@@ -292,6 +394,13 @@ export function createUniverseGPU(canvas) {
         "uZoom",
         "uShowcase",
         "uViewAngle",
+        "uOrbitBlend",
+        "uEye",
+        "uRight",
+        "uDown",
+        "uBack",
+        "uFocal",
+        "uCenter",
       ],
       "aPosition",
     );
@@ -303,8 +412,11 @@ export function createUniverseGPU(canvas) {
         "uLayer",
         "uComposition",
         "uShowcase",
-        "uViewAngle",
-        "uFlight",
+        "uEye",
+        "uRight",
+        "uDown",
+        "uBack",
+        "uFocal",
         "uCenter",
         "uTime",
         "uDpr",
@@ -353,6 +465,14 @@ export function createUniverseGPU(canvas) {
   } catch {
     return null;
   }
+  function setCameraUniforms(u, camera) {
+    gl.uniform3fv(u.uEye, camera.eye);
+    gl.uniform3fv(u.uRight, camera.right);
+    gl.uniform3fv(u.uDown, camera.down);
+    gl.uniform3fv(u.uBack, camera.back);
+    gl.uniform1f(u.uFocal, camera.focal);
+    gl.uniform2f(u.uCenter, camera.centerX, camera.centerY);
+  }
   function draw(args) {
     last = args;
     if (gl.isContextLost()) return;
@@ -381,6 +501,8 @@ export function createUniverseGPU(canvas) {
     gl.uniform1f(u.uZoom, camera.zoom);
     gl.uniform1f(u.uShowcase, showcase);
     gl.uniform1f(u.uViewAngle, camera.viewAngle || 0);
+    gl.uniform1f(u.uOrbitBlend, camera.orbitBlend);
+    setCameraUniforms(u, camera);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
     gl.disableVertexAttribArray(background.attribute);
 
@@ -393,14 +515,7 @@ export function createUniverseGPU(canvas) {
     gl.vertexAttribPointer(particles.photoAttribute, 2, gl.FLOAT, false, 0, 0);
     u = particles.uniforms;
     gl.uniform2f(u.uViewport, width, height);
-    gl.uniform4f(
-      u.uFlight,
-      camera.cx,
-      camera.cy,
-      camera.distance,
-      camera.baseWidth,
-    );
-    gl.uniform2f(u.uCenter, camera.centerX, camera.centerY);
+    setCameraUniforms(u, camera);
     gl.uniform1f(u.uTime, time);
     gl.uniform1f(u.uDpr, dpr);
     gl.uniform1f(u.uPointLimit, pointLimit);
@@ -410,7 +525,6 @@ export function createUniverseGPU(canvas) {
     gl.uniform1f(u.uCover, cover);
     gl.uniform1f(u.uComposition, compositionAt(camera.zoom));
     gl.uniform1f(u.uShowcase, showcase);
-    gl.uniform1f(u.uViewAngle, camera.viewAngle || 0);
     gl.uniform1f(u.uLayer, 0);
     gl.disableVertexAttribArray(particles.fadeAttribute);
     gl.vertexAttrib1f(particles.fadeAttribute, 1);
@@ -418,7 +532,10 @@ export function createUniverseGPU(canvas) {
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     // The lens images are behind the physical near side; the particles then
     // occlude each other by their actual depth instead of array order.
-    gl.uniform1f(u.uLensFade, 1 - ease((camera.zoom - 5) / 7));
+    gl.uniform1f(
+      u.uLensFade,
+      (1 - ease((camera.zoom - 5) / 7)) * (1 - camera.orbitBlend),
+    );
     if (camera.zoom < 12) {
       gl.uniform1f(u.uLens, 1);
       gl.drawArrays(gl.POINTS, 0, 4096);

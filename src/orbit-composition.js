@@ -11,7 +11,7 @@ import {
 // dust. Fade before the projected tangent reverses direction, never wrap x.
 export function frontArc(point, camera) {
   const facing =
-    (camera.cx * point.x + camera.distance * point.depth) / point.radius -
+    (camera.eye[0] * point.x + camera.eye[2] * point.depth) / point.radius -
     point.radius;
   return ease((facing - 0.012) / 0.045);
 }
@@ -77,7 +77,7 @@ export function createOrbitComposition(orbit) {
       const limit = width < 700 ? 8 : 16;
       const records = [];
       for (const index of candidates) {
-        const point = orbitAt(orbit, index, time, camera.viewAngle);
+        const point = orbitAt(orbit, index, time);
         const projected = focusProjection(point, camera, width, height);
         if (!projected || projected.size < (width < 700 ? 34 : 55)) continue;
         const existing = active.has(index);
@@ -112,7 +112,7 @@ export function createOrbitComposition(orbit) {
           continue;
         const future =
           focusProjection(
-            orbitAt(orbit, index, time + 0.12, camera.viewAngle),
+            orbitAt(orbit, index, time + 0.12),
             camera,
             width,
             height,
@@ -164,8 +164,7 @@ export function createOrbitComposition(orbit) {
           active.delete(index);
           continue;
         }
-        const point =
-          record?.point || orbitAt(orbit, index, time, camera.viewAngle);
+        const point = record?.point || orbitAt(orbit, index, time);
         const projected =
           record?.projected || focusProjection(point, camera, width, height);
         if (projected)
@@ -173,7 +172,7 @@ export function createOrbitComposition(orbit) {
             index,
             point,
             projected,
-            alpha: state.alpha * frontArc(point, camera),
+            alpha: state.alpha * frontArc(point, camera) * point.opacity,
           });
       }
       return result;

@@ -1,5 +1,8 @@
 import {
   cameraAt,
+  projectWorld,
+  HORIZON,
+  ASPECT,
   JOURNEY_MS,
   journeyProgress,
   photoShowcaseAt,
@@ -8,6 +11,7 @@ import {
   PARTICLE_COUNT,
   createOrbit,
   orbitAt,
+  orbitTangent,
   projectOrbit,
   orbitDustSize,
   orbitPhotoSize,
@@ -71,14 +75,7 @@ export function createUniverse(canvas) {
   function visibleEstimate(camera) {
     let visible = 0;
     for (let i = 0; i < orbit.length / 4; i += 64)
-      if (
-        projectOrbit(
-          orbitAt(orbit, i, flowSeconds, camera.viewAngle),
-          camera,
-          width,
-          height,
-        )
-      )
+      if (projectOrbit(orbitAt(orbit, i, flowSeconds), camera, width, height))
         visible++;
     return visible * 64;
   }
@@ -87,24 +84,24 @@ export function createUniverse(canvas) {
     const blend = compositionAt(camera.zoom);
     const showcase = photoShowcaseAt(progress);
     for (let i = 0; i < orbit.length / 4; i++) {
-      const point = orbitAt(orbit, i, flowSeconds, camera.viewAngle);
+      const point = orbitAt(orbit, i, flowSeconds);
       const projected = projectOrbit(point, camera, width, height);
       if (projected)
         points.push({ ...point, ...projected, index: i, photoId: photoIds[i] });
     }
     points.sort((a, b) => b.depth - a.depth);
     function paint(point, opacity = 1) {
-      const { x, y, size, seed, angle, depth } = point;
+      const { x, y, size, seed, depth } = point;
       const readable = ease((size - 2) / (26 - 16 * showcase));
       ctx.save();
       ctx.translate(x, y);
-      const tangent = Math.atan2(
-        0.19 * Math.cos(angle) - 0.26 * Math.sin(angle),
-        -Math.sin(angle),
-      );
+      const tangent = orbitTangent(point, camera);
       ctx.rotate(tangent * (1 - readable) + (seed - 0.5) * 0.18 * readable);
       ctx.globalAlpha =
-        opacity * (0.38 + readable * 0.6) * ease((depth - 0.028) / 0.047);
+        opacity *
+        point.opacity *
+        (0.38 + readable * 0.6) *
+        ease((depth - 0.028) / 0.047);
       const image = images[point.photoId];
       const ratio = image ? image.width / image.height : 0.8;
       const cardWidth = size * Math.min(ratio, 1);
@@ -140,7 +137,7 @@ export function createUniverse(canvas) {
     }
     for (const point of points) {
       const dust = projectOrbit(
-        orbitAt(orbit, point.index, flowSeconds, camera.viewAngle),
+        orbitAt(orbit, point.index, flowSeconds),
         camera,
         width,
         height,
@@ -152,7 +149,7 @@ export function createUniverse(canvas) {
           {
             ...point,
             ...projectOrbit(
-              orbitAt(orbit, point.index, flowSeconds, camera.viewAngle),
+              orbitAt(orbit, point.index, flowSeconds),
               camera,
               width,
               height,
@@ -213,6 +210,25 @@ export function createUniverse(canvas) {
       (1 - 0.9 * ease((camera.zoom - 4) / 14)) *
       (1 - 0.25 * photoShowcaseAt(progress));
     ctx.globalAlpha = radiance;
+    // The fallback follows the same moving world-space camera. Anchor the lens
+    // plate to the projected sphere, rather than leaving a static backdrop.
+    if (camera.orbitBlend > 0) {
+      const hole = projectWorld(
+        { x: HORIZON.x, y: HORIZON.y * ASPECT, depth: 0 },
+        camera,
+        width,
+        height,
+        0,
+      );
+      if (hole) {
+        const scale = camera.focal / hole.depth;
+        camera.x += (hole.x - 0.5 * scale - camera.x) * camera.orbitBlend;
+        camera.y +=
+          (hole.y - (0.43 * scale) / ASPECT - camera.y) * camera.orbitBlend;
+        camera.width += (scale - camera.width) * camera.orbitBlend;
+        camera.height = camera.width / ASPECT;
+      }
+    }
     if (plate)
       ctx.drawImage(plate, camera.x, camera.y, camera.width, camera.height);
     // A separately reconstructed close-up resolves the disk filaments before
@@ -286,6 +302,9 @@ export function createUniverse(canvas) {
     canvas.dataset.photoMix = camera.photoMix.toFixed(4);
     canvas.dataset.zoom = camera.zoom.toFixed(4);
     canvas.dataset.viewAngle = camera.viewAngle.toFixed(4);
+    canvas.dataset.cameraPosition = camera.eye
+      .map((v) => v.toFixed(5))
+      .join(",");
     canvas.dataset.detailMix = detailMix.toFixed(4);
     canvas.dataset.progress = progress.toFixed(4);
     canvas.dataset.photoShowcase = photoShowcaseAt(progress).toFixed(4);

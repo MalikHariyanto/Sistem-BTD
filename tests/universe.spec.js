@@ -22,7 +22,9 @@ test("a dense physical annulus rotates differentially, retaining its identities 
       after = orbitAt(data, i, 10);
     radii.add(before.radius);
     phases.add(before.angle);
-    expect(Math.hypot(after.x, after.depth)).toBeCloseTo(before.radius, 7);
+    expect(after.radius).toBeLessThan(before.radius);
+    expect(before.radius ** 2 - after.radius ** 2).toBeCloseTo(0.007, 7);
+    expect(Math.hypot(after.x, after.depth)).toBeCloseTo(after.radius, 7);
     expect(after.seed).toBe(before.seed);
     expect(
       Math.hypot(after.x - before.x, after.depth - before.depth),
@@ -61,6 +63,10 @@ test("a dense physical annulus rotates differentially, retaining its identities 
       expect(camera.zoom).toBeGreaterThanOrEqual(previous.zoom - 1e-9);
       // A perceptual zoom cannot surge in the final second of the flight.
       expect(camera.zoom / previous.zoom).toBeLessThan(1.01);
+      // Focal widening must not quietly reverse the apparent zoom even when
+      // the underlying camera distance continues to decrease.
+      expect(camera.width).toBeGreaterThanOrEqual(previous.width - 1e-7);
+      expect(camera.width / previous.width).toBeLessThan(1.012);
       expect(camera.distance).toBeGreaterThan(0.32);
       previous = camera;
     }
