@@ -9,6 +9,7 @@ import { quotes } from "./quotes.js";
 import { createUniverse } from "./universe.js";
 import { openMemories, optimizePhoto } from "./memories.js";
 import { createMotion } from "./motion.js";
+import { captureChapterChrome } from "./chapter-chrome.js";
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
@@ -137,6 +138,11 @@ async function goTo(index) {
   if (changing || index < 0 || index >= chapters.length || index === active)
     return;
   changing = true;
+  const chrome = [$(".story-header"), $("#story-nav"), $("#open-editor")];
+  const snapshots = motion.matches ? [] : captureChapterChrome(chrome);
+  document.body.classList.add("chapter-changing");
+  chrome.forEach(element => { element.inert = true; });
+  updateNav(index);
   $("#stage").setAttribute("aria-busy", "true");
   $$("#story-nav button").forEach((button) => (button.disabled = true));
   const before = $(`[data-scene="${active}"]`),
@@ -156,6 +162,10 @@ async function goTo(index) {
   // Incoming and outgoing pages overlap for a single continuous dissolve.
   const shift = motion.matches ? 0 : 36 * dir;
   await Promise.all([
+    ...chrome.filter(element => !element.hidden).map(element =>
+      animate(element, [{ opacity: 0 }, { opacity: Number(getComputedStyle(element).opacity) }], 820)),
+    ...snapshots.map(element =>
+      animate(element, [{ opacity: Number(getComputedStyle(element).opacity) }, { opacity: 0 }], 820)),
     animate(
       before,
       [
@@ -181,6 +191,9 @@ async function goTo(index) {
   after.classList.add("is-active");
   effects.reset(after);
   after.style.removeProperty("z-index");
+  chrome.forEach(element => { effects.reset(element); element.inert = false; });
+  snapshots.forEach(element => { effects.reset(element); element.remove(); });
+  document.body.classList.remove("chapter-changing");
   active = index;
   changing = false;
   $("#stage").removeAttribute("aria-busy");
@@ -191,18 +204,18 @@ async function goTo(index) {
   $("#scene-announcement").textContent = chapters[index];
   updateNav();
 }
-function updateNav() {
-  document.body.dataset.chapter = String(active);
-  $("#story-nav").hidden = active === 0;
-  $("#chapter-name").textContent = chapters[active];
-  $("#next-scene").innerHTML = esc(nextLabels[active]) + arrow;
-  $("#next-scene").hidden = active === 6;
+function updateNav(index = active) {
+  document.body.dataset.chapter = String(index);
+  $("#story-nav").hidden = index === 0;
+  $("#chapter-name").textContent = chapters[index];
+  $("#next-scene").innerHTML = esc(nextLabels[index]) + arrow;
+  $("#next-scene").hidden = index === 6;
   $$("#story-nav [data-chapter]").forEach((b, i) => {
-    if (i === active) b.setAttribute("aria-current", "step");
+    if (i === index) b.setAttribute("aria-current", "step");
     else b.removeAttribute("aria-current");
-    b.classList.toggle("passed", i < active);
+    b.classList.toggle("passed", i < index);
   });
-  const dark = [0, 3, 6].includes(active);
+  const dark = [0, 3, 6].includes(index);
   document.body.classList.toggle("dark-scene", dark);
 }
 $("#previous-scene").onclick = () => goTo(active - 1);

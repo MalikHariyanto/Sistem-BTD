@@ -21,6 +21,9 @@ export function createWishGarden(
         .join("")}
     </div>
     <p class="garden-status" role="status">Tiga bunga kecil. Tiga doa baik.</p>
+    <div class="garden-picks" role="group" aria-label="Pilih doa berikutnya" hidden>
+      ${quotes.map((q, i) => `<button type="button" data-pick="${i}" aria-label="Buka doa: ${esc(q.bloom)}" aria-expanded="false" aria-controls="garden-wish-${i}"><img src="${flowerTypes[i % flowerTypes.length].src}" alt="" width="24" height="36"><span>${esc(q.bloom)}</span><span class="pick-check" aria-hidden="true">✓</span></button>`).join("")}
+    </div>
     <div class="garden-notes" aria-label="Doa yang sudah mekar">
       <p class="garden-empty">Ada hal-hal baik<br><em>yang ingin kutitipkan pada hidupmu.</em></p>
       ${quotes
@@ -39,6 +42,8 @@ export function createWishGarden(
     <p class="garden-complete" hidden>Semoga semuanya tumbuh di hidupmu.<br><em>Hari ini, dan hari-hari setelahnya.</em></p>`;
   const buttons = [...root.querySelectorAll("[data-bloom]")];
   const notes = [...root.querySelectorAll(".garden-note")];
+  const picks = root.querySelector(".garden-picks");
+  const pickButtons = [...picks.querySelectorAll("button")];
   const opened = new Set();
   const empty = root.querySelector(".garden-empty");
   const complete = root.querySelector(".garden-complete");
@@ -47,57 +52,68 @@ export function createWishGarden(
     const scene = root.closest(".scene");
     const bounds = note.getBoundingClientRect();
     const viewport = scene.getBoundingClientRect();
-    if (bounds.top >= viewport.top + 20 && bounds.bottom <= viewport.bottom - 24)
+    const clearance = picks.getBoundingClientRect().height + 18;
+    if (bounds.top >= viewport.top + clearance && bounds.bottom <= viewport.bottom - 24)
       return;
     // Scroll only the chapter, never the page or the header/navigation rows.
     scene.scrollTo({
-      top: scene.scrollTop + bounds.top - viewport.top - 20,
+      top: scene.scrollTop + bounds.top - viewport.top - clearance,
       behavior: motion.matches ? "instant" : "smooth",
     });
   }
 
-  buttons.forEach((button, i) => {
-    button.onclick = (event) => {
-      const note = notes[i];
-      if (opened.has(i)) {
-        note.focus({ preventScroll: true });
-        scrollToNote(note);
-        return;
-      }
-      opened.add(i);
-      button.setAttribute("aria-expanded", "true");
-      button.setAttribute("aria-label", `Baca lagi doa: ${quotes[i].bloom}`);
-      button.querySelector("small").textContent = "Sudah mekar · baca lagi";
-      empty.hidden = true;
-      // Append in the order chosen: an earlier wish never jumps below a new one.
-      root.querySelector(".garden-notes").append(note);
-      note.hidden = false;
-      effects.play(
-        note,
-        [
-          { opacity: 0, transform: "translateY(14px)" },
-          { opacity: 1, transform: "translateY(0)" },
-        ],
-        650,
-      );
-      status.textContent =
-        opened.size === quotes.length
-          ? "Semua doaku, untukmu."
-          : `Doa untuk ${quotes[i].bloom.toLowerCase()} telah mekar.`;
-      if (opened.size === quotes.length) {
-        complete.hidden = false;
-        effects.play(complete, [{ opacity: 0 }, { opacity: 1 }], 900);
-      }
-      if (event.detail > 0) scrollToNote(note);
-    };
-  });
+  function bloom(i, event) {
+    const button = buttons[i];
+    const note = notes[i];
+    if (opened.has(i)) {
+      note.focus({ preventScroll: true });
+      scrollToNote(note);
+      return;
+    }
+    opened.add(i);
+    button.setAttribute("aria-expanded", "true");
+    button.setAttribute("aria-label", `Baca lagi doa: ${quotes[i].bloom}`);
+    button.querySelector("small").textContent = "Sudah mekar · baca lagi";
+    pickButtons[i].setAttribute("aria-expanded", "true");
+    pickButtons[i].setAttribute("aria-label", `Baca kembali: ${quotes[i].bloom}`);
+    picks.hidden = false;
+    empty.hidden = true;
+    // Append in the order chosen: an earlier wish never jumps below a new one.
+    root.querySelector(".garden-notes").append(note);
+    note.hidden = false;
+    // Keep the next choices above the reading area, instead of returning to
+    // the full-size flowers after every wish. Measure before animating text.
+    if (event.detail > 0 || event.currentTarget.hasAttribute("data-pick"))
+      scrollToNote(note);
+    effects.play(
+      note,
+      [
+        { opacity: 0, transform: "translateY(14px)" },
+        { opacity: 1, transform: "translateY(0)" },
+      ],
+      650,
+    );
+    status.textContent =
+      opened.size === quotes.length
+        ? "Semua doaku, untukmu."
+        : `Doa untuk ${quotes[i].bloom.toLowerCase()} telah mekar.`;
+    if (opened.size === quotes.length) {
+      complete.hidden = false;
+      effects.play(complete, [{ opacity: 0 }, { opacity: 1 }], 900);
+    }
+  }
+  buttons.forEach((button, i) => { button.onclick = event => bloom(i, event); });
+  pickButtons.forEach((button, i) => { button.onclick = event => bloom(i, event); });
   return {
     reset() {
       opened.clear();
+      picks.hidden = true;
       buttons.forEach((button, i) => {
         button.setAttribute("aria-expanded", "false");
         button.setAttribute("aria-label", `Mekarkan doa: ${quotes[i].bloom}`);
         button.querySelector("small").textContent = "Sentuh untuk mekar";
+        pickButtons[i].setAttribute("aria-expanded", "false");
+        pickButtons[i].setAttribute("aria-label", `Buka doa: ${quotes[i].bloom}`);
         effects.reset(notes[i]);
         notes[i].hidden = true;
         notes[i].querySelector("details").open = false;

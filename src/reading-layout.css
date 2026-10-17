@@ -11,6 +11,15 @@
 body[data-chapter="0"] #app {
   --scene-surface: #000;
 }
+body[data-chapter="2"] #app {
+  --scene-surface: #e7dfd0;
+}
+body[data-chapter="4"] #app {
+  --scene-surface: #e4d5bd;
+}
+body[data-chapter="5"] #app {
+  --scene-surface: #eae4d7;
+}
 body[data-chapter="3"] #app {
   --scene-surface: #664834;
 }
@@ -38,7 +47,8 @@ body[data-chapter="0"] .stage {
   /* The full-screen opening and its skip control extend beyond the reader. */
   overflow: visible;
 }
-.scene:not(.universe-scene) {
+#main .scene:not(.universe-scene) {
+  --reading-inset: 24px;
   padding: 24px 7vw 40px;
   scroll-padding-block: 24px 40px;
 }
@@ -151,7 +161,8 @@ body[data-chapter="0"] .story-header {
   .story-header {
     padding: 12px 24px;
   }
-  .scene:not(.universe-scene) {
+  #main .scene:not(.universe-scene) {
+    --reading-inset: 18px;
     padding: 18px 24px 32px;
   }
   .story-nav {
@@ -203,4 +214,61 @@ body[data-chapter="0"] .story-header {
   #app {
     grid-template-rows: 64px minmax(0, 1fr) 82px;
   }
+}
+
+/* All controls dissolve on the same clock as the chapter, without a second
+   delayed color transition or a clipping edge during the full-screen opening. */
+body.chapter-changing .stage {
+  overflow: visible;
+}
+.story-header,
+.story-nav,
+.edit-trigger {
+  transition: none;
+}
+
+/* A small, persistent choice row keeps the next flower within reach. Full-size
+   botanical flowers remain in the introduction; wishes still accumulate. */
+.garden-picks {
+  position: sticky;
+  top: calc(-1 * var(--reading-inset));
+  z-index: 3;
+  display: flex;
+  gap: 8px;
+  padding: 10px 0 12px;
+  background: #664834;
+  border-bottom: 1px solid #d3b89640;
+}
+.garden-picks[hidden] { display: none; }
+.garden-picks button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 48px;
+  min-width: 0;
+  flex: 1;
+  padding: 5px 9px;
+  color: #f2e5cf;
+  background: #f2e5cf08;
+  border: 1px solid #d3b89655;
+  border-radius: 3px;
+  font-size: 12px;
+}
+.garden-picks img { width: 24px; height: 36px; object-fit: contain; }
+.pick-check { visibility: hidden; color: #e8c795; font-size: 11px; }
+.garden-picks [aria-expanded="true"] .pick-check { visibility: visible; }
+.garden-picks [aria-expanded="true"] { border-color: #e8c795; }
+.garden-scene { scroll-padding-top: 98px; }
+@media (max-width: 700px) {
+  .garden-picks { gap: 6px; }
+  .garden-picks button { gap: 4px; padding-inline: 5px; font-size: 10px; }
+  .garden-picks img { width: 19px; height: 30px; }
+  .pick-check { font-size: 9px; }
+}
+
+.story-nav .progress-lines > button > span { transition: none; }
+@media (max-width: 360px) {
+  .garden-picks button { gap: 3px; padding-inline: 3px; font-size: 9px; }
+  .garden-picks img { width: 16px; }
 }

@@ -170,6 +170,7 @@ uniform float uShade;
 uniform float uLayer;
 uniform float uComposition;
 uniform float uShowcase;
+uniform float uPhotoField;
 uniform float uDpr;
 uniform float uCover;
 uniform vec2 uViewport;
@@ -205,13 +206,20 @@ void main(){
   vec2 tile=vec2(mod(id,uAtlas.x),floor(id/uAtlas.x));
   vec3 photo=texture2D(uPhotos,(tile+mix(vec2(.006),vec2(.994),local))/uAtlas.xy).rgb;
   float border=smoothstep(.48,.495,edge)*readable;
-  photo=mix(photo,vec3(.91,.87,.79),border*.55);
+  photo=mix(photo,vec3(.91,.87,.79),border*(uLayer>2.5?.15:.55));
+  // Warm reflected light and compressed contrast embed the photographs in the
+  // disk, while keeping facial detail and differences between images visible.
+  float photoLum=dot(photo,vec3(.2126,.7152,.0722));
+  vec3 softened=mix(vec3(photoLum),photo,.58)*.70+vec3(.16,.11,.07);
+  softened=mix(softened,vec3(.98,.73,.45),.13+vHeat*.10);
+  photo=mix(photo,softened,uPhotoField*(uLayer>2.5?1.0:.4));
   float lum=dot(photo,vec3(.2126,.7152,.0722));
   vec3 ember=mix(vec3(.68,.30,.095),vec3(1.0,.90,.66),vHeat+.22)*(.65+lum*.75);
   vec3 color=mix(ember,photo,readable);
   float opacity=mix(.72,.98,readable)*vPhoto.w;
   opacity*=mix(1.0-smoothstep(.20,.5,edge),1.0,readable);
   if(uLayer<.5)opacity*=mix(1.0,.60,uComposition);
+  if(uLayer>2.5)opacity*=.78;
   if(opacity<.025)discard;
   vec2 screen=gl_FragCoord.xy/(uViewport*uDpr);
   float shade=uShade*(.65+.25*length(screen-.5));

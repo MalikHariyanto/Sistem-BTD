@@ -57,17 +57,19 @@ test("GPU resolves uploaded textures across the middle disk rather than showing 
       return pixels;
     }
     const before = capture(0), after = capture(0.3), cells = new Set();
-    let extraCyan = 0, extraPink = 0;
+    let extraCyan = 0, extraPink = 0, chroma = 0;
     for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
       const i = (y * width + x) * 4;
-      const cyan = p => p[i + 1] > p[i] + 60 && p[i + 2] > p[i] + 60;
-      const pink = p => p[i] > p[i + 1] + 80 && p[i + 2] > p[i + 1] + 35;
-      if (cyan(after) && !cyan(before)) { extraCyan++; cells.add(`${x >> 4},${y >> 4}`); }
+      const cyan = p => p[i + 1] > p[i] + 30 && p[i + 2] > p[i] + 20;
+      const pink = p => p[i] > p[i + 1] + 45 && p[i + 2] > p[i + 1] + 5;
+      if (cyan(after) && !cyan(before)) { extraCyan++; chroma += Math.max(after[i],after[i+1],after[i+2])-Math.min(after[i],after[i+1],after[i+2]); cells.add(`${x >> 4},${y >> 4}`); }
       if (pink(after) && !pink(before)) extraPink++;
     }
-    return { extraCyan, extraPink, cells: cells.size, width, error: gl.getError() };
+    return { extraCyan, extraPink, chroma: chroma / extraCyan, cells: cells.size, width, error: gl.getError() };
   });
   expect(coverage.error).toBe(0);
+  expect(coverage.chroma).toBeGreaterThan(25);
+  expect(coverage.chroma).toBeLessThan(160);
   expect(coverage.extraCyan).toBeGreaterThan(coverage.width < 700 ? 1500 : 10000);
   expect(coverage.extraPink).toBeGreaterThan(coverage.width < 700 ? 1500 : 10000);
   expect(coverage.cells).toBeGreaterThan(coverage.width < 700 ? 35 : 100);
@@ -99,7 +101,7 @@ test("Canvas fallback also shows uploaded photographs across the middle and can 
     const pixels = canvas.getContext("2d").getImageData(0, 0, canvas.width, canvas.height).data;
     let cyan = 0;
     for (let i = 0; i < pixels.length; i += 16)
-      if (pixels[i + 1] > pixels[i] + 60 && pixels[i + 2] > pixels[i] + 60) cyan++;
+      if (pixels[i + 1] > pixels[i] + 30 && pixels[i + 2] > pixels[i] + 20) cyan++;
     return { fraction: cyan / (pixels.length / 16), progress: Number(canvas.dataset.progress), renderer: canvas.dataset.renderer };
   });
   expect(image.renderer).toBe("canvas2d");

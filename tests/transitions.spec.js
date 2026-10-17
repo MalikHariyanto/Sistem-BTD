@@ -200,3 +200,53 @@ test("Canvas fallback still runs the story when WebGL is unavailable", async ({
     .click();
   await expect(page.locator("#ready-wish")).toBeVisible();
 });
+
+test("header, footer and chapter dissolve together without a late theme change", async ({ page }) => {
+  await page.goto("/");
+  await page.locator("#begin").click();
+  await page.locator("#skip-intro").click();
+  // Check the full-screen opening as well as every reading chapter and return.
+  for (const target of [1, 2, 3, 4, 5, 6, 5, 4, 3, 2, 1]) {
+    const result = await page.evaluate(async target => {
+      const incoming = document.querySelector(`[data-scene="${target}"]`);
+      const button = document.body.dataset.chapter === "0"
+        ? document.querySelector("#enter-story")
+        : document.querySelector(`#story-nav [data-chapter="${target}"]`);
+      button.click();
+      const controls = [document.querySelector('.story-header'), document.querySelector('#story-nav')];
+      const animation = incoming.getAnimations()[0];
+      const frames = [], beginning = {
+        theme: document.body.dataset.chapter,
+        label: document.querySelector('#chapter-name').textContent,
+        durations: controls.map(element => element.getAnimations()[0]?.effect.getTiming().duration),
+        starts: controls.map(element => element.getAnimations()[0]?.startTime),
+        duration: animation.effect.getTiming().duration,
+        start: animation.startTime,
+      };
+      await new Promise(resolve => {
+        function frame() {
+          frames.push({
+            scene: Number(getComputedStyle(incoming).opacity),
+            controls: controls.map(element => Number(getComputedStyle(element).opacity)),
+          });
+          if (!document.querySelector('#stage').hasAttribute('aria-busy')) resolve();
+          else requestAnimationFrame(frame);
+        }
+        requestAnimationFrame(frame);
+      });
+      return { beginning, frames,
+        snapshots: document.querySelectorAll('[data-chrome-snapshot]').length,
+        backgrounds: [...controls, incoming].map(element => getComputedStyle(element).backgroundColor),
+        pending: controls.flatMap(element => element.getAnimations({ subtree: true })).length,
+      };
+    }, target);
+    expect(result.beginning.theme).toBe(String(target));
+    expect(result.beginning.durations).toEqual([result.beginning.duration, result.beginning.duration]);
+    expect(result.beginning.starts).toEqual([result.beginning.start, result.beginning.start]);
+    for (const frame of result.frames)
+      for (const opacity of frame.controls) expect(Math.abs(opacity - frame.scene)).toBeLessThan(0.025);
+    expect(new Set(result.backgrounds).size).toBe(1);
+    expect(result.snapshots).toBe(0);
+    expect(result.pending).toBe(0);
+  }
+});

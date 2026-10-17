@@ -67,6 +67,7 @@ export function createUniverse(canvas) {
     generation = 0,
     signature;
   const thumbnails = new Map();
+  const softenedThumbnails = new WeakMap();
   let photosReady = Promise.resolve();
   const aspect = 1672 / 941;
   const orbit = createOrbit(gpu ? PARTICLE_COUNT : 8192);
@@ -115,8 +116,11 @@ export function createUniverse(canvas) {
         point.opacity *
         (0.38 + readable * 0.6) *
         ease((depth - 0.028) / 0.047);
-      const image = images[point.photoId];
-      const ratio = image ? image.width / image.height : 0.8;
+      const integration = field * (photographic ? 1 : 0.4);
+      if (photographic) ctx.globalAlpha *= 0.78;
+      const source = images[point.photoId];
+      const image = photographic ? softenedThumbnails.get(source) || source : source;
+      const ratio = source ? source.width / source.height : 0.8;
       const cardWidth = size * Math.min(ratio, 1);
       const cardHeight =
         size *
@@ -130,7 +134,7 @@ export function createUniverse(canvas) {
           cardWidth,
           cardHeight,
         );
-        ctx.fillStyle = `rgba(227,161,77,${(1 - readable) * 0.85})`;
+        ctx.fillStyle = `rgba(227,161,77,${(1 - readable) * 0.85 + integration * 0.16})`;
         ctx.fillRect(-cardWidth / 2, -cardHeight / 2, cardWidth, cardHeight);
       } else {
         ctx.fillStyle = readable > 0.1 ? "#b8a68e" : "#f4c58e";
@@ -142,7 +146,7 @@ export function createUniverse(canvas) {
         );
       }
       if (readable > 0.65) {
-        ctx.strokeStyle = "#e7dcc9";
+        ctx.strokeStyle = photographic ? "#cbb28b55" : "#e7dcc9";
         ctx.lineWidth = Math.max(0.5, size * 0.009);
         ctx.strokeRect(-cardWidth / 2, -cardHeight / 2, cardWidth, cardHeight);
       }
@@ -536,7 +540,22 @@ export function createUniverse(canvas) {
     if (current !== generation) return;
     images = loaded.filter(Boolean);
     if (gpu) gpu.setPhotos(images);
-    else photoIds = assignOrbitPhotos(orbit, images.length);
+    else {
+      // Bake the small, softened disk textures once. Applying a Canvas filter
+      // to thousands of draw calls each frame can stall software rendering.
+      for (const image of images) {
+        if (softenedThumbnails.has(image)) continue;
+        const thumb = document.createElement("canvas");
+        const scale = Math.min(1, 96 / Math.max(image.width, image.height));
+        thumb.width = Math.max(1, Math.round(image.width * scale));
+        thumb.height = Math.max(1, Math.round(image.height * scale));
+        const context = thumb.getContext("2d");
+        context.filter = "saturate(0.58) contrast(0.7)";
+        context.drawImage(image, 0, 0, thumb.width, thumb.height);
+        softenedThumbnails.set(image, thumb);
+      }
+      photoIds = assignOrbitPhotos(orbit, images.length);
+    }
     canvas.dataset.photoSources = String(images.length);
     for (const key of thumbnails.keys())
       if (!sources.includes(key)) thumbnails.delete(key);

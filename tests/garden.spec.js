@@ -95,3 +95,31 @@ test("garden works with keyboard and reduced motion, with sourced quotes and no 
   await expect(page.locator(".garden-complete")).toBeVisible();
   await expect(page.locator("dialog[open]")).toHaveCount(0);
 });
+
+test("the next flower stays reachable while reading, without returning to the large flowers", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await enterGarden(page);
+  await page.locator('[data-bloom="0"]').click();
+  const scene = page.locator('[data-scene="3"]');
+  for (const index of [1, 2, 0]) {
+    const pick = page.locator(`[data-pick="${index}"]`);
+    const position = await pick.evaluate(button => {
+      const box = button.getBoundingClientRect(), scene = button.closest('.scene').getBoundingClientRect();
+      return { top: box.top, bottom: box.bottom, start: scene.top, end: scene.bottom };
+    });
+    expect(position.top).toBeGreaterThanOrEqual(position.start);
+    expect(position.bottom).toBeLessThanOrEqual(position.end);
+    const previousScroll = await scene.evaluate(element => element.scrollTop);
+    await pick.click();
+    const reading = await page.locator(`#garden-wish-${index} .garden-wish`).evaluate(text => {
+      const box = text.getBoundingClientRect(), choices = document.querySelector('.garden-picks').getBoundingClientRect(), title = text.parentElement.querySelector('h3').getBoundingClientRect();
+      return { top: box.top, titleTop: title.top, choicesBottom: choices.bottom, end: box.bottom, viewportEnd: text.closest('.scene').getBoundingClientRect().bottom };
+    });
+    expect(reading.top).toBeGreaterThanOrEqual(reading.choicesBottom);
+    expect(reading.titleTop).toBeGreaterThanOrEqual(reading.choicesBottom);
+    expect(reading.end).toBeLessThanOrEqual(reading.viewportEnd);
+    if (index !== 0) expect(await scene.evaluate(element => element.scrollTop)).toBeGreaterThanOrEqual(previousScroll);
+  }
+  await expect(page.locator('.garden-note:not([hidden])')).toHaveCount(3);
+  await expect(page.locator('.garden-picks [aria-expanded="true"]')).toHaveCount(3);
+});
