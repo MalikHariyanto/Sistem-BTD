@@ -1,150 +1,135 @@
 import { test, expect } from "@playwright/test";
 
-test("WebGL projects the actual moving camera and keeps the upper shadow free of photo bleed", async ({
+test("the React renderer contains one black sphere and one 5000-photo InstancedMesh, with actual opposing movement", async ({
   page,
 }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
+  await expect(page.locator("#universe")).toHaveAttribute(
+    "data-ready",
+    "true",
+    { timeout: 20000 },
+  );
   const result = await page.evaluate(async () => {
-    const { createUniverseGPU } = await import("/src/universe-gpu.js");
-    const {
-      cameraAt,
-      createOrbit,
-      orbitAt,
-      projectOrbit,
-      projectWorld,
-      orbitPhotoSize,
-      orbitDustSize,
-      HORIZON,
-      ASPECT,
-      photoShowcaseAt,
-    } = await import("/src/universe-camera.js");
+    const { mountGargantua } = await import("/src/GargantuaScene.jsx");
     const canvas = document.createElement("canvas");
-    // Fixed pixel budget isolates projection/raster agreement from device DPR.
-    const width = 1280,
-      height = 800;
-    canvas.width = width;
-    canvas.height = height;
-    const gpu = createUniverseGPU(canvas);
-    if (!gpu) throw Error("WebGL renderer failed to initialize");
-    const plate = new Image();
-    plate.src = "/art/gargantua.webp";
-    await plate.decode();
-    gpu.setPlate(plate);
-    const photo = document.createElement("canvas");
-    photo.width = 160;
-    photo.height = 200;
-    const ctx = photo.getContext("2d");
-    ctx.fillStyle = "#00ffff";
-    ctx.fillRect(0, 0, 160, 200);
-    gpu.setPhotos([photo]);
-    const gl = canvas.getContext("webgl"),
-      orbit = createOrbit(),
-      frames = [];
-    for (const progress of [0.3, 0.33, 0.36]) {
-      const camera = cameraAt(progress, width, height);
-      // Hold physical time fixed: visible displacement must come from the camera.
-      const time = 6;
-      gpu.draw({
-        camera,
-        width,
-        height,
-        time,
-        detail: 0,
-        cover: 0,
-        showcase: photoShowcaseAt(progress),
-        reduced: true,
-      });
-      const pixels = new Uint8Array(width * height * 4);
-      gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
-      const isCyan = (x, y) => {
-        if (x < 0 || x >= width || y < 0 || y >= height) return false;
-        const i = ((height - 1 - Math.floor(y)) * width + Math.floor(x)) * 4;
-        return (
-          pixels[i + 1] > pixels[i] + 40 &&
-          pixels[i + 2] > pixels[i] + 40 &&
-          pixels[i + 1] > 100
-        );
-      };
-      let predicted = 0,
-        matched = 0;
-      for (let i = 0; i < orbit.length / 4; i += 1) {
-        const p = orbitAt(orbit, i, time);
-        if (p.opacity < 0.9 || orbitPhotoSize(p.seed) <= orbitDustSize(p.seed))
-          continue;
-        const screen = projectOrbit(
-          p,
-          camera,
-          width,
-          height,
-          orbitPhotoSize(p.seed) * 1.25,
-        );
-        if (
-          !screen ||
-          screen.size < 8 ||
-          screen.x < 2 ||
-          screen.x > width - 2 ||
-          screen.y < 2 ||
-          screen.y > height - 2
-        )
-          continue;
-        predicted++;
-        if (
-          isCyan(screen.x, screen.y) ||
-          isCyan(screen.x + 1, screen.y) ||
-          isCyan(screen.x, screen.y + 1)
-        )
-          matched++;
-      }
-      const center = projectWorld(
-        { x: HORIZON.x, y: HORIZON.y * ASPECT, depth: HORIZON.z },
-        camera,
-        width,
-        height,
+    canvas.style = "width:900px;height:600px";
+    document.body.append(canvas);
+    const runtime = { progress: 0.3, time: 3 },
+      engine = await mountGargantua(canvas, runtime);
+    const images = Array.from({ length: 37 }, (_, i) => {
+      const c = document.createElement("canvas");
+      c.width = i % 2 ? 100 : 180;
+      c.height = i % 2 ? 180 : 100;
+      const ctx = c.getContext("2d");
+      ctx.fillStyle =
+        { 0: "#ff0000", 7: "#00ffff", 36: "#ff00ff" }[i] ||
+        `hsl(${(i * 137.5) % 360} 100% 50%)`;
+      ctx.fillRect(0, 0, c.width, c.height);
+      return c;
+    });
+    await engine.setPhotos(images);
+    engine.draw();
+    const { scene, camera, renderer } = engine.inspect(),
+      meshes = [];
+    scene.traverse((object) => {
+      if (object.isMesh) meshes.push(object);
+    });
+    const disk = scene.getObjectByName("photo-accretion-disk"),
+      hole = scene.getObjectByName("gargantua-horizon");
+    const direction = camera.getWorldDirection(camera.position.clone());
+    const dot = direction.dot(camera.position.clone().normalize());
+    const first = {
+      camera: Math.atan2(camera.position.z, camera.position.x),
+      disk: disk.rotation.y,
+    };
+    runtime.time = 4;
+    engine.draw();
+    const last = {
+      camera: Math.atan2(camera.position.z, camera.position.x),
+      disk: disk.rotation.y,
+    };
+    const ids = [...disk.geometry.getAttribute("aTile").array];
+    const output = {
+      meshes: meshes.map((m) => ({
+        name: m.name,
+        instanced: !!m.isInstancedMesh,
+        count: m.count,
+      })),
+      sphere: hole.geometry.type,
+      black: hole.material.color.getHex(),
+      holePosition: hole.position.toArray(),
+      instances: disk.count,
+      sources: new Set(ids).size,
+      lookDot: dot,
+      opposing: (last.camera - first.camera) * -(last.disk - first.disk) < 0,
+      error: renderer.getContext().getError(),
+      bloom: renderer.info.render.calls > 0,
+    };
+    // Read native colors from top, middle and last atlas rows. This catches
+    // whole-atlas Y flips that silently attach the wrong image/aspect to ids.
+    runtime.progress = 1;
+    runtime.time = 0;
+    engine.draw();
+    output.resolvedProgress = disk.material.uniforms.uProgress.value;
+    const eye = camera.position.clone().multiplyScalar(0.5);
+    disk.count = 1;
+    disk.setMatrixAt(
+      0,
+      disk.matrix
+        .clone()
+        .compose(
+          eye,
+          disk.quaternion.clone().identity(),
+          disk.scale.clone().set(0.6, 0.6, 1),
+        ),
+    );
+    disk.instanceMatrix.needsUpdate = true;
+    const tile = disk.geometry.getAttribute("aTile"),
+      spin = disk.geometry.getAttribute("aSpin");
+    spin.array[0] = 0.99 / 1.173;
+    spin.needsUpdate = true;
+    output.colorSamples = [];
+    const gl = renderer.getContext();
+    for (const id of [0, 7, 36]) {
+      tile.array[0] = id;
+      tile.needsUpdate = true;
+      engine.draw();
+      const pixel = new Uint8Array(4);
+      gl.readPixels(
+        Math.floor(canvas.width / 2),
+        Math.floor(canvas.height / 2),
+        1,
+        1,
+        gl.RGBA,
+        gl.UNSIGNED_BYTE,
+        pixel,
       );
-      const radius = (HORIZON.radius * camera.focal) / center.depth;
-      let leaks = 0,
-        samples = 0;
-      // Above the accretion plane, inside the sphere; never mask legitimate
-      // near-side material crossing the lower part of the projected shadow.
-      for (
-        let y = Math.max(0, Math.ceil(center.y - radius * 0.65));
-        y < center.y - radius * 0.25;
-        y++
-      )
-        for (
-          let x = Math.max(0, Math.ceil(center.x - radius * 0.3));
-          x < Math.min(width, center.x + radius * 0.3);
-          x++
-        ) {
-          samples++;
-          if (isCyan(x, y)) leaks++;
-        }
-      const program = gl.getParameter(gl.CURRENT_PROGRAM);
-      const eye = [
-        ...gl.getUniform(program, gl.getUniformLocation(program, "uEye")),
-      ];
-      frames.push({
-        predicted,
-        matched,
-        leaks,
-        samples,
-        eye,
-        expectedEye: camera.eye,
-        error: gl.getError(),
-      });
+      output.colorSamples.push([...pixel]);
     }
-    return frames;
+    engine.dispose();
+    canvas.remove();
+    return output;
   });
-  for (const frame of result) {
-    expect(frame.error).toBe(0);
-    expect(frame.predicted).toBeGreaterThan(10);
-    expect(frame.matched / frame.predicted).toBeGreaterThan(0.95);
-    expect(frame.samples).toBeGreaterThan(100);
-    expect(frame.leaks).toBe(0);
-    frame.eye.forEach((v, i) => expect(v).toBeCloseTo(frame.expectedEye[i], 5));
-  }
-  expect(
-    Math.hypot(...result[0].eye.map((v, i) => v - result[2].eye[i])),
-  ).toBeGreaterThan(1);
+  expect(result.meshes).toHaveLength(2);
+  expect(result.instances).toBe(5000);
+  expect(result.sources).toBe(37);
+  expect(result.sphere).toBe("SphereGeometry");
+  expect(result.black).toBe(0);
+  expect(result.holePosition).toEqual([0, 0, 0]);
+  expect(result.lookDot).toBeCloseTo(-1, 5);
+  expect(result.opposing).toBe(true);
+  expect(result.error).toBe(0);
+  expect(result.bloom).toBe(true);
+  expect(result.resolvedProgress).toBe(1);
+  const [red, cyan, magenta] = result.colorSamples;
+  expect(red[0]).toBeGreaterThan(220);
+  expect(red[1]).toBeLessThan(25);
+  expect(red[2]).toBeLessThan(25);
+  expect(cyan[0]).toBeLessThan(25);
+  expect(cyan[1]).toBeGreaterThan(220);
+  expect(cyan[2]).toBeGreaterThan(220);
+  expect(magenta[0]).toBeGreaterThan(220);
+  expect(magenta[1]).toBeLessThan(25);
+  expect(magenta[2]).toBeGreaterThan(220);
 });

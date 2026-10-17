@@ -1,3 +1,4 @@
+import { finishIntro } from "./helpers.js";
 import { test, expect } from "@playwright/test";
 
 async function chapter(page, label) {
@@ -17,7 +18,7 @@ async function chapter(page, label) {
 async function enter(page) {
   await page.goto("/");
   await page.locator("#begin").click();
-  await page.locator("#skip-intro").click();
+  await finishIntro(page);
   await page.locator("#enter-story").click();
   await expect(page.locator('[data-scene="1"]')).toHaveClass(/is-active/);
 }
@@ -25,58 +26,54 @@ async function enter(page) {
 test("camera move contains no greeting or countdown; dense photos settle before words appear", async ({
   page,
 }) => {
+  test.setTimeout(45000);
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto("/");
+  await expect(page.locator("#universe")).toHaveAttribute(
+    "data-ready",
+    "true",
+    { timeout: 20000 },
+  );
+  // Sample inside the browser on every frame. Several protocol round trips can
+  // otherwise miss the entire middle interval on a software WebGL renderer.
+  await page.evaluate(() => {
+    window.__flightSamples = [];
+    function sample() {
+      const canvas = document.querySelector("#universe"),
+        phase = document.querySelector("#semesta").dataset.phase;
+      if (phase === "traveling")
+        window.__flightSamples.push({
+          p: Number(canvas.dataset.progress),
+          showcase: Number(canvas.dataset.photoShowcase),
+          eye: canvas.dataset.cameraPosition.split(",").map(Number),
+          wordsHidden:
+            document.querySelector("#cover-copy").hidden &&
+            document.querySelector("#reveal-copy").hidden &&
+            document.querySelector("#intro-count").hidden,
+          fragments: Number(canvas.dataset.fragments),
+        });
+      if (phase !== "revealed") requestAnimationFrame(sample);
+    }
+    requestAnimationFrame(sample);
+  });
   await page.locator("#begin").click();
   await expect(page.locator("#semesta")).toHaveAttribute(
     "data-phase",
-    "traveling",
-    { timeout: 6000 },
-  );
-  await expect(page.locator("#cover-copy")).toBeHidden();
-  await expect(page.locator("#reveal-copy")).toBeHidden();
-  await expect(page.locator("#intro-count")).toBeHidden();
-  await page.waitForTimeout(1800);
-  await expect(page.locator("#semesta")).toHaveAttribute(
-    "data-phase",
-    "traveling",
-  );
-  await expect(page.locator("#reveal-copy")).toBeHidden();
-  expect(
-    Number(await page.locator("#universe").getAttribute("data-fragments")),
-  ).toBeGreaterThanOrEqual(160);
-  // The crowded middle remains on screen long enough to read the photos.
-  await expect
-    .poll(
-      async () =>
-        Number(
-          await page.locator("#universe").getAttribute("data-photo-showcase"),
-        ),
-      { timeout: 8000 },
-    )
-    .toBeGreaterThan(0.95);
-  const readCamera = () =>
-    page.locator("#universe").evaluate((c) => ({
-      progress: Number(c.dataset.progress),
-      eye: c.dataset.cameraPosition.split(",").map(Number),
-    }));
-  const middleStart = await readCamera();
-  await page.waitForTimeout(1000);
-  const middleEnd = await readCamera();
-  expect(middleEnd.progress).toBeGreaterThan(middleStart.progress);
-  expect(
-    Math.hypot(...middleEnd.eye.map((v, i) => v - middleStart.eye[i])),
-  ).toBeGreaterThan(0.01);
-  // Clock dilation is checked by the deterministic timing test; browser round
-  // trips may take longer than a second on software WebGL.
-  await expect(page.locator("#reveal-copy")).toBeHidden();
-  await expect(page.locator("#intro-count")).toBeHidden();
-  await expect(page.locator("#semesta")).toHaveAttribute(
-    "data-phase",
     "revealed",
-    { timeout: 11000 },
+    { timeout: 22000 },
   );
+  const samples = await page.evaluate(() => window.__flightSamples);
+  expect(samples.length).toBeGreaterThan(10);
+  expect(samples.every((s) => s.wordsHidden && s.fragments === 5000)).toBe(
+    true,
+  );
+  const middle = samples.filter((s) => s.showcase > 0.95);
+  expect(middle.length).toBeGreaterThan(2);
+  expect(middle.at(-1).p).toBeGreaterThan(middle[0].p);
+  expect(
+    Math.hypot(...middle.at(-1).eye.map((v, i) => v - middle[0].eye[i])),
+  ).toBeGreaterThan(0.01);
   await expect(page.locator("#reveal-title")).toBeVisible();
   await expect(page.locator("dialog[open]")).toHaveCount(0);
   await page.locator("#enter-story").click();
@@ -126,7 +123,7 @@ test("chapters dissolve without content modals; poems and sourced wishes can be 
   await expect(page.locator('[data-scene="2"]')).toHaveAttribute("inert", "");
 });
 
-test("letter opens in place and pages; music remains user triggered", async ({
+test("letter opens in place and pages; opening music continues into later chapters", async ({
   page,
 }) => {
   await enter(page);
@@ -146,10 +143,11 @@ test("letter opens in place and pages; music remains user triggered", async ({
   await chapter(page, "Nada kita");
   await expect(page.locator("#sound-toggle")).toHaveAttribute(
     "aria-pressed",
-    "false",
+    "true",
   );
   await page.locator('[data-track="0"]').click();
   await expect(page.locator("#track-status")).toContainText("belum diisi");
+  await page.locator("#sound-toggle").click();
   await page.locator("#ambient-toggle").click();
   await expect(page.locator("#sound-toggle")).toHaveAttribute(
     "aria-pressed",
@@ -180,7 +178,8 @@ test("birthday finale has explicit wish steps and a large working blow button", 
   );
   const box = await blow.boundingBox();
   const cakeWidth = (await page.locator("#cake").boundingBox()).width;
-  expect(box.height).toBeGreaterThanOrEqual(48);
+  // Transformed DOM rectangles can report 47.99997 for a 48px target.
+  expect(Math.round(box.height * 1000) / 1000).toBeGreaterThanOrEqual(48);
   expect(box.width).toBeGreaterThanOrEqual(250);
   expect(
     await blow.evaluate((e) => {
@@ -219,7 +218,7 @@ test("replay cancels an unfinished celebration and resets the story", async ({
   await expect(page.locator("#cover-copy")).toBeVisible();
   await page.waitForTimeout(250);
   await page.locator("#begin").click();
-  await page.locator("#skip-intro").click();
+  await finishIntro(page);
   await page.locator("#enter-story").click();
   await chapter(page, "Bait untukmu");
   await expect(page.locator("#poem-title")).toHaveText("Gravitasi");
@@ -269,7 +268,7 @@ test("129 photo slots and bulk uploads persist, with old photo keys preserved", 
     "Menuju hari spesialmu",
   );
   await page.locator("#begin").click();
-  await page.locator("#skip-intro").click();
+  await finishIntro(page);
   await page.locator("#enter-story").click();
   await expect(page.locator(".dedication-copy [data-recipient]")).toHaveText(
     "Sayang",

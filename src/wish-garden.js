@@ -44,19 +44,13 @@ export function createWishGarden(
   const complete = root.querySelector(".garden-complete");
   const status = root.querySelector(".garden-status");
   function scrollToNote(note) {
-    const bounds = note.getBoundingClientRect();
-    const flowers = root
-      .querySelector(".garden-flowers")
-      .getBoundingClientRect();
-    const viewport = root.closest(".scene").getBoundingClientRect();
-    if (
-      bounds.top < flowers.bottom + 12 ||
-      bounds.bottom > viewport.bottom - 145
-    )
-      note.scrollIntoView({
-        block: "start",
-        behavior: motion.matches ? "instant" : "smooth",
-      });
+    const scene = root.closest(".scene");
+    const box = note.getBoundingClientRect(),
+      viewport = scene.getBoundingClientRect();
+    if (box.top >= viewport.top + 20 && box.bottom <= viewport.bottom - 24)
+      return;
+    const top = box.top - viewport.top + scene.scrollTop - 20;
+    scene.scrollTo({ top, behavior: motion.matches ? "instant" : "smooth" });
   }
   buttons.forEach((button, i) => {
     button.onclick = (event) => {

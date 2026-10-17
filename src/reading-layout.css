@@ -1,0 +1,217 @@
+/* Header, reading viewport and navigation get their own rows. Scrolling any
+   chapter can never carry a photo or a prayer underneath either control row. */
+#app {
+  --scene-surface: var(--paper);
+  display: grid;
+  grid-template-rows: 88px minmax(0, 1fr) 96px;
+  height: 100svh;
+  overflow: hidden;
+  background: var(--scene-surface);
+}
+body[data-chapter="0"] #app {
+  --scene-surface: #000;
+}
+body[data-chapter="3"] #app {
+  --scene-surface: #664834;
+}
+body[data-chapter="6"] #app {
+  --scene-surface: #15110e;
+}
+.story-header {
+  position: relative;
+  inset: auto;
+  padding: 18px 5vw;
+  background: var(--scene-surface);
+  isolation: isolate;
+}
+.story-header::before {
+  display: none;
+}
+#main {
+  min-height: 0;
+  position: relative;
+}
+.stage {
+  height: 100%;
+}
+.scene:not(.universe-scene) {
+  padding: 24px 7vw 40px;
+  scroll-padding-block: 24px 40px;
+}
+.universe-scene {
+  background: #000;
+}
+.story-nav {
+  position: relative;
+  inset: auto;
+  margin: 0;
+  padding: 12px 5vw 26px;
+  background: var(--scene-surface);
+  align-self: stretch;
+}
+.story-nav::before {
+  display: none;
+}
+.story-nav[hidden] {
+  display: grid !important;
+  visibility: hidden;
+  pointer-events: none;
+}
+.story-nav[hidden] button {
+  pointer-events: none;
+}
+.story-nav > .nav-back,
+.story-nav > .nav-next {
+  align-self: center;
+}
+.edit-trigger {
+  bottom: 8px;
+}
+.garden-layout {
+  padding-top: 8px;
+  padding-bottom: 30px;
+}
+.garden-flowers {
+  position: relative;
+  top: auto;
+  padding-top: 0;
+}
+.garden-note {
+  padding: 26px 0 30px;
+  scroll-margin-block: 20px;
+}
+.garden-note-heading {
+  align-items: flex-start;
+  gap: 15px;
+  margin-bottom: 16px;
+}
+.garden-note .garden-note-heading h3 {
+  font-size: clamp(29px, 2.8vw, 38px);
+  line-height: 1.2;
+}
+.garden-note .garden-wish {
+  font-size: clamp(16px, 1.2vw, 18px);
+  line-height: 1.85;
+  color: #fff3e5;
+  max-width: 59ch;
+  margin-bottom: 20px;
+}
+.garden-source summary,
+.garden-source a {
+  font-size: 13px;
+  padding-block: 12px;
+}
+.garden-source .garden-author {
+  font-size: 12px;
+}
+.garden-source .garden-translation-label {
+  font-size: 10px;
+}
+.garden-source .garden-translation {
+  font-size: 23px;
+}
+.garden-status {
+  font-size: 12px !important;
+  line-height: 1.6;
+  margin-block: 8px 18px;
+}
+.garden-bloom small {
+  font-size: 10px;
+}
+.garden-species {
+  font-size: 9px;
+}
+.garden-notes {
+  padding-bottom: 12px;
+}
+.garden-note:focus-visible {
+  outline: 1px solid #e4c9a0;
+}
+@media (max-width: 700px) {
+  #app {
+    grid-template-rows: 66px minmax(0, 1fr) 104px;
+  }
+  .story-header {
+    padding: 12px 24px;
+  }
+  .scene:not(.universe-scene) {
+    padding: 18px 24px 32px;
+  }
+  .story-nav {
+    padding: 39px 24px 22px;
+  }
+  .chapter-progress {
+    bottom: 59px;
+  }
+  .garden-layout {
+    gap: 26px;
+    padding-top: 0;
+  }
+  .garden-intro > p:not(.eyebrow) {
+    font-size: 13px;
+  }
+  .garden-note .garden-wish {
+    font-size: 16px;
+    line-height: 1.85;
+  }
+  .garden-note .garden-note-heading h3 {
+    font-size: 29px;
+  }
+  .garden-bloom small {
+    font-size: 9px;
+  }
+  .garden-flower {
+    height: 134px;
+  }
+  .garden-status {
+    font-size: 11px !important;
+  }
+  .garden-source blockquote {
+    font-size: 25px;
+  }
+  .garden-source .garden-translation {
+    font-size: 22px;
+  }
+  .garden-note-heading img {
+    width: 29px;
+    height: 44px;
+    flex-basis: 29px;
+  }
+  .garden-note {
+    padding-block: 24px;
+  }
+  .cover-copy {
+    bottom: 7%;
+  }
+  .cover-footnote {
+    display: none;
+  }
+  .reveal-copy {
+    padding: 14px 24px;
+  }
+  .reveal-copy h2 {
+    font-size: clamp(48px, 12vw, 70px);
+    margin-block: 12px 18px;
+  }
+  .reveal-copy > p:not(.eyebrow) {
+    font-size: 11px;
+    margin-bottom: 22px;
+  }
+}
+@media (max-height: 600px) and (min-width: 701px) {
+  #app {
+    grid-template-rows: 64px minmax(0, 1fr) 82px;
+  }
+}
+
+/* The recipient can mute immediately while the cinematic camera is moving. */
+body.intro-running .story-header {
+  opacity: 1;
+  pointer-events: auto;
+}
+body.intro-running .story-header > #home-link {
+  visibility: hidden;
+}
+body.intro-running .story-header > #sound-toggle {
+  pointer-events: auto;
+}

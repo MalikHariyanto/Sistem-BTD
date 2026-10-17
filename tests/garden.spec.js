@@ -1,9 +1,10 @@
+import { finishIntro } from "./helpers.js";
 import { test, expect } from "@playwright/test";
 
 async function enterGarden(page) {
   await page.goto("/");
   await page.locator("#begin").click();
-  await page.locator("#skip-intro").click();
+  await finishIntro(page);
   await page.locator("#enter-story").click();
   await expect(page.locator('[data-scene="1"]')).toHaveClass(/is-active/);
   await page.getByRole("button", { name: "Ke Tiga doa", exact: true }).click();
@@ -13,6 +14,7 @@ async function enterGarden(page) {
 test("garden wishes bloom in any order and accumulate without replacing the earlier wish", async ({
   page,
 }) => {
+  test.setTimeout(60000);
   await enterGarden(page);
   await expect(page.locator(".garden-flower-art")).toHaveCount(3);
   await expect
@@ -63,7 +65,7 @@ test("garden wishes bloom in any order and accumulate without replacing the earl
   await page.locator("#home-link").click();
   await expect(page.locator('[data-scene="0"]')).toHaveClass(/is-active/);
   await page.locator("#begin").click();
-  await page.locator("#skip-intro").click();
+  await finishIntro(page);
   await page.locator("#enter-story").click();
   await expect(page.locator('[data-scene="1"]')).toHaveClass(/is-active/);
   await page.getByRole("button", { name: "Ke Tiga doa", exact: true }).click();

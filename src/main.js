@@ -2,6 +2,8 @@ import "./style.css";
 import "./florals.css";
 import { flowerSrc } from "./florals.js";
 import "./wish-garden.css";
+import "./reading-layout.css";
+import { createSoundtrack } from "./soundtrack.js";
 import { createWishGarden } from "./wish-garden.js";
 import { content, ORBIT_PHOTO_COUNT } from "./content.js";
 import { quotes } from "./quotes.js";
@@ -45,9 +47,7 @@ let introRun = 0,
   wishState = "waiting";
 let store,
   settings = {},
-  localTrackUrl,
-  audio,
-  ambient;
+  localTrackUrl;
 let storyVersion = 0,
   letterRun = 0,
   wishRun = 0;
@@ -90,7 +90,7 @@ $("#app").innerHTML = `
 <main id="main" tabindex="-1"><div class="stage" id="stage">
   <section class="scene universe-scene is-active" id="semesta" aria-labelledby="cover-title" data-scene="0" data-phase="idle">
     <canvas id="universe" aria-hidden="true"></canvas>
-    <div class="cover-copy" id="cover-copy"><p class="eyebrow">UNTUK HARI KETIKA DUNIA MENGENALMU</p><h1 id="cover-title">Ada semesta.<br><em>Di dalamnya, kamu.</em></h1><p>Beberapa kenangan. Banyak sekali rasa.<br>Semuanya berawal dari satu tarikan kecil.</p><button class="primary light" id="begin">Buka semesta kita ${arrow}</button><p id="birthday-countdown" class="birthday-countdown"></p></div>
+    <div class="cover-copy" id="cover-copy"><p class="eyebrow">UNTUK HARI KETIKA DUNIA MENGENALMU</p><h1 id="cover-title">Ada semesta.<br><em>Di dalamnya, kamu.</em></h1><p>Beberapa kenangan. Banyak sekali rasa.<br>Semuanya berawal dari satu tarikan kecil.</p><button class="primary light" id="begin" disabled>Buka semesta kita ${arrow}</button><p id="birthday-countdown" class="birthday-countdown"></p></div>
     <p class="intro-count" id="intro-count" aria-live="polite" hidden></p>
     <button class="skip-intro" id="skip-intro" hidden>Lewati perjalanan →</button>
     <div class="reveal-copy" id="reveal-copy" hidden><p class="eyebrow">SETELAH SEMUA JARAK DAN CAHAYA</p><h2 id="reveal-title" tabindex="-1">Ternyata,<br><em>semuanya kamu.</em></h2><p>Setiap kepingnya, satu alasan untuk bersyukur kamu ada.</p><button class="primary light" id="enter-story">Ini cerita untukmu ${arrow}</button></div>
@@ -112,7 +112,7 @@ $("#app").innerHTML = `
     <div class="letter-intro" id="letter-intro"><p class="eyebrow">YANG INI, KUTULIS SENDIRI</p><h2 id="letter-heading" tabindex="-1">Tidak semua rasa<br>muat dalam puisi.<br><em>Jadi, ini suratku.</em></h2><button id="open-letter" class="envelope" aria-label="Buka surat untukmu"><span class="envelope-back"></span><span class="envelope-paper">dear, you.</span><span class="envelope-front"></span><span class="envelope-flap"></span><span class="wax-seal">a.</span></button><button id="open-letter-text" class="text-button">Ketuk untuk membuka surat ${arrow}</button></div>
     <article id="letter-reading" class="letter-reading" hidden><div class="letter-image">${photo("hero", "Senyummu, favoritku")}${flowers("flower-letter")}<span class="handwritten">my favorite person.</span></div><div class="letter-paper"><p class="eyebrow">UNTUK <span data-recipient></span>, DENGAN SELURUH RASA</p><div id="letter-page"><h2 id="letter-title" tabindex="-1">Happy birthday,<br><em>my love.</em></h2><p id="letter-paragraph"></p><p class="handwritten signature">${esc(content.sender)}</p></div><div class="page-controls"><button id="prev-letter" class="round" aria-label="Halaman surat sebelumnya">←</button><span id="letter-position" aria-live="polite"></span><button id="next-letter" class="round" aria-label="Halaman surat selanjutnya">→</button></div><button id="close-letter" class="text-button">Lipat kembali suratnya</button></div></article>
   </div></section>
-  <section class="scene music-scene" data-scene="5" aria-labelledby="music-title" hidden inert><div class="scene-inner music-layout"><div class="record-composition"><div class="record-sleeve">${photo("moment2", "Tentang kita")}</div><div class="vinyl" aria-hidden="true"><div>a.</div></div><span class="handwritten">if this feeling had a sound.</span></div><div class="music-copy"><p class="eyebrow">BERHENTI SEBENTAR DI SINI</p><h2 id="music-title" tabindex="-1">Some songs<br><em>sound like you.</em></h2><p>Kalau ingin, biarkan satu lagu menemani sisa cerita ini.</p><div class="track-list">${content.tracks.map((t, i) => `<button class="track" data-track="${i}"><span class="track-state">▷</span><span><strong>${esc(t.title)}</strong><small>${esc(t.artist)}</small></span></button>`).join("")}</div><p id="track-status" role="status">Atau nikmati nada lembut yang sudah kusiapkan.</p><button class="text-button" id="ambient-toggle" aria-pressed="false">Putar nada lembut ♫</button></div></div></section>
+  <section class="scene music-scene" data-scene="5" aria-labelledby="music-title" hidden inert><div class="scene-inner music-layout"><div class="record-composition"><div class="record-sleeve">${photo("moment2", "Tentang kita")}</div><div class="vinyl" aria-hidden="true"><div>a.</div></div><span class="handwritten">if this feeling had a sound.</span></div><div class="music-copy"><p class="eyebrow">BERHENTI SEBENTAR DI SINI</p><h2 id="music-title" tabindex="-1">Some songs<br><em>sound like you.</em></h2><p>Lagu ini menemani ceritamu sejak awal. Di sini, kamu bisa memilih nada yang lain.</p><div class="track-list">${content.tracks.map((t, i) => `<button class="track" data-track="${i}"><span class="track-state">▷</span><span><strong>${esc(t.title)}</strong><small>${esc(t.artist)}</small></span></button>`).join("")}</div><p id="track-status" role="status">Atau nikmati nada lembut yang sudah kusiapkan.</p><button class="text-button" id="ambient-toggle" aria-pressed="false">Putar nada lembut ♫</button></div></div></section>
   <section class="scene wish-scene" data-scene="6" aria-labelledby="wish-title" hidden inert><div class="wish-halo"></div><div class="celebration-particles" aria-hidden="true">${Array.from({ length: 32 }, (_, i) => `<span style="--i:${i};--x:${(i * 37) % 100}%;--delay:${(i % 8) * 0.08}s"></span>`).join("")}</div><div class="scene-inner wish-layout">
     <div class="wish-copy"><p class="eyebrow" id="wish-step">SATU HAL TERAKHIR. YANG PALING PENTING.</p><h2 id="wish-title" tabindex="-1">Hari ini,<br><em>milikmu.</em></h2><p id="wish-instruction">Semua cahaya ini untukmu.<br>Sudah siap membuat satu harapan?</p><div class="wish-steps" aria-label="Langkah perayaan"><span class="current" data-wish-step="0">01 <i>Buat harapan</i></span><span data-wish-step="1">02 <i>Tiup lilin</i></span><span data-wish-step="2">03 <i>Rayakan</i></span></div><button class="primary light" id="ready-wish">Aku siap buat harapan ${arrow}</button><button class="primary light blow-button" id="blow-candle" hidden>Tiup lilinnya <span aria-hidden="true">♡</span></button><p class="wish-hint" id="wish-hint">Ambil waktu sebanyak yang kamu butuhkan.</p></div>
     <div class="cake-composition" id="cake" aria-hidden="true"><div class="candle-glow"></div><div class="cake-candle"><div class="flame"></div><span class="smoke"></span><div class="wick"></div><div class="candle-body"></div></div><div class="cake-top"></div><div class="cake-body"><span class="cake-ribbon">for you, always.</span></div><div class="cake-bottom"></div><div class="cake-plate"></div><div class="cake-stand"></div><div class="cake-foot"></div><div class="cake-spark spark-one">✧</div><div class="cake-spark spark-two">✧</div></div>
@@ -191,6 +191,7 @@ async function goTo(index) {
   updateNav();
 }
 function updateNav() {
+  document.body.dataset.chapter = String(active);
   $("#story-nav").hidden = active === 0;
   $("#chapter-name").textContent = chapters[active];
   $("#next-scene").innerHTML = esc(nextLabels[active]) + arrow;
@@ -239,7 +240,8 @@ window.addEventListener("keydown", (e) => {
 function phase(value) {
   introPhase = value;
   const inTravel = ["countdown", "traveling"].includes(value);
-  $(".story-header").inert = inTravel;
+  $(".story-header").inert = false;
+  $("#home-link").inert = inTravel;
   $("#open-editor").inert = inTravel;
   document.body.classList.toggle(
     "intro-running",
@@ -268,6 +270,7 @@ function revealIntro() {
 async function beginIntro() {
   if (introPhase !== "idle") return;
   const token = ++introRun;
+  soundtrack.startOpening();
   phase("countdown");
   $("#cover-copy").inert = true;
   $("#skip-intro").hidden = false;
@@ -529,123 +532,68 @@ function resetWish(focus = true) {
 }
 $("#relight").onclick = () => resetWish();
 
-function pauseTrack() {
-  audio?.pause();
-  $$(".track").forEach((t) => {
-    t.classList.remove("playing");
-    t.querySelector(".track-state").textContent = "▷";
-  });
-  $(".vinyl").classList.remove("playing");
-}
-function soundLabels() {
-  const playing = !!ambient || !!(audio && !audio.paused);
-  $("#sound-toggle").setAttribute("aria-pressed", String(playing));
+const soundtrack = createSoundtrack(soundLabels);
+soundtrack.setFirstSource(content.tracks[0].src);
+function soundLabels(state = soundtrack.state) {
+  $("#sound-toggle").setAttribute("aria-pressed", String(!!state.playing));
   $("#sound-toggle").setAttribute(
     "aria-label",
-    playing ? "Jeda musik" : "Putar nada lembut",
+    state.playing ? "Jeda musik" : "Putar musik",
   );
-  $("#sound-label").textContent = playing ? "Suara menyala" : "Suara mati";
-  $("#ambient-toggle").textContent = ambient
+  $("#sound-label").textContent =
+    state.pending && !state.playing
+      ? "Menyiapkan lagu…"
+      : state.playing
+        ? "Suara menyala"
+        : "Suara mati";
+  const isAmbient = state.playing && state.kind === "ambient";
+  $("#ambient-toggle").setAttribute("aria-pressed", String(!!isAmbient));
+  $("#ambient-toggle").textContent = isAmbient
     ? "Jeda nada lembut Ⅱ"
     : "Putar nada lembut ♫";
-  $("#ambient-toggle").setAttribute("aria-pressed", String(!!ambient));
+  $$("[data-track]").forEach((button) => {
+    const playing =
+      state.playing &&
+      state.kind === "track" &&
+      Number(button.dataset.track) === state.index;
+    button.classList.toggle("playing", playing);
+    button.querySelector(".track-state").textContent = playing ? "Ⅱ" : "▷";
+  });
+  $(".vinyl").classList.toggle("playing", !!state.playing);
+  if (state.error) $("#track-status").textContent = state.error;
+  else if (state.playing)
+    $("#track-status").textContent =
+      state.kind === "track"
+        ? content.tracks[state.index].title
+        : "Nada lembut menemani cerita ini.";
 }
-async function stopAmbient() {
-  if (ambient) {
-    const current = ambient;
-    ambient = undefined;
-    await current.close();
-  }
-}
-async function toggleAmbient() {
-  if (ambient) {
-    await stopAmbient();
-    soundLabels();
-    return;
-  }
-  pauseTrack();
-  try {
-    const context = new AudioContext();
-    await context.resume();
-    ambient = context;
-    const master = context.createGain();
-    master.gain.value = 0.04;
-    master.connect(context.destination);
-    [130.81, 164.81, 196, 261.63, 329.63].forEach((frequency, i) => {
-      const osc = context.createOscillator(),
-        gain = context.createGain();
-      osc.frequency.value = frequency;
-      gain.gain.setValueAtTime(0, context.currentTime);
-      gain.gain.linearRampToValueAtTime(
-        0.17,
-        context.currentTime + 2 + i * 0.3,
-      );
-      osc.connect(gain);
-      gain.connect(master);
-      osc.start();
-    });
-  } catch {
-    $("#track-status").textContent = "Audio belum bisa diputar di browser ini.";
-  }
-  soundLabels();
-}
-$("#ambient-toggle").onclick = toggleAmbient;
-$("#sound-toggle").onclick = async () => {
-  if (audio && !audio.paused) {
-    pauseTrack();
-    soundLabels();
-  } else await toggleAmbient();
-};
+$("#sound-toggle").onclick = () => soundtrack.toggle();
+$("#ambient-toggle").onclick = () => soundtrack.toggleAmbient();
 $$("[data-track]").forEach(
-  (b) =>
-    (b.onclick = async () => {
-      const i = Number(b.dataset.track),
-        t = content.tracks[i],
-        src = i === 0 ? localTrackUrl || t.src : t.src;
+  (button) =>
+    (button.onclick = () => {
+      const i = Number(button.dataset.track),
+        src =
+          i === 0
+            ? localTrackUrl || content.tracks[i].src
+            : content.tracks[i].src;
       if (!src) {
         $("#track-status").textContent =
           "Lagu ini belum diisi. Kamu tetap bisa menikmati nada lembut di bawah.";
         return;
       }
-      if (audio && !audio.paused && audio.datasetIndex === i) {
-        pauseTrack();
-        soundLabels();
-        return;
-      }
-      await stopAmbient();
-      pauseTrack();
-      audio = new Audio(src);
-      audio.datasetIndex = i;
-      try {
-        await audio.play();
-        b.classList.add("playing");
-        b.querySelector(".track-state").textContent = "Ⅱ";
-        $(".vinyl").classList.add("playing");
-        $("#track-status").textContent = t.title;
-      } catch {
-        $("#track-status").textContent =
-          "Lagu belum bisa diputar. Periksa format atau lokasi filenya.";
-      }
-      audio.onended = () => {
-        pauseTrack();
-        soundLabels();
-      };
-      soundLabels();
+      soundtrack.toggleTrack(i, src);
     }),
 );
-document.addEventListener("visibilitychange", () => {
-  if (document.hidden) {
-    pauseTrack();
-    stopAmbient().then(soundLabels);
-  }
-});
 
 function setBlob(key, blob) {
   if (urls.has(key)) URL.revokeObjectURL(urls.get(key));
   const url = URL.createObjectURL(blob);
   urls.set(key, url);
-  if (key === "track") localTrackUrl = url;
-  else localPhotos.set(key, url);
+  if (key === "track") {
+    localTrackUrl = url;
+    soundtrack.setFirstSource(url);
+  } else localPhotos.set(key, url);
 }
 function applyPhotos() {
   $$("[data-photo]").forEach((el) => {
@@ -731,6 +679,9 @@ const storageReady = openMemories()
     status(
       "Penyimpanan browser tidak tersedia. Edit src/content.js untuk perubahan permanen.",
     );
+  })
+  .finally(() => {
+    $("#begin").disabled = false;
   });
 $("#editor-form").onsubmit = async (e) => {
   e.preventDefault();
@@ -828,7 +779,7 @@ $("#audio-upload").onchange = async (e) => {
   }
   try {
     if (!store) throw Error();
-    pauseTrack();
+    soundtrack.pause();
     await store.put("track", file);
     setBlob("track", file);
     soundLabels();
@@ -843,11 +794,13 @@ $("#reset-local").onclick = async () => {
   try {
     if (!store) throw Error();
     await store.clear();
-    pauseTrack();
+    soundtrack.pause();
     for (const url of urls.values()) URL.revokeObjectURL(url);
     urls.clear();
     localPhotos.clear();
     localTrackUrl = undefined;
+    soundtrack.reset();
+    soundtrack.setFirstSource(content.tracks[0].src);
     settings = {};
     applySettings();
     applyPhotos();

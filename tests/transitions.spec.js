@@ -1,10 +1,10 @@
+import { finishIntro } from "./helpers.js";
 import { test, expect } from "@playwright/test";
-import { cameraAt } from "../src/universe-camera.js";
 
 async function enter(page) {
   await page.goto("/");
   await page.locator("#begin").click();
-  await page.locator("#skip-intro").click();
+  await finishIntro(page);
   await page.locator("#enter-story").click();
   await expect(page.locator('[data-scene="1"]')).toHaveClass(/is-active/);
 }
@@ -112,21 +112,14 @@ test("poem content changes while transparent and stays visible after its animati
 test("disk texture orbits at rest, the central shadow stays fixed, and reduced motion stops it", async ({
   page,
 }) => {
+  test.setTimeout(45000);
   await page.goto("/");
-  await expect(page.locator("#universe")).toHaveAttribute(
-    "data-plate",
-    "ready",
-  );
-  const c0 = cameraAt(
-    0,
-    await page.evaluate(() => innerWidth),
-    await page.evaluate(() => innerHeight),
-  );
+  await expect(page.locator("#universe")).toHaveAttribute("data-ready", "true");
   const capture = () =>
     page.locator("#universe").evaluate(
       (c, center) => {
         const ctx = c.getContext("2d"),
-          gl = ctx ? null : c.getContext("webgl");
+          gl = ctx ? null : c.getContext("webgl2");
         let pixels;
         if (ctx) pixels = ctx.getImageData(0, 0, c.width, c.height).data;
         else {
@@ -144,8 +137,8 @@ test("disk texture orbits at rest, the central shadow stays fixed, and reduced m
         let hash = 2166136261;
         for (let i = 0; i < pixels.length; i += 32)
           hash = Math.imul(hash ^ pixels[i], 16777619);
-        const x = Math.round((center.x * c.width) / c.clientWidth),
-          y = Math.round((center.y * c.height) / c.clientHeight);
+        const x = Math.round(center.x * c.width),
+          y = Math.round(center.y * c.height);
         const offset = ((ctx ? y : c.height - y) * c.width + x) * 4;
         return {
           hash,
@@ -153,7 +146,7 @@ test("disk texture orbits at rest, the central shadow stays fixed, and reduced m
           flow: Number(c.dataset.flow),
         };
       },
-      { x: c0.x + c0.width * 0.5, y: c0.y + c0.height * 0.4 },
+      { x: 0.5, y: 0.27 },
     );
   const first = await capture();
   await page.waitForTimeout(700);
