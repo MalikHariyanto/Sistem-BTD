@@ -72,21 +72,28 @@ test("chapters dissolve without content modals; poems and sourced wishes can be 
   await page.getByRole("button", { name: "Puisi sebelumnya" }).click();
   await expect(page.locator("#poem-title")).toHaveText("Gravitasi");
   await chapter(page, "Tiga doa");
-  await expect(page.locator("#quote-author")).toContainText(
-    "Christina Rossetti",
+  await page
+    .getByRole("button", { name: "Mekarkan doa: Bahagia", exact: true })
+    .click();
+  await expect(page.locator("#garden-wish-0")).toContainText(
+    "Semoga usia barumu",
   );
-  await expect(page.locator("#quote-source")).toHaveAttribute(
+  await page.locator("#garden-wish-0 summary").click();
+  await expect(page.locator("#garden-wish-0 a")).toHaveAttribute(
     "href",
     "https://www.gutenberg.org/ebooks/16950",
   );
-  await page.getByRole("button", { name: "Doa selanjutnya" }).click();
-  await expect(page.locator("#quote-author")).toContainText(
-    "William Shakespeare",
+  await page
+    .getByRole("button", { name: "Mekarkan doa: Bertumbuh", exact: true })
+    .click();
+  await expect(page.locator("#garden-wish-1")).toContainText(
+    "Bertambahlah usia",
   );
-  await expect(page.locator("#quote-wish")).toContainText("Bertambahlah usia");
-  await page.waitForTimeout(650);
-  await page.getByRole("button", { name: "Doa selanjutnya" }).click();
-  await expect(page.locator("#quote-author")).toContainText("Emily Dickinson");
+  await page
+    .getByRole("button", { name: "Mekarkan doa: Dicintai", exact: true })
+    .click();
+  await expect(page.locator("#garden-wish-2")).toContainText("Emily Dickinson");
+  await expect(page.locator(".garden-note:not([hidden])")).toHaveCount(3);
   await expect(page.locator("dialog")).toHaveCount(1); // Editor only, never part of the gift.
   await expect(page.locator("dialog[open]")).toHaveCount(0);
   await expect(page.locator("[data-scene]:not([hidden])")).toHaveCount(1);

@@ -2,6 +2,7 @@
 // Translations and birthday wishes are ours, not words attributed to the poets.
 export const quotes = [
   {
+    bloom: "Bahagia",
     author: "Christina Rossetti",
     work: "A Birthday",
     original:
@@ -13,6 +14,7 @@ export const quotes = [
     source: "https://www.gutenberg.org/ebooks/16950",
   },
   {
+    bloom: "Bertumbuh",
     author: "William Shakespeare",
     work: "Sonnet 104",
     original: "To me, fair friend, you never can be old,",
@@ -22,6 +24,7 @@ export const quotes = [
     source: "https://www.gutenberg.org/ebooks/1041",
   },
   {
+    bloom: "Dicintai",
     author: "Emily Dickinson",
     work: "Proof · Poems, Series One",
     original: "That I shall love alway,\nI offer thee",

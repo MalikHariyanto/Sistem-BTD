@@ -1,5 +1,7 @@
 import "./style.css";
 import "./florals.css";
+import "./wish-garden.css";
+import { createWishGarden } from "./wish-garden.js";
 import { content } from "./content.js";
 import { quotes } from "./quotes.js";
 import { createUniverse } from "./universe.js";
@@ -26,7 +28,6 @@ const arrow = '<span aria-hidden="true">→</span>';
 let active = 0,
   changing = false,
   poemIndex = 0,
-  quoteIndex = 0,
   letterIndex = 0;
 let introRun = 0,
   introPhase = "idle",
@@ -92,9 +93,9 @@ $("#app").innerHTML = `
     <div class="poem-visual">${flowers("flower-poem")}<div id="poem-photo"></div><div class="poem-small-photo">${photo("orbit04", "Sebuah detail kecil")}</div><span class="handwritten">some feelings become poems.</span></div>
     <article class="poem-paper"><p class="eyebrow">KATA-KATA YANG SELALU PULANG PADAMU</p><div id="poem-page"><h2 id="poem-title" tabindex="-1"></h2><p id="poem-subtitle" class="poem-subtitle"></p><p id="poem-text" class="poem-text"></p></div><div class="page-controls"><button id="prev-poem" class="round" aria-label="Puisi sebelumnya">←</button><span id="poem-position" aria-live="polite"></span><button id="next-poem" class="round" aria-label="Puisi selanjutnya">→</button></div></article>
   </div></section>
-  <section class="scene quotes-scene" data-scene="3" aria-labelledby="quote-heading" hidden inert><div class="scene-inner quotes-layout">
-    <div class="quote-side"><p class="eyebrow">KATA MEREKA. HARAPANKU UNTUKMU.</p><h2 id="quote-heading" tabindex="-1">Kata mereka.<br><em>Doa untukmu.</em></h2><div class="quote-photo-pair">${photo("moment1", "Satu hari yang indah")}${photo("orbit05", "Yang ingin kusimpan")}</div><p>Untuk hari lahirmu, kupinjam sedikit kata.<br>Doanya, kutulis sendiri untukmu.</p></div>
-    <article class="quote-page" id="quote-page"><p id="quote-theme" class="eyebrow"></p><span class="quote-mark" aria-hidden="true">“</span><blockquote id="quote-original"></blockquote><p id="quote-author"></p><p class="translation-label">TERJEMAHAN BEBAS</p><p id="quote-translation"></p><div class="personal-wish"><span>Dan harapanku untukmu...</span><p id="quote-wish"></p></div><div class="quote-bottom"><a id="quote-source" target="_blank" rel="noopener noreferrer">Baca karya aslinya →</a><div class="page-controls"><button class="round" id="prev-quote" aria-label="Doa sebelumnya">←</button><span id="quote-position" aria-live="polite"></span><button class="round" id="next-quote" aria-label="Doa selanjutnya">→</button></div></div></article>
+  <section class="scene quotes-scene garden-scene" data-scene="3" aria-labelledby="quote-heading" hidden inert><div class="scene-inner garden-layout">
+    <div class="garden-intro"><p class="eyebrow">SEBUAH KEBUN KECIL UNTUKMU</p><h2 id="quote-heading" tabindex="-1">Untukmu,<br> <em>semoga selalu<br> ada yang mekar.</em></h2><p>Tiga bunga, tiga harapan.<br>Sentuh bunganya satu per satu.<br>Biarkan doa-doa baik ini mekar untukmu.</p><div class="garden-photos">${photo("moment1", "Satu hari yang indah")}${photo("orbit05", "Yang ingin kusimpan")}${flowers("flower-garden")}</div><span class="handwritten">may good things find you.</span></div>
+    <div class="garden-experience" id="wish-garden"></div>
   </div></section>
   <section class="scene letter-scene" data-scene="4" aria-labelledby="letter-heading" hidden inert><div class="scene-inner letter-layout">
     <div class="letter-intro" id="letter-intro"><p class="eyebrow">YANG INI, KUTULIS SENDIRI</p><h2 id="letter-heading" tabindex="-1">Tidak semua rasa<br>muat dalam puisi.<br><em>Jadi, ini suratku.</em></h2><button id="open-letter" class="envelope" aria-label="Buka surat untukmu"><span class="envelope-back"></span><span class="envelope-paper">dear, you.</span><span class="envelope-front"></span><span class="envelope-flap"></span><span class="wax-seal">a.</span></button><button id="open-letter-text" class="text-button">Ketuk untuk membuka surat ${arrow}</button></div>
@@ -115,6 +116,11 @@ const universe = createUniverse($("#universe"));
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const effects = createMotion(motion);
 const animate = effects.play;
+const wishGarden = createWishGarden($("#wish-garden"), quotes, {
+  effects,
+  motion,
+  escapeHtml: esc,
+});
 async function goTo(index) {
   if (changing || index < 0 || index >= chapters.length || index === active)
     return;
@@ -209,7 +215,7 @@ window.addEventListener("keydown", (e) => {
     changing
   )
     return;
-  if (e.target.closest("button,a,input,textarea,select")) return;
+  if (e.target.closest("button,a,input,textarea,select,summary")) return;
   if (e.key === "ArrowRight" && active > 0 && active < 6) {
     e.preventDefault();
     goTo(active + 1);
@@ -296,9 +302,9 @@ async function replay() {
   storyVersion++;
   letterRun++;
   openingLetter = false;
-  poemIndex = quoteIndex = letterIndex = 0;
+  poemIndex = letterIndex = 0;
   renderPoem();
-  renderQuote();
+  wishGarden.reset();
   renderLetter();
   $("#letter-reading").hidden = true;
   $("#letter-intro").hidden = false;
@@ -310,7 +316,6 @@ async function replay() {
 }
 $("#replay").onclick = replay;
 let poemChanging = false,
-  quoteChanging = false,
   letterChanging = false;
 async function changePage(el, render) {
   const version = storyVersion;
@@ -361,31 +366,6 @@ async function turnPoem(dir) {
 }
 $("#prev-poem").onclick = () => turnPoem(-1);
 $("#next-poem").onclick = () => turnPoem(1);
-function renderQuote() {
-  const q = quotes[quoteIndex];
-  $("#quote-theme").textContent = q.theme;
-  $("#quote-original").textContent = q.original;
-  $("#quote-author").textContent = q.author + " — " + q.work;
-  $("#quote-translation").textContent = q.translation;
-  $("#quote-wish").textContent = q.wish;
-  $("#quote-source").href = q.source;
-  $("#quote-position").textContent = `${quoteIndex + 1} / ${quotes.length}`;
-}
-async function turnQuote(dir) {
-  if (quoteChanging) return;
-  quoteChanging = true;
-  $("#prev-quote").disabled = true;
-  $("#next-quote").disabled = true;
-  await changePage($("#quote-page"), () => {
-    quoteIndex = (quoteIndex + dir + quotes.length) % quotes.length;
-    renderQuote();
-  });
-  quoteChanging = false;
-  $("#prev-quote").disabled = false;
-  $("#next-quote").disabled = false;
-}
-$("#prev-quote").onclick = () => turnQuote(-1);
-$("#next-quote").onclick = () => turnQuote(1);
 function renderLetter() {
   $("#letter-paragraph").textContent = content.letter[letterIndex];
   $("#letter-position").textContent =
@@ -867,7 +847,6 @@ $("#reset-local").onclick = async () => {
   }
 };
 renderPoem();
-renderQuote();
 renderLetter();
 applySettings();
 updateNav();

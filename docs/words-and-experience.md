@@ -2,7 +2,7 @@
 
 ## Verifiable words, personal wishes
 
-This gift uses three literary excerpts, followed by original Indonesian birthday wishes. It does not claim a ranking of the world's most romantic people or pretend that a historical writer addressed the recipient. Only Rossetti's poem is titled _A Birthday_; it uses birthday as a metaphor for love. Shakespeare's line is about time and affection. Dickinson's line is a promise of enduring love. Indonesian versions are explicitly labelled **Terjemahan bebas**; **Dan harapanku untukmu** is original site copy.
+This gift uses three literary excerpts, followed by original Indonesian birthday wishes. It does not claim a ranking of the world's most romantic people or pretend that a historical writer addressed the recipient. Only Rossetti's poem is titled _A Birthday_; it uses birthday as a metaphor for love. Shakespeare's line is about time and affection. Dickinson's line is a promise of enduring love. Indonesian versions are explicitly labelled **Terjemahan bebas** inside the expandable source notes; the birthday wishes themselves are original site copy.
 
 Checked against the following public-domain texts, available in Project Gutenberg's GITenberg mirrors:
 
@@ -13,6 +13,8 @@ Checked against the following public-domain texts, available in Project Gutenber
 Google and Poetry Foundation requests were denied by the environment's network policy. The linked GITenberg texts were retrieved successfully and the passages checked directly. Nothing is presented as a Google result.
 
 ## Experience decisions
+
+- Poems retain paginated reading. Wishes use three independent flower buttons: Bahagia, Bertumbuh, and Dicintai. Each opens its own note in the order selected, with earlier notes retained. There is no next/previous wish control. Literary excerpts, translations, and original sources sit in native expandable details, separate from the personal wish. Returning to the chapter keeps the garden; replay closes the flowers and source notes.
 
 - One chapter per viewport, continuous cross-dissolve with a slight camera shift. Reading stays in the story; only the authoring editor uses a dialog. Long letter content is paginated, not opened in a scrolling modal. Very small screens can scroll the active scene for accessibility.
 - A greeting cannot appear during the camera move. Explicit phases: idle → countdown → traveling → revealed. All opening copy and the countdown are hidden before `travel()` begins; reveal runs only after the renderer finishes and settles. Skipping cancels stale work.
