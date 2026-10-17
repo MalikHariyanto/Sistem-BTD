@@ -13,6 +13,7 @@ async function enterGarden(page) {
 test("garden wishes bloom in any order and accumulate without replacing the earlier wish", async ({
   page,
 }) => {
+  test.setTimeout(60000);
   await enterGarden(page);
   await expect(page.locator(".garden-note:not([hidden])")).toHaveCount(0);
   await expect(

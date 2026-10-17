@@ -1,3 +1,5 @@
+import { flowerTypes } from "./florals.js";
+
 // A small, cumulative ritual: each flower reveals its own wish. Nothing pages
 // away, and every literary excerpt keeps its own translation and source.
 export function createWishGarden(
@@ -9,15 +11,13 @@ export function createWishGarden(
   root.innerHTML = `
     <div class="garden-flowers" role="group" aria-label="Bunga harapan">
       ${quotes
-        .map(
-          (
-            q,
-            i,
-          ) => `<button type="button" class="garden-bloom bloom-${i}" data-bloom="${i}" aria-label="Mekarkan doa: ${esc(q.bloom)}" aria-expanded="false" aria-controls="garden-wish-${i}">
-        <span class="garden-flower" aria-hidden="true"><span class="garden-stem"></span><span class="garden-leaf leaf-left"></span><span class="garden-leaf leaf-right"></span><span class="garden-petals">${Array.from({ length: 8 }, (_, p) => `<span style="--angle:${p * 45}deg"></span>`).join("")}</span><span class="garden-pollen"></span></span>
-        <strong>${esc(q.bloom)}</strong><small>Sentuh untuk mekar</small>
-      </button>`,
-        )
+        .map((q, i) => {
+          const flower = flowerTypes[i % flowerTypes.length];
+          return `<button type="button" class="garden-bloom bloom-${i}" data-bloom="${i}" data-flower="${flower.key}" aria-label="Mekarkan doa: ${esc(q.bloom)}" aria-expanded="false" aria-controls="garden-wish-${i}">
+          <span class="garden-flower" aria-hidden="true"><span class="garden-halo"></span><img class="garden-flower-art" src="${flower.src}" alt="" width="512" height="768" loading="eager" fetchpriority="low" decoding="async" draggable="false"><span class="garden-petals">${Array.from({ length: 3 }, (_, p) => `<span style="--i:${p};--drift:${[-34, 28, 12][p]}px"></span>`).join("")}</span></span>
+          <span class="garden-species">${flower.name}</span><strong>${esc(q.bloom)}</strong><small>Sentuh untuk mekar</small>
+        </button>`;
+        })
         .join("")}
     </div>
     <p class="garden-status" role="status">Tiga bunga kecil. Tiga doa baik.</p>
@@ -29,7 +29,7 @@ export function createWishGarden(
             q,
             i,
           ) => `<article class="garden-note" id="garden-wish-${i}" tabindex="-1" aria-labelledby="garden-theme-${i}" hidden>
-        <h3 id="garden-theme-${i}">${esc(q.theme)}</h3>
+        <div class="garden-note-heading"><img src="${flowerTypes[i % flowerTypes.length].src}" alt="" aria-hidden="true" width="34" height="51" loading="lazy"><h3 id="garden-theme-${i}">${esc(q.theme)}</h3></div>
         <p class="garden-wish">${esc(q.wish)}</p>
         <details class="garden-source"><summary>Kata ${esc(q.author)}</summary><div class="garden-source-body"><blockquote>${esc(q.original)}</blockquote><p class="garden-author">${esc(q.author)} — ${esc(q.work)}</p><p class="garden-translation-label">TERJEMAHAN BEBAS</p><p class="garden-translation">${esc(q.translation)}</p><a href="${esc(q.source)}" target="_blank" rel="noopener noreferrer">Baca karya aslinya →</a></div></details>
       </article>`,
@@ -44,20 +44,18 @@ export function createWishGarden(
   const complete = root.querySelector(".garden-complete");
   const status = root.querySelector(".garden-status");
   function scrollToNote(note) {
+    const scene = root.closest(".scene");
     const bounds = note.getBoundingClientRect();
-    const flowers = root
-      .querySelector(".garden-flowers")
-      .getBoundingClientRect();
-    const viewport = root.closest(".scene").getBoundingClientRect();
-    if (
-      bounds.top < flowers.bottom + 12 ||
-      bounds.bottom > viewport.bottom - 145
-    )
-      note.scrollIntoView({
-        block: "start",
-        behavior: motion.matches ? "instant" : "smooth",
-      });
+    const viewport = scene.getBoundingClientRect();
+    if (bounds.top >= viewport.top + 20 && bounds.bottom <= viewport.bottom - 24)
+      return;
+    // Scroll only the chapter, never the page or the header/navigation rows.
+    scene.scrollTo({
+      top: scene.scrollTop + bounds.top - viewport.top - 20,
+      behavior: motion.matches ? "instant" : "smooth",
+    });
   }
+
   buttons.forEach((button, i) => {
     button.onclick = (event) => {
       const note = notes[i];

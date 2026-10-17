@@ -81,6 +81,13 @@ export function createUniverse(canvas) {
   function drawMaterial(camera) {
     const points = [];
     const shadow = horizonOutline(camera);
+    const shadowMask = new Path2D();
+    shadowMask.rect(-1, -1, width + 2, height + 2);
+    shadow.forEach(([sx, sy], i) =>
+      i ? shadowMask.lineTo(sx, sy) : shadowMask.moveTo(sx, sy),
+    );
+    shadowMask.closePath();
+    const rearDepth = camera.distance - HORIZON.z - HORIZON.radius;
     const blend = compositionAt(camera.zoom);
     const showcase = photoShowcaseAt(progress);
     for (let i = 0; i < orbit.length / 4; i++) {
@@ -90,19 +97,11 @@ export function createUniverse(canvas) {
         points.push({ ...point, ...projected, index: i, photoId: photoIds[i] });
     }
     points.sort((a, b) => b.depth - a.depth);
-    function paint(point, opacity = 1) {
+    function paint(point, opacity = 1, maskRear = true) {
       const { x, y, size, seed, depth } = point;
       const readable = ease((size - 2) / (26 - 16 * showcase));
       ctx.save();
-      if (depth >= camera.distance - HORIZON.z - HORIZON.radius) {
-        ctx.beginPath();
-        ctx.rect(-1, -1, width + 2, height + 2);
-        shadow.forEach(([sx, sy], i) =>
-          i ? ctx.lineTo(sx, sy) : ctx.moveTo(sx, sy),
-        );
-        ctx.closePath();
-        ctx.clip("evenodd");
-      }
+      if (maskRear && depth >= rearDepth) ctx.clip(shadowMask, "evenodd");
       ctx.translate(x, y);
       const tangent = orbitTangent(point, camera);
       ctx.rotate(tangent * (1 - readable) + (seed - 0.5) * 0.18 * readable);
@@ -144,7 +143,16 @@ export function createUniverse(canvas) {
       }
       ctx.restore();
     }
+    // Depth-sorted dust behind the horizon shares a single clip. Rebuilding
+    // thousands of clipping regions per frame stalls software Canvas devices.
+    let rearClipped = true;
+    ctx.save();
+    ctx.clip(shadowMask, "evenodd");
     for (const point of points) {
+      if (rearClipped && point.depth < rearDepth) {
+        ctx.restore();
+        rearClipped = false;
+      }
       const dust = projectOrbit(
         orbitAt(orbit, point.index, flowSeconds),
         camera,
@@ -152,10 +160,11 @@ export function createUniverse(canvas) {
         height,
         orbitDustSize(point.seed),
       );
-      if (dust) paint({ ...point, ...dust }, 1 - 0.4 * blend);
+      if (dust) paint({ ...point, ...dust }, 1 - 0.4 * blend, false);
       if (blend < 1 && orbitPhotoSize(point.seed) > orbitDustSize(point.seed))
-        paint(point, 1 - blend);
+        paint(point, 1 - blend, false);
     }
+    if (rearClipped) ctx.restore();
     const focused = composition.update({
       camera,
       width,
