@@ -9,7 +9,6 @@ import { quotes } from "./quotes.js";
 import { createUniverse } from "./universe.js";
 import { openMemories, optimizePhoto } from "./memories.js";
 import { createMotion } from "./motion.js";
-import { captureChapterChrome } from "./chapter-chrome.js";
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
@@ -139,15 +138,13 @@ async function goTo(index) {
     return;
   changing = true;
   const chrome = [$(".story-header"), $("#story-nav"), $("#open-editor")];
-  const snapshots = motion.matches ? [] : captureChapterChrome(chrome);
+  const surface = $("#app"), oldSurface = getComputedStyle(surface).backgroundColor;
   document.body.classList.add("chapter-changing");
   chrome.forEach(element => { element.inert = true; });
   updateNav(index);
   $("#stage").setAttribute("aria-busy", "true");
-  $$("#story-nav button").forEach((button) => (button.disabled = true));
   const before = $(`[data-scene="${active}"]`),
-    after = $(`[data-scene="${index}"]`),
-    dir = index > active ? 1 : -1;
+    after = $(`[data-scene="${index}"]`);
   if (active === 0) {
     introRun++;
     universe.settle();
@@ -159,28 +156,30 @@ async function goTo(index) {
   after.style.opacity = "0";
   after.hidden = false;
   after.inert = true;
-  // Incoming and outgoing pages overlap for a single continuous dissolve.
-  const shift = motion.matches ? 0 : 36 * dir;
+  // One surface and one dissolve: no frozen copies of the old control bars,
+  // and no scaled page edges extending across the reading viewport.
   await Promise.all([
+    animate(surface, [
+      { backgroundColor: oldSurface },
+      { backgroundColor: getComputedStyle(surface).backgroundColor },
+    ], 520),
     ...chrome.filter(element => !element.hidden).map(element =>
-      animate(element, [{ opacity: 0 }, { opacity: Number(getComputedStyle(element).opacity) }], 820)),
-    ...snapshots.map(element =>
-      animate(element, [{ opacity: Number(getComputedStyle(element).opacity) }, { opacity: 0 }], 820)),
+      animate(element, [{ opacity: 0 }, { opacity: Number(getComputedStyle(element).opacity) }], 520)),
     animate(
       before,
       [
-        { opacity: 1, transform: "translateY(0) scale(1)" },
-        { opacity: 0, transform: `translateY(${-shift / 2}px) scale(.985)` },
+        { opacity: 1 },
+        { opacity: 0 },
       ],
-      820,
+      520,
     ),
     animate(
       after,
       [
-        { opacity: 0, transform: `translateY(${shift}px) scale(1.018)` },
-        { opacity: 1, transform: "translateY(0) scale(1)" },
+        { opacity: 0 },
+        { opacity: 1 },
       ],
-      820,
+      520,
     ),
   ]);
   before.hidden = true;
@@ -192,12 +191,11 @@ async function goTo(index) {
   effects.reset(after);
   after.style.removeProperty("z-index");
   chrome.forEach(element => { effects.reset(element); element.inert = false; });
-  snapshots.forEach(element => { effects.reset(element); element.remove(); });
+  effects.reset(surface);
   document.body.classList.remove("chapter-changing");
   active = index;
   changing = false;
   $("#stage").removeAttribute("aria-busy");
-  $$("#story-nav button").forEach((button) => (button.disabled = false));
   document.body.dataset.chapter = String(index);
   const title = after.querySelector('[tabindex="-1"]');
   title?.focus({ preventScroll: true });

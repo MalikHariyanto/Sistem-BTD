@@ -222,6 +222,9 @@ test("header, footer and chapter dissolve together without a late theme change",
         starts: controls.map(element => element.getAnimations()[0]?.startTime),
         duration: animation.effect.getTiming().duration,
         start: animation.startTime,
+        snapshots: document.querySelectorAll('[data-chrome-snapshot]').length,
+        dimmedControls: [...document.querySelectorAll('#story-nav button')].some(button =>
+          button.disabled || Number(getComputedStyle(button).opacity) < 1),
       };
       await new Promise(resolve => {
         function frame() {
@@ -241,11 +244,13 @@ test("header, footer and chapter dissolve together without a late theme change",
       };
     }, target);
     expect(result.beginning.theme).toBe(String(target));
+    expect(result.beginning.snapshots).toBe(0);
+    expect(result.beginning.dimmedControls).toBe(false);
     expect(result.beginning.durations).toEqual([result.beginning.duration, result.beginning.duration]);
     expect(result.beginning.starts).toEqual([result.beginning.start, result.beginning.start]);
     for (const frame of result.frames)
       for (const opacity of frame.controls) expect(Math.abs(opacity - frame.scene)).toBeLessThan(0.025);
-    expect(new Set(result.backgrounds).size).toBe(1);
+    expect(result.backgrounds.slice(0, 2)).toEqual(['rgba(0, 0, 0, 0)', 'rgba(0, 0, 0, 0)']);
     expect(result.snapshots).toBe(0);
     expect(result.pending).toBe(0);
   }

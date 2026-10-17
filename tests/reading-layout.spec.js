@@ -39,7 +39,7 @@ test("scrolling poems and prayers keeps both control rows clear, and prayers rem
         sceneBottom: scene.bottom,
         navTop: nav.top,
         logoOnTop: !!hit.closest("#home-link"),
-        background: getComputedStyle(document.querySelector(".story-header"))
+        background: getComputedStyle(document.querySelector("#app"))
           .backgroundColor,
       };
     });
