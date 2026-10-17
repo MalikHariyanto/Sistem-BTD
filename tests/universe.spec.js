@@ -6,6 +6,10 @@ import {
   projectOrbit,
   PARTICLE_COUNT,
   ease,
+  journeyProgress,
+  JOURNEY_MS,
+  photoShowcaseAt,
+  orbitRateAt,
 } from "../src/universe-camera.js";
 
 test("a dense physical annulus rotates differentially, retaining its identities through a smooth camera flight", () => {
@@ -80,6 +84,33 @@ test("a dense physical annulus rotates differentially, retaining its identities 
       0.00001,
     );
   }
+});
+
+test("the crowded middle has a moving viewing interval while opening and ending keep their pacing", () => {
+  expect(journeyProgress(0)).toBe(0);
+  expect(journeyProgress(JOURNEY_MS)).toBe(1);
+  let previous = 0,
+    highlightedMs = 0;
+  for (let elapsed = 10; elapsed < JOURNEY_MS; elapsed += 10) {
+    const p = journeyProgress(elapsed);
+    if (p <= previous)
+      throw Error("The camera stopped or reversed during the flight");
+    if (photoShowcaseAt(p) > 0.9) highlightedMs += 10;
+    previous = p;
+  }
+  // The opening clock is unchanged; after the viewing interval, the same final
+  // camera path and idle rotation are reached without a cut or a hard pause.
+  expect(journeyProgress(2580)).toBeCloseTo(0.3, 6);
+  expect(highlightedMs).toBeGreaterThan(4000);
+  expect(highlightedMs).toBeLessThan(5000);
+  expect(journeyProgress(7000) - journeyProgress(5000)).toBeGreaterThan(0.05);
+  expect(journeyProgress(7000) - journeyProgress(5000)).toBeLessThan(0.08);
+  expect(photoShowcaseAt(0)).toBe(0);
+  expect(photoShowcaseAt(1)).toBe(0);
+  expect(orbitRateAt(0)).toBe(1);
+  expect(orbitRateAt(0.5)).toBeGreaterThan(0.4);
+  expect(orbitRateAt(0.5)).toBeLessThan(0.5);
+  expect(orbitRateAt(1)).toBeCloseTo(0.025, 8);
 });
 
 test("uploaded photos form the live accretion disk and resolve through perspective on approach", async ({

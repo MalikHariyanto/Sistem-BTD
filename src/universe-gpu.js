@@ -18,6 +18,7 @@ uniform vec4 uCamera;
 uniform vec4 uState; // simulation time, photo reveal, vignette, detail reveal
 uniform float uCover;
 uniform float uZoom;
+uniform float uShowcase;
 
 float luminance(vec3 c){return dot(c,vec3(.2126,.7152,.0722));}
 vec4 wide(vec2 uv){
@@ -58,7 +59,7 @@ void main(){
 
   // The unresolved plasma radiance falls away as individual cards become
   // optically resolvable. Geometry and photo positions remain unchanged.
-  vec3 color=plasma*mix(1.0,.10,smoothstep(4.0,18.0,uZoom));
+  vec3 color=plasma*mix(1.0,.10,smoothstep(4.0,18.0,uZoom))*(1.0-.25*uShowcase);
   float vignette=smoothstep(.12,.83,length((pixel-uViewport*vec2(.5,.45))/max(uViewport.x,uViewport.y)));
   float shade=mix(uState.z*.65,min(.84,uState.z+.24),vignette);
   color=mix(color,vec3(.031,.035,.043),shade);
@@ -75,6 +76,7 @@ attribute vec2 aPhoto; // stable image id and original width/height
 attribute float aFade;
 uniform float uLayer;
 uniform float uComposition;
+uniform float uShowcase;
 varying float vAspect;
 varying float vPhotoId;
 uniform vec2 uViewport;
@@ -139,7 +141,7 @@ void main(){
   gl_PointSize=mask>.001?min(uPointLimit,footprint*uDpr):1.0;
   // Tiny tilted cards merge into light filaments. The same cards become legible
   // through perspective magnification, with no new grid or new positions.
-  float readable=smoothstep(2.0,28.0,size);
+  float readable=smoothstep(2.0,mix(28.0,20.0,uShowcase),size);
   float tangent=atan(.19*cos(theta)-.26*sin(theta),-sin(theta));
   vPhoto=vec4(seed,size,mix(tangent,(seed-.5)*.18,readable),mask);
   vHeat=(1.0-smoothstep(.14,.64,r))*.36+seed*.20;
@@ -154,6 +156,7 @@ uniform vec3 uAtlas;
 uniform float uShade;
 uniform float uLayer;
 uniform float uComposition;
+uniform float uShowcase;
 uniform float uDpr;
 uniform float uCover;
 uniform vec2 uViewport;
@@ -162,7 +165,7 @@ varying float vHeat;
 varying vec2 vOffset;
 void main(){
   if(vPhoto.w<.001)discard;
-  float size=vPhoto.y, readable=smoothstep(2.0,28.0,size);
+  float size=vPhoto.y, readable=smoothstep(2.0,mix(28.0,20.0,uShowcase),size);
   vec2 p=(gl_PointCoord-vec2(.5)+vOffset)*1.3;
   float c=cos(vPhoto.z),s=sin(vPhoto.z);
   p=mat2(c,-s,s,c)*p;
@@ -277,7 +280,16 @@ export function createUniverseGPU(canvas) {
     background = program(
       vertex,
       fragment,
-      ["uViewport", "uCamera", "uState", "uCover", "uWide", "uDetail", "uZoom"],
+      [
+        "uViewport",
+        "uCamera",
+        "uState",
+        "uCover",
+        "uWide",
+        "uDetail",
+        "uZoom",
+        "uShowcase",
+      ],
       "aPosition",
     );
     particles = program(
@@ -287,6 +299,7 @@ export function createUniverseGPU(canvas) {
         "uViewport",
         "uLayer",
         "uComposition",
+        "uShowcase",
         "uFlight",
         "uCenter",
         "uTime",
@@ -339,7 +352,7 @@ export function createUniverseGPU(canvas) {
   function draw(args) {
     last = args;
     if (gl.isContextLost()) return;
-    const { camera, width, height, time, detail, cover } = args;
+    const { camera, width, height, time, detail, cover, showcase = 0 } = args;
     const dpr = canvas.width / width;
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.clearDepth(1);
@@ -362,6 +375,7 @@ export function createUniverseGPU(canvas) {
     gl.uniform4f(u.uState, time, camera.photoMix, camera.shade, detail);
     gl.uniform1f(u.uCover, cover);
     gl.uniform1f(u.uZoom, camera.zoom);
+    gl.uniform1f(u.uShowcase, showcase);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
     gl.disableVertexAttribArray(background.attribute);
 
@@ -390,6 +404,7 @@ export function createUniverseGPU(canvas) {
     gl.uniform1f(u.uShade, camera.shade);
     gl.uniform1f(u.uCover, cover);
     gl.uniform1f(u.uComposition, compositionAt(camera.zoom));
+    gl.uniform1f(u.uShowcase, showcase);
     gl.uniform1f(u.uLayer, 0);
     gl.disableVertexAttribArray(particles.fadeAttribute);
     gl.vertexAttrib1f(particles.fadeAttribute, 1);

@@ -1,6 +1,9 @@
 import {
   cameraAt,
   JOURNEY_MS,
+  journeyProgress,
+  photoShowcaseAt,
+  orbitRateAt,
   DISK,
   PARTICLE_COUNT,
   createOrbit,
@@ -75,6 +78,7 @@ export function createUniverse(canvas) {
   function drawMaterial(camera) {
     const points = [];
     const blend = compositionAt(camera.zoom);
+    const showcase = photoShowcaseAt(progress);
     for (let i = 0; i < orbit.length / 4; i++) {
       const point = orbitAt(orbit, i, flowSeconds);
       const projected = projectOrbit(point, camera, width, height);
@@ -84,7 +88,7 @@ export function createUniverse(canvas) {
     points.sort((a, b) => b.depth - a.depth);
     function paint(point, opacity = 1) {
       const { x, y, size, seed, angle, depth } = point;
-      const readable = ease((size - 2) / 26);
+      const readable = ease((size - 2) / (26 - 8 * showcase));
       ctx.save();
       ctx.translate(x, y);
       const tangent = Math.atan2(
@@ -176,6 +180,7 @@ export function createUniverse(canvas) {
         detail: detailMix,
         cover: 1 - ease(progress / 0.18),
         reduced: motion.matches,
+        showcase: photoShowcaseAt(progress),
       });
       report(camera, visibleEstimate(camera), detailMix);
       return;
@@ -185,7 +190,9 @@ export function createUniverse(canvas) {
     ctx.fillRect(0, 0, width, height);
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = "high";
-    const radiance = 1 - 0.9 * ease((camera.zoom - 4) / 14);
+    const radiance =
+      (1 - 0.9 * ease((camera.zoom - 4) / 14)) *
+      (1 - 0.25 * photoShowcaseAt(progress));
     ctx.globalAlpha = radiance;
     if (plate)
       ctx.drawImage(plate, camera.x, camera.y, camera.width, camera.height);
@@ -261,6 +268,7 @@ export function createUniverse(canvas) {
     canvas.dataset.zoom = camera.zoom.toFixed(4);
     canvas.dataset.detailMix = detailMix.toFixed(4);
     canvas.dataset.progress = progress.toFixed(4);
+    canvas.dataset.photoShowcase = photoShowcaseAt(progress).toFixed(4);
     canvas.dataset.flow = flowSeconds.toFixed(4);
   }
 
@@ -375,10 +383,11 @@ export function createUniverse(canvas) {
         ? Math.min((now - lastSimulationFrame) / 1000, 0.1)
         : 0;
       lastSimulationFrame = now;
-      if (traveling) progress = clamp((now - started) / duration);
-      if (!motion.matches)
-        flowSeconds +=
-          dt * (0.025 + 0.975 * (1 - ease((progress - 0.7) / 0.3)));
+      if (traveling)
+        progress = motion.matches
+          ? clamp((now - started) / duration)
+          : journeyProgress(now - started);
+      if (!motion.matches) flowSeconds += dt * orbitRateAt(progress);
       draw();
       if (traveling && progress >= 1) {
         traveling = false;

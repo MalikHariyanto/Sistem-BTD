@@ -46,6 +46,28 @@ test("camera move contains no greeting or countdown; dense photos settle before 
   expect(
     Number(await page.locator("#universe").getAttribute("data-fragments")),
   ).toBeGreaterThanOrEqual(160);
+  // The crowded middle remains on screen long enough to read the photos.
+  await expect
+    .poll(
+      async () =>
+        Number(
+          await page.locator("#universe").getAttribute("data-photo-showcase"),
+        ),
+      { timeout: 8000 },
+    )
+    .toBeGreaterThan(0.95);
+  const middleStart = Number(
+    await page.locator("#universe").getAttribute("data-progress"),
+  );
+  await page.waitForTimeout(1000);
+  const middleEnd = Number(
+    await page.locator("#universe").getAttribute("data-progress"),
+  );
+  expect(middleEnd).toBeGreaterThan(middleStart);
+  // Clock dilation is checked by the deterministic timing test; browser round
+  // trips may take longer than a second on software WebGL.
+  await expect(page.locator("#reveal-copy")).toBeHidden();
+  await expect(page.locator("#intro-count")).toBeHidden();
   await expect(page.locator("#semesta")).toHaveAttribute(
     "data-phase",
     "revealed",

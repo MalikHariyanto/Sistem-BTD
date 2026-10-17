@@ -1,4 +1,6 @@
-export const JOURNEY_MS = 8600;
+const FLIGHT_MS = 8600;
+const PHOTO_REVEAL_MS = 2600;
+export const JOURNEY_MS = FLIGHT_MS + PHOTO_REVEAL_MS;
 export const DISK = { slope: 0.26, intercept: 0.35 };
 export const PARTICLE_COUNT = 32768;
 export const ORBIT = { inner: 0.14, outer: 0.64, tilt: 0.19, centerY: 0.475 };
@@ -9,6 +11,27 @@ export const ease = (n) => {
 };
 export const mix = (a, b, t) => a + (b - a) * t;
 export const diskY = (u) => DISK.intercept + DISK.slope * u;
+
+// Spend time inside the crowded photo stream, keeping the original camera
+// path. Clock dilation eases in/out and never freezes or reverses the dolly.
+export function journeyProgress(elapsedMs) {
+  if (elapsedMs <= 0) return 0;
+  if (elapsedMs >= JOURNEY_MS) return 1;
+  let low = 0,
+    high = 1;
+  for (let i = 0; i < 24; i++) {
+    const p = (low + high) / 2;
+    const elapsed = FLIGHT_MS * p + PHOTO_REVEAL_MS * ease((p - 0.4) / 0.22);
+    if (elapsed < elapsedMs) low = p;
+    else high = p;
+  }
+  return (low + high) / 2;
+}
+export const photoShowcaseAt = (p) =>
+  ease((p - 0.37) / 0.07) * (1 - ease((p - 0.6) / 0.1));
+export const orbitRateAt = (p) =>
+  (0.025 + 0.975 * (1 - ease((p - 0.7) / 0.3))) *
+  (1 - 0.55 * photoShowcaseAt(p));
 
 // Stable particle identities: an uploaded image changes the texture, never its
 // orbit. A single packed buffer is shared by the GPU and the Canvas fallback.

@@ -15,7 +15,7 @@ export function frontArc(point, camera) {
     point.radius;
   return ease((facing - 0.012) / 0.045);
 }
-export const compositionAt = (zoom) => ease((zoom - 10) / 22);
+export const compositionAt = (zoom) => ease((zoom - 18) / 20);
 export function focusProjection(point, camera, width, height) {
   return projectOrbit(
     point,
