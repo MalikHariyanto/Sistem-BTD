@@ -50,7 +50,7 @@ test("mobile immersion fills the former text space while cover and ending retain
     expect(middle).toBeGreaterThan(0.47);
     expect(middle).toBeLessThan(0.55);
     const mobileMiddle = cameraAt(0.3, width, height);
-    expect(mobileMiddle.centerY / height).toBeGreaterThan(0.52);
+    expect(mobileMiddle.centerY / height).toBe(0.5);
     expect(cameraAt(1, width, height).centerY / height).toBe(0.5);
   }
   expect(cameraAt(0, 1440, 900, ASPECT, 1).centerY / 900).toBe(0.38);

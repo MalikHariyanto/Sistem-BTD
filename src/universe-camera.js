@@ -120,17 +120,26 @@ export function cameraAt(progress, width, height, aspect = 1672 / 941, immersion
   // magnification merges into the existing dolly without a pull-back or jump.
   const zoom = opticalZoom + (mobile ? 0.35 * clamp(immersion) * (1 - ease(p / 0.45)) : 0);
   const distance = focusDepth * focus + 5 / zoom;
-  const cx = focusX * focus,
-    cy =
-      (0.26 * focusX + ORBIT.tilt * focusDepth - heightAboveDisk * closeUp) *
-      focus;
+  // Push straight toward the shared centerline. The old lateral target (.24)
+  // pulled the hole out of frame, especially during the slow photographic pass.
+  // Hold the artwork's center through the entire slow middle pass. Only after
+  // that pass, ease into the established near-side portrait composition.
+  const alignment = ease(p / 0.16),
+    nearSide = ease((p - 0.42) / 0.4),
+    cx = focusX * focus * nearSide,
+    cy = mix(
+      (0.445 - ORBIT.centerY) * alignment,
+      (0.26 * focusX + ORBIT.tilt * focusDepth - heightAboveDisk * closeUp) * focus,
+      nearSide,
+    );
   const imageWidth = (baseWidth * 5) / distance,
     imageHeight = imageWidth / aspect;
-  const centerY = mix(
+  const originalCenterY = mix(
     height * (mobile ? mix(0.32, 0.54, clamp(immersion)) : 0.38),
     height * 0.5,
     travel,
   );
+  const centerY = mix(originalCenterY, height * 0.5, alignment);
   return {
     progress: p,
     zoom,
