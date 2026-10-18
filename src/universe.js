@@ -26,6 +26,7 @@ import { createOrbitComposition, compositionAt } from "./orbit-composition.js";
 import { assignOrbitPhotos } from "./photo-textures.js";
 import { createUniverseGPU } from "./universe-gpu.js";
 import { createDiskStream } from "./disk-stream.js";
+import { createSpaceBackdrop } from "./space-background.js";
 
 const PLATE_URL = `${import.meta.env.BASE_URL}art/gargantua.webp`;
 
@@ -68,6 +69,7 @@ export function createUniverse(canvas) {
   let detailPlate,
     detailArrived = 0;
   let plate,
+    spaceBackdrop,
     lightField,
     lowerMask,
     lowerFrame,
@@ -258,8 +260,7 @@ export function createUniverse(canvas) {
       (1 - 0.9 * ease((camera.zoom - 4) / 14)) *
       (1 - 0.25 * photoShowcaseAt(progress));
     ctx.globalAlpha = radiance;
-    if (plate)
-      ctx.drawImage(plate, camera.x, camera.y, camera.width, camera.height);
+    if (spaceBackdrop) spaceBackdrop.draw(ctx, camera, width, height);
     // A separately reconstructed close-up resolves the disk filaments before
     // photographs emerge, rather than enlarging one small bitmap all the way.
     if (detailMix > 0) {
@@ -414,6 +415,7 @@ export function createUniverse(canvas) {
       plate = ok ? image : fallbackPlate();
       gpu?.setPlate(plate);
       if (!gpu) {
+        spaceBackdrop = createSpaceBackdrop(plate);
         diskStream = createDiskStream(plate);
         // Read a tiny irradiance map once, never the full image every frame.
         const sample = document.createElement("canvas");

@@ -13,6 +13,7 @@ import { createOrbitComposition, compositionAt } from "./orbit-composition.js";
 import { assignOrbitPhotos, planPhotoAtlas } from "./photo-textures.js";
 import { lensGLSL } from "./accretion-lens.js";
 import { DISK_STREAM } from "./disk-stream.js";
+import { spaceGLSL } from "./space-background.js";
 
 // A photographic halo plus 32,768 persistent orbiting photo sprites. No engine dependency.
 const vertex = `
@@ -33,10 +34,7 @@ uniform float uZoom;
 uniform float uShowcase;
 
 float luminance(vec3 c){return dot(c,vec3(.2126,.7152,.0722));}
-vec4 wide(vec2 uv){
-  float inside=step(0.0,uv.x)*step(uv.x,1.0)*step(0.0,uv.y)*step(uv.y,1.0);
-  return mix(vec4(.031,.035,.043,1.0),texture2D(uWide,uv),inside);
-}
+${spaceGLSL}
 vec3 radianceAt(vec2 uv){
   vec3 base=wide(uv).rgb;
   vec2 detailUV=(uv-vec2(.513,.360))*3.0;
