@@ -6,6 +6,8 @@ import {
   photoShowcaseAt,
   photoFieldAt,
   orbitFieldSize,
+  orbitFieldLimit,
+  middlePhotoEmphasis,
   orbitRateAt,
   DISK,
   PARTICLE_COUNT,
@@ -115,7 +117,8 @@ export function createUniverse(canvas) {
     function paint(point, opacity = 1, maskRear = true, photographic = false, isPhoto = true) {
       const { x, y, seed, depth } = point;
       const sourcePoint = point.source || point;
-      const atmosphere = isPhoto ? photoDepthAt(sourcePoint, camera) : { opacity: 1, brightness: 1, detail: 1, scale: 1 };
+      const middle = photographic ? middlePhotoEmphasis(seed, showcase) : 0;
+      const atmosphere = isPhoto ? photoDepthAt(sourcePoint, camera, middle) : { opacity: 1, brightness: 1, detail: 1, scale: 1 };
       const size = point.size * atmosphere.scale;
       const readable = (photographic
         ? ease((size - 1.5) / 3.5)
@@ -123,7 +126,8 @@ export function createUniverse(canvas) {
       const coupled = lightField ? 1 - ease((Math.abs(camera.cx) / camera.distance - 0.07) / 0.18) : 0;
       const u = clamp((x - camera.x) / camera.width), v = clamp((y - camera.y) / camera.height);
       const light = lightField?.[Math.min(71, Math.floor(v * 72)) * 128 + Math.min(127, Math.floor(u * 128))] || 0;
-      const localLight = 1 - coupled + coupled * (0.24 + 0.76 * ease((light - 0.025) / 0.525));
+      const lightFloor = 0.24 + 0.34 * middle;
+      const localLight = 1 - coupled + coupled * (lightFloor + (1 - lightFloor) * ease((light - 0.025) / 0.525));
       ctx.save();
       if (maskRear && depth >= rearDepth) ctx.clip(shadowMask, "evenodd");
       ctx.translate(x, y);
@@ -136,8 +140,8 @@ export function createUniverse(canvas) {
         point.opacity *
         (0.38 + readable * 0.6) *
         ease((depth - 0.028) / 0.047);
-      const integration = Math.max(field * (photographic ? 1 : 0.4), coupled * 0.65);
-      if (photographic) ctx.globalAlpha *= 0.78;
+      const integration = Math.max(field * (photographic ? 1 : 0.4), coupled * 0.65) * (1 - 0.55 * middle);
+      if (photographic) ctx.globalAlpha *= 0.78 + 0.18 * middle;
       const source = images[point.photoId];
       const image = photographic ? softenedThumbnails.get(source) || source : source;
       const ratio = source ? source.width / source.height : 0.8;
@@ -154,6 +158,12 @@ export function createUniverse(canvas) {
           cardWidth,
           cardHeight,
         );
+        if (middle > 0.01 && image !== source) {
+          const opacity = ctx.globalAlpha;
+          ctx.globalAlpha *= middle * 0.36;
+          ctx.drawImage(source, -cardWidth / 2, -cardHeight / 2, cardWidth, cardHeight);
+          ctx.globalAlpha = opacity;
+        }
         ctx.fillStyle = `rgba(227,161,77,${(1 - readable) * 0.85 + integration * 0.16})`;
         ctx.fillRect(-cardWidth / 2, -cardHeight / 2, cardWidth, cardHeight);
         if (atmosphere.brightness < 1) {
@@ -194,12 +204,12 @@ export function createUniverse(canvas) {
         orbitDustSize(point.seed),
       );
       if (dust) paint({ ...point, ...dust }, 1 - 0.4 * blend, false, false, false);
-      const fieldSize = field > 0 ? orbitFieldSize(point.seed, width) : 0;
+      const fieldSize = field > 0 ? orbitFieldSize(point.seed, width, showcase) : 0;
       if (fieldSize) {
         const photo = projectOrbit(point.source, camera, width, height, fieldSize);
         if (photo)
           paint(
-            { ...point, ...photo, size: Math.min(24, photo.size) },
+            { ...point, ...photo, size: Math.min(orbitFieldLimit(width, middlePhotoEmphasis(point.seed, showcase)), photo.size) },
             field,
             false,
             true,

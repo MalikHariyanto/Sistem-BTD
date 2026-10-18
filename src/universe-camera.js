@@ -41,10 +41,25 @@ export const photoShowcaseAt = (p) =>
 // light grains and the sparse, readable foreground portraits.
 export const photoFieldAt = (p) =>
   ease((p - 0.14) / 0.12) * (1 - ease((p - 0.4) / 0.18));
-export const orbitFieldSize = (seed, width) =>
+// A stable, sparse subset resolves into readable photographs during slowmo.
+// The same particles keep their original paths; the rest retain the dense dust.
+export const MIDDLE_PHOTOS = {
+  start: 0.99,
+  full: 0.998,
+  ambientBoost: 0.12,
+  focusBoost: 2.4,
+  phoneLimit: 48,
+  desktopLimit: 64,
+};
+export const middlePhotoEmphasis = (seed, showcase) =>
+  showcase * ease(((seed * 97.13) % 1 - MIDDLE_PHOTOS.start) / (MIDDLE_PHOTOS.full - MIDDLE_PHOTOS.start));
+export const orbitFieldSize = (seed, width, showcase = 0) =>
   (seed * 97.13) % 1 > 0.76
-    ? (0.0032 + seed * 0.0016) * (width < 700 ? 1.3 : 1)
+    ? (0.0032 + seed * 0.0016) * (width < 700 ? 1.3 : 1) *
+      (1 + MIDDLE_PHOTOS.ambientBoost * showcase + MIDDLE_PHOTOS.focusBoost * middlePhotoEmphasis(seed, showcase))
     : 0;
+export const orbitFieldLimit = (width, emphasis) =>
+  mix(24, width < 700 ? MIDDLE_PHOTOS.phoneLimit : MIDDLE_PHOTOS.desktopLimit, emphasis);
 export const orbitRateAt = (p, width = Infinity) =>
   (0.025 + 0.975 * (1 - ease((p - 0.7) / 0.3))) *
   (1 - 0.15 * photoShowcaseAt(p)) *
@@ -275,7 +290,7 @@ export function horizonOutline(camera, segments = 64) {
 
 // Photographs resolve differently across the disk's depth. Inner material
 // shrinks, aligns with the flow and darkens before reaching the hard horizon.
-export function photoDepthAt(point, camera) {
+export function photoDepthAt(point, camera, clarity = 0) {
   point = lensedOrbit(point, camera);
   const depth = camera.distance - point.depth;
   const far = ease((depth / camera.distance - 0.98) / 0.36);
@@ -290,7 +305,7 @@ export function photoDepthAt(point, camera) {
   return {
     opacity: (1 - 0.38 * far) * infall * limb,
     brightness: (1 - 0.4 * far) * (0.68 + 0.32 * infall),
-    detail: (1 - 0.3 * far) * infall,
+    detail: (1 - (0.3 - 0.16 * clarity) * far) * infall,
     scale: 0.6 + 0.4 * infall,
   };
 }
