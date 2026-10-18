@@ -81,6 +81,8 @@ export const content = {
       src: "",
     },
   ],
+  // Foto menemani setiap bait surat saat di-scroll, memakai slot unggahan yang ada.
+  letterPhotos: ["hero", "moment0", "moment1", "moment3"],
   letter: [
     "Selamat ulang tahun, manusia kesayanganku. Di hari ketika dunia pertama kali mengenalmu, aku ingin mengucapkan terima kasih. Untuk hadirmu, untuk tawamu, untuk semua hal kecil yang mungkin tak kamu sadari telah membuat hidupku lebih hangat.",
     "Aku tidak bisa menjanjikan hari-hari yang selalu mudah. Tapi aku ingin ada: mendengarkan cerita yang sama untuk kesekian kalinya, merayakan langkah kecilmu, dan mengingatkan betapa berharganya kamu ketika kamu sendiri lupa.",

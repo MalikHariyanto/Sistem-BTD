@@ -701,58 +701,6 @@ button {
 .opened .envelope-paper {
   transform: translateY(-85px);
 }
-.letter-reading {
-  display: grid;
-  grid-template-columns: 0.85fr 1fr;
-  gap: 12%;
-  align-items: center;
-  max-width: 1040px;
-  width: 100%;
-}
-.letter-image {
-  transform: rotate(-4deg);
-  border: 10px solid #f6eddd;
-  border-bottom-width: 50px;
-  position: relative;
-  box-shadow: 0 12px 40px #61452517;
-}
-.letter-image .photo-slot {
-  aspect-ratio: 3/4;
-}
-.letter-image > .handwritten {
-  position: absolute;
-  bottom: -38px;
-  width: 100%;
-  text-align: center;
-  font-size: 24px;
-  color: #7b6042;
-}
-.letter-paper .eyebrow {
-  font-size: 8px;
-  color: #76634a;
-}
-.letter-paper h2 {
-  font-size: 60px;
-  margin-top: 20px;
-}
-.letter-paper #letter-paragraph {
-  font: 25px/1.6 var(--serif);
-  min-height: 240px;
-}
-.signature {
-  font-size: 23px;
-  color: #8c6c49;
-  margin-bottom: 30px;
-}
-.letter-paper .text-button {
-  font-size: 9px;
-  color: #816950;
-  margin-top: 25px;
-}
-.letter-paper .page-controls {
-  padding-top: 20px;
-  border-top: 1px solid #baa581;
-}
 .music-scene {
   background: #eae4d7;
 }
@@ -1528,15 +1476,6 @@ summary {
     transform: scale(0.85);
     margin-left: -30px;
   }
-  .letter-reading {
-    gap: 7%;
-  }
-  .letter-paper h2 {
-    font-size: 50px;
-  }
-  .letter-paper #letter-paragraph {
-    font-size: 23px;
-  }
 }
 @media (max-width: 600px) {
   h1,
@@ -1781,57 +1720,6 @@ summary {
   }
   .letter-intro .text-button {
     font-size: 10px;
-  }
-  .letter-reading {
-    grid-template-columns: 1fr;
-    gap: 28px;
-    max-width: 360px;
-  }
-  .letter-image {
-    width: 145px;
-    height: 145px;
-    justify-self: center;
-    border-width: 5px;
-    border-bottom-width: 25px;
-  }
-  .letter-image .photo-slot {
-    aspect-ratio: auto;
-    height: 100%;
-    min-height: 0;
-  }
-  .letter-image > .handwritten {
-    font-size: 15px;
-    bottom: -21px;
-  }
-  .letter-image .photo-label {
-    font-size: 5px;
-  }
-  .letter-paper .eyebrow {
-    font-size: 6px;
-    margin-bottom: 16px;
-  }
-  .letter-paper h2 {
-    font-size: 43px;
-    line-height: 0.98;
-    margin: 0 0 20px;
-  }
-  .letter-paper #letter-paragraph {
-    font-size: 21px;
-    line-height: 1.5;
-    min-height: 185px;
-    margin-bottom: 16px;
-  }
-  .signature {
-    font-size: 18px;
-    line-height: 1.2;
-    margin-bottom: 18px;
-  }
-  .letter-paper .page-controls {
-    padding-top: 12px;
-  }
-  .letter-paper .text-button {
-    font-size: 8px;
-    margin-top: 15px;
   }
   .music-layout {
     grid-template-columns: 1fr;
@@ -2099,13 +1987,6 @@ summary {
   .wish-copy h2 {
     font-size: 75px;
   }
-  .letter-paper #letter-paragraph {
-    font-size: 23px;
-    min-height: 190px;
-  }
-  .letter-paper h2 {
-    font-size: 50px;
-  }
 }
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -2335,33 +2216,6 @@ body.intro-running .story-header > button {
     height: 160px;
     margin: 35px auto 20px;
   }
-  .letter-reading {
-    display: block;
-  }
-  .letter-image {
-    display: none;
-  }
-  .letter-paper h2 {
-    font-size: 38px;
-    line-height: 1;
-    margin: 0 0 18px;
-  }
-  .letter-paper .eyebrow {
-    margin-bottom: 15px;
-  }
-  .letter-paper #letter-paragraph {
-    font-size: 21px;
-    line-height: 1.45;
-    min-height: 0;
-    margin-bottom: 18px;
-  }
-  .signature {
-    font-size: 18px;
-    margin-bottom: 20px;
-  }
-  .letter-paper .text-button {
-    margin-top: 14px;
-  }
   .music-layout {
     gap: 28px;
   }
@@ -2425,22 +2279,6 @@ body.intro-running .story-header > button {
 @media (max-width: 600px) and (max-height: 740px) {
   .memory-constellation {
     height: 158px;
-  }
-  .letter-image {
-    display: block;
-    float: right;
-    width: 80px;
-    height: 100px;
-    margin: 0 0 14px 14px;
-    border-width: 4px;
-    border-bottom-width: 19px;
-  }
-  .letter-image > .handwritten {
-    font-size: 10px;
-    bottom: -16px;
-  }
-  .letter-image .photo-label {
-    display: none;
   }
   .music-layout {
     gap: 20px;

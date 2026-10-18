@@ -122,7 +122,7 @@ test("chapters dissolve without content modals; poems and sourced wishes can be 
   await expect(page.locator('[data-scene="2"]')).toHaveAttribute("inert", "");
 });
 
-test("letter opens in place and pages; music remains user triggered", async ({
+test("letter opens in place and follows the scroll; music remains user triggered", async ({
   page,
 }) => {
   await enter(page);
@@ -131,12 +131,15 @@ test("letter opens in place and pages; music remains user triggered", async ({
     .getByRole("button", { name: "Buka surat untukmu", exact: true })
     .click();
   await expect(page.locator("#letter-reading")).toBeVisible();
-  await expect(page.locator("#letter-paragraph")).toContainText(
+  await expect(page.locator(".letter-verse").first()).toContainText(
     "Selamat ulang tahun",
   );
-  await page.getByRole("button", { name: "Halaman surat selanjutnya" }).click();
-  await expect(page.locator("#letter-position")).toHaveText("2 / 4");
-  await expect(page.locator("#letter-paragraph")).toContainText(
+  await page.locator('[data-letter-stanza="1"]').evaluate(element => {
+    const scene = element.closest('.scene');
+    scene.scrollTop += element.getBoundingClientRect().top - scene.getBoundingClientRect().top - 240;
+  });
+  await expect(page.locator('#letter-reading')).toHaveAttribute('data-letter-active', '1');
+  await expect(page.locator(".letter-verse").nth(1)).toContainText(
     "Aku tidak bisa menjanjikan",
   );
   await chapter(page, "Nada kita");

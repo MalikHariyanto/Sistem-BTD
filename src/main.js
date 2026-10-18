@@ -2,6 +2,7 @@ import "./style.css";
 import "./florals.css";
 import "./wish-garden.css";
 import "./reading-layout.css";
+import "./letter-scroll.css";
 import { flowerSrc } from "./florals.js";
 import { createWishGarden } from "./wish-garden.js";
 import { content, ORBIT_PHOTO_COUNT } from "./content.js";
@@ -9,6 +10,7 @@ import { quotes } from "./quotes.js";
 import { createUniverse } from "./universe.js";
 import { openMemories, optimizePhoto } from "./memories.js";
 import { createMotion } from "./motion.js";
+import { createScrollLetter } from "./letter-scroll.js";
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
@@ -39,8 +41,7 @@ const flowers = (placement) => {
 const arrow = '<span aria-hidden="true">→</span>';
 let active = 0,
   changing = false,
-  poemIndex = 0,
-  letterIndex = 0;
+  poemIndex = 0;
 let introRun = 0,
   introPhase = "idle",
   wishState = "waiting";
@@ -111,7 +112,7 @@ $("#app").innerHTML = `
   </div></section>
   <section class="scene letter-scene" data-scene="4" aria-labelledby="letter-heading" hidden inert><div class="scene-inner letter-layout">
     <div class="letter-intro" id="letter-intro"><p class="eyebrow">YANG INI, KUTULIS SENDIRI</p><h2 id="letter-heading" tabindex="-1">Tidak semua rasa<br>muat dalam puisi.<br><em>Jadi, ini suratku.</em></h2><button id="open-letter" class="envelope" aria-label="Buka surat untukmu"><span class="envelope-back"></span><span class="envelope-paper">dear, you.</span><span class="envelope-front"></span><span class="envelope-flap"></span><span class="wax-seal">a.</span></button><button id="open-letter-text" class="text-button">Ketuk untuk membuka surat ${arrow}</button></div>
-    <article id="letter-reading" class="letter-reading" hidden><div class="letter-image">${photo("hero", "Senyummu, favoritku")}${flowers("flower-letter")}<span class="handwritten">my favorite person.</span></div><div class="letter-paper"><p class="eyebrow">UNTUK <span data-recipient></span>, DENGAN SELURUH RASA</p><div id="letter-page"><h2 id="letter-title" tabindex="-1">Happy birthday,<br><em>my love.</em></h2><p id="letter-paragraph"></p><p class="handwritten signature">${esc(content.sender)}</p></div><div class="page-controls"><button id="prev-letter" class="round" aria-label="Halaman surat sebelumnya">←</button><span id="letter-position" aria-live="polite"></span><button id="next-letter" class="round" aria-label="Halaman surat selanjutnya">→</button></div><button id="close-letter" class="text-button">Lipat kembali suratnya</button></div></article>
+    <article id="letter-reading" class="letter-scroll" aria-label="Surat untukmu" hidden></article>
   </div></section>
   <section class="scene music-scene" data-scene="5" aria-labelledby="music-title" hidden inert><div class="scene-inner music-layout"><div class="record-composition"><div class="record-sleeve">${photo("moment2", "Tentang kita")}</div><div class="vinyl" aria-hidden="true"><div>a.</div></div><span class="handwritten">if this feeling had a sound.</span></div><div class="music-copy"><p class="eyebrow">BERHENTI SEBENTAR DI SINI</p><h2 id="music-title" tabindex="-1">Some songs<br><em>sound like you.</em></h2><p>Kalau ingin, biarkan satu lagu menemani sisa cerita ini.</p><div class="track-list">${content.tracks.map((t, i) => `<button class="track" data-track="${i}"><span class="track-state">▷</span><span><strong>${esc(t.title)}</strong><small>${esc(t.artist)}</small></span></button>`).join("")}</div><p id="track-status" role="status">Atau nikmati nada lembut yang sudah kusiapkan.</p><button class="text-button" id="ambient-toggle" aria-pressed="false">Putar nada lembut ♫</button></div></div></section>
   <section class="scene wish-scene" data-scene="6" aria-labelledby="wish-title" hidden inert><div class="wish-halo"></div><div class="celebration-particles" aria-hidden="true">${Array.from({ length: 32 }, (_, i) => `<span style="--i:${i};--x:${(i * 37) % 100}%;--delay:${(i % 8) * 0.08}s"></span>`).join("")}</div><div class="scene-inner wish-layout">
@@ -128,6 +129,9 @@ const universe = createUniverse($("#universe"));
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const effects = createMotion(motion);
 const animate = effects.play;
+const letterStory = createScrollLetter($("#letter-reading"), {
+  content, photo, flowers, escapeHtml: esc,
+});
 const wishGarden = createWishGarden($("#wish-garden"), quotes, {
   effects,
   motion,
@@ -197,10 +201,11 @@ async function goTo(index) {
   changing = false;
   $("#stage").removeAttribute("aria-busy");
   document.body.dataset.chapter = String(index);
-  const title = after.querySelector('[tabindex="-1"]');
+  const title = [...after.querySelectorAll('[tabindex="-1"]')].find(element => element.getClientRects().length);
   title?.focus({ preventScroll: true });
   $("#scene-announcement").textContent = chapters[index];
   updateNav();
+  if (index === 4) letterStory.refresh();
 }
 function updateNav(index = active) {
   document.body.dataset.chapter = String(index);
@@ -327,11 +332,13 @@ async function replay() {
   storyVersion++;
   letterRun++;
   openingLetter = false;
-  poemIndex = letterIndex = 0;
+  poemIndex = 0;
   renderPoem();
   wishGarden.reset();
-  renderLetter();
+  letterStory.reset();
+  $(".letter-layout").classList.remove("is-reading");
   $("#letter-reading").hidden = true;
+  $(".letter-scene").setAttribute("aria-labelledby", "letter-heading");
   $("#letter-intro").hidden = false;
   $("#open-letter").classList.remove("opened");
   resetWish(false);
@@ -340,8 +347,7 @@ async function replay() {
   $("#begin").focus({ preventScroll: true });
 }
 $("#replay").onclick = replay;
-let poemChanging = false,
-  letterChanging = false;
+let poemChanging = false;
 async function changePage(el, render) {
   const version = storyVersion;
   await animate(
@@ -391,13 +397,6 @@ async function turnPoem(dir) {
 }
 $("#prev-poem").onclick = () => turnPoem(-1);
 $("#next-poem").onclick = () => turnPoem(1);
-function renderLetter() {
-  $("#letter-paragraph").textContent = content.letter[letterIndex];
-  $("#letter-position").textContent =
-    `${letterIndex + 1} / ${content.letter.length}`;
-  $("#prev-letter").disabled = letterIndex === 0;
-  $("#next-letter").disabled = letterIndex === content.letter.length - 1;
-}
 let openingLetter = false;
 async function openLetter() {
   if (openingLetter) return;
@@ -409,8 +408,10 @@ async function openLetter() {
   await animate($("#letter-intro"), [{ opacity: 1 }, { opacity: 0 }], 300);
   if (token !== letterRun) return;
   $("#letter-intro").hidden = true;
+  $(".letter-layout").classList.add("is-reading");
   $("#letter-reading").hidden = false;
-  renderLetter();
+  $(".letter-scene").setAttribute("aria-labelledby", "letter-title");
+  letterStory.reset();
   await animate(
     $("#letter-reading"),
     [
@@ -432,29 +433,16 @@ $("#close-letter").onclick = async () => {
   await animate($("#letter-reading"), [{ opacity: 1 }, { opacity: 0 }], 350);
   if (token !== letterRun) return;
   $("#letter-reading").hidden = true;
+  $(".letter-scene").setAttribute("aria-labelledby", "letter-heading");
+  $(".letter-layout").classList.remove("is-reading");
   $("#letter-intro").hidden = false;
+  letterStory.reset();
   $("#open-letter").classList.remove("opened");
   await animate($("#letter-intro"), [{ opacity: 0 }, { opacity: 1 }], 500);
   if (token !== letterRun) return;
   if (active === 4) $("#open-letter").focus({ preventScroll: true });
   openingLetter = false;
 };
-async function turnLetter(dir) {
-  if (
-    letterChanging ||
-    letterIndex + dir < 0 ||
-    letterIndex + dir >= content.letter.length
-  )
-    return;
-  letterChanging = true;
-  await changePage($("#letter-page"), () => {
-    letterIndex += dir;
-    renderLetter();
-  });
-  letterChanging = false;
-}
-$("#prev-letter").onclick = () => turnLetter(-1);
-$("#next-letter").onclick = () => turnLetter(1);
 
 function setWishStep(i) {
   $$("[data-wish-step]").forEach((e, n) =>
@@ -673,7 +661,7 @@ function applyPhotos() {
       const img = new Image();
       img.alt = el.getAttribute("aria-label");
       img.src = src;
-      img.loading = "lazy";
+      img.loading = el.closest('.letter-frame') && !$("#letter-reading").hidden ? "eager" : "lazy";
       img.onerror = () => {
         img.remove();
         el.classList.remove("has-photo");
@@ -872,7 +860,6 @@ $("#reset-local").onclick = async () => {
   }
 };
 renderPoem();
-renderLetter();
 applySettings();
 updateNav();
 setInterval(updateCountdown, 1000);

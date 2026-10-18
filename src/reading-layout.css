@@ -325,17 +325,6 @@ body[data-chapter="0"] .story-header {
     aspect-ratio: 34 / 21;
     margin: 28px auto 16px;
   }
-  .letter-reading { gap: 9%; }
-  .letter-image { width: min(100%, 55cqh); justify-self: center; }
-  .letter-paper h2 { font-size: clamp(36px, 8cqh, 60px); margin-top: 16px; }
-  .letter-paper #letter-paragraph {
-    font-size: clamp(19px, 4cqh, 25px);
-    min-height: 0;
-    line-height: 1.5;
-  }
-  .letter-paper .signature { margin-bottom: 16px; }
-  .letter-paper .page-controls { padding-top: 12px; }
-  .letter-paper .text-button { margin-top: 12px; }
 
   .record-composition { height: clamp(250px, 62cqh, 350px); }
   .vinyl { width: min(300px, 53cqh); height: auto; aspect-ratio: 1; }

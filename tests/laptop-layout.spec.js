@@ -59,10 +59,9 @@ for (const [width, height] of [[1280, 580], [1280, 620], [1366, 768], [1920, 930
     await page.locator('[data-chapter="4"]').click();
     await page.locator('#open-letter').click();
     await expect(page.locator('#letter-reading')).toBeVisible();
-    for (let i = 0; i < 4; i++) {
-      if (i) await page.locator('#next-letter').click();
-      await fits(['#letter-paragraph', '#close-letter']);
-    }
+    await expect(page.locator('.letter-verse')).toHaveCount(4);
+    await page.locator('[data-scene="4"]').evaluate(scene => { scene.scrollTop = scene.scrollHeight; });
+    await expect(page.locator('#close-letter')).toBeInViewport();
     await page.locator('[data-chapter="2"]').click();
     for (let i = 0; i < 3; i++) {
       if (i) await page.locator('#next-poem').click();
