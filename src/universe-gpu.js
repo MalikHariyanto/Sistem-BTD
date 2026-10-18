@@ -13,6 +13,7 @@ import {
 import { createOrbitComposition, compositionAt } from "./orbit-composition.js";
 import { assignOrbitPhotos, planPhotoAtlas } from "./photo-textures.js";
 import { lensGLSL } from "./accretion-lens.js";
+import { createPortraitAtlas } from "./portrait-textures.js";
 import { DISK_STREAM } from "./disk-stream.js";
 import { spaceGLSL } from "./space-background.js";
 
@@ -231,6 +232,9 @@ uniform vec2 uCenter;
 varying float vPhotoId;
 varying float vAspect;
 uniform highp sampler2D uPhotos;
+uniform highp sampler2D uPortraits;
+uniform vec2 uPortraitGrid;
+uniform vec2 uPortraitInset;
 uniform vec3 uAtlas;
 uniform vec2 uAtlasInset;
 uniform float uShade;
@@ -282,9 +286,14 @@ void main(){
   float edge=max(abs(p.x),abs(p.y));
   if(edge>.5)discard;
   vec2 local=p+vec2(.5);
-  float id=clamp(floor(vPhotoId+.5),0.0,uAtlas.z-1.0);
-  vec2 tile=vec2(mod(id,uAtlas.x),floor(id/uAtlas.x));
-  vec3 photo=texture2D(uPhotos,(tile+mix(uAtlasInset,vec2(1.0)-uAtlasInset,local))/uAtlas.xy).rgb;
+  bool detailed=vPhotoId<0.0;
+  float id=detailed?-vPhotoId-1.0:clamp(floor(vPhotoId+.5),0.0,uAtlas.z-1.0);
+  vec2 grid=detailed?uPortraitGrid:uAtlas.xy;
+  vec2 inset=detailed?uPortraitInset:uAtlasInset;
+  vec2 tile=vec2(mod(id,grid.x),floor(id/grid.x));
+  vec2 photoUV=(tile+mix(inset,vec2(1.0)-inset,local))/grid;
+  vec3 photo=detailed?texture2D(uPortraits,photoUV).rgb:texture2D(uPhotos,photoUV).rgb;
+  float nearClarity=uLayer>1.5&&uLayer<2.5?smoothstep(32.0,128.0,size)*(1.0-vAtmosphere.x)*vAtmosphere.y:0.0;
   float border=smoothstep(.48,.495,edge)*readable;
   photo=mix(photo,vec3(.91,.87,.79),border*(uLayer>2.5?.15:.55));
   // Warm reflected light and compressed contrast embed the photographs in the
@@ -292,7 +301,7 @@ void main(){
   float photoLum=dot(photo,vec3(.2126,.7152,.0722));
   vec3 softened=mix(vec3(photoLum),photo,.58+.20*vMiddle)*.70+vec3(.16,.11,.07);
   softened=mix(softened,vec3(.98,.73,.45),.13+vHeat*.10);
-  photo=mix(photo,softened,uPhotoField*(uLayer>2.5?1.0:.4));
+  photo=mix(photo,softened,uPhotoField*(uLayer>2.5?1.0:.4)*(1.0-.65*nearClarity));
   float lum=dot(photo,vec3(.2126,.7152,.0722));
   vec3 ember=mix(vec3(.68,.30,.095),vec3(1.0,.90,.66),vHeat+.22)*(.65+lum*.75);
   vec3 color=mix(ember,photo,readable);
@@ -308,12 +317,12 @@ void main(){
   vec3 diskLight=texture2D(uWide,clamp(uv,0.0,1.0)).rgb;
   float light=dot(diskLight,vec3(.2126,.7152,.0722));
   float coupled=uPlateReady*(1.0-softstep(.07,.25,abs(uFlight.x)/uFlight.z));
-  float lightFloor=.24+.34*vMiddle;
+  float lightFloor=.24+.34*vMiddle+.22*nearClarity;
   opacity*=mix(1.0,lightFloor+(1.0-lightFloor)*smoothstep(.025,.55,light),coupled);
-  color=mix(color,mix(color*.72,vec3(1.0,.78,.49),.22+.18*light),coupled*.65*(1.0-.55*vMiddle));
+  color=mix(color,mix(color*.72,vec3(1.0,.78,.49),.22+.18*light),coupled*.65*(1.0-.55*vMiddle)*(1.0-.45*nearClarity));
   if(opacity<.025)discard;
   vec2 screen=gl_FragCoord.xy/(uViewport*uDpr);
-  float shade=uShade*(.65+.25*length(screen-.5));
+  float shade=uShade*(.65+.25*length(screen-.5))*(1.0-.25*nearClarity);
   color=mix(color,vec3(.031,.035,.043),shade);
   color=mix(color,vec3(.063,.059,.055),smoothstep(.44,1.0,1.0-screen.y)*uCover*.92);
   gl_FragColor=vec4(color,opacity);
@@ -404,7 +413,7 @@ export function createUniverseGPU(canvas) {
   const sources = { wide: null, detail: null, photos: null };
   const orbit = createOrbit();
   const composition = createOrbitComposition(orbit);
-  let ratios = [];
+  let ratios = [], portraitImages = [], portraitAtlas;
   let photoIds = new Float32Array(PARTICLE_COUNT);
   let photoAttributes = new Float32Array(PARTICLE_COUNT * 2);
   const maxTextureSize = Math.min(4096, gl.getParameter(gl.MAX_TEXTURE_SIZE));
@@ -500,6 +509,9 @@ export function createUniverseGPU(canvas) {
         "uPointLimit",
         "uPortraitScale",
         "uPhotos",
+        "uPortraits",
+        "uPortraitGrid",
+        "uPortraitInset",
         "uWide",
         "uCamera",
         "uPlateReady",
@@ -539,6 +551,7 @@ export function createUniverseGPU(canvas) {
       return t;
     });
     ["wide", "detail", "photos"].forEach((n, i) => upload(i, sources[n]));
+    portraitAtlas = createPortraitAtlas(gl, maxTextureSize);
   }
   try {
     initialize();
@@ -600,6 +613,9 @@ export function createUniverseGPU(canvas) {
     gl.uniform1f(u.uPointLimit, pointLimit);
     gl.uniform1f(u.uPortraitScale, portraitScaleAt(camera.zoom));
     gl.uniform1i(u.uPhotos, 2);
+    gl.uniform1i(u.uPortraits, 3);
+    gl.uniform2f(u.uPortraitGrid, 1, 1);
+    gl.uniform2f(u.uPortraitInset, 0, 0);
     gl.uniform3fv(u.uAtlas, atlas);
     gl.uniform2fv(u.uAtlasInset, atlasInset);
     gl.uniform1f(u.uShade, camera.shade);
@@ -635,11 +651,24 @@ export function createUniverseGPU(canvas) {
       now: performance.now(),
       reduced: args.reduced,
     });
+    const detailIds = [...new Set(focused
+      .filter(photo => photo.alpha > .05 && photo.projected.size >= 40)
+      .sort((a, b) => b.alpha - a.alpha || b.projected.size - a.projected.size)
+      .map(photo => photoIds[photo.index]))];
+    const detailSlots = portraitAtlas.update(detailIds, portraitImages, sources.photos ? Number(canvas.dataset.atlasTile) : 256);
+    const detailPlan = portraitAtlas.plan;
+    if (detailPlan) {
+      gl.uniform2f(u.uPortraitGrid, detailPlan.columns, detailPlan.rows);
+      gl.uniform2f(u.uPortraitInset, (detailPlan.gutter + .5) / detailPlan.tileWidth, (detailPlan.gutter + .5) / detailPlan.tileHeight);
+    }
+    canvas.dataset.portraitTile = String(detailPlan?.tileWidth || 0);
+    canvas.dataset.detailedPhotos = String(detailSlots.size);
     const packed = new Float32Array(focused.length * 7);
     for (let i = 0; i < focused.length; i++) {
       const { index, alpha } = focused[i];
       packed.set(orbit.subarray(index * 4, index * 4 + 4), i * 7);
-      packed[i * 7 + 4] = photoIds[index];
+      const slot = detailSlots.get(photoIds[index]);
+      packed[i * 7 + 4] = slot === undefined ? photoIds[index] : -slot - 1;
       packed[i * 7 + 5] = ratios[photoIds[index]] || 0.8;
       packed[i * 7 + 6] = alpha;
     }
@@ -753,6 +782,8 @@ export function createUniverseGPU(canvas) {
         }));
       return false;
     }
+    portraitImages = images;
+    portraitAtlas.clear();
     ratios = images.map((image) => image.width / image.height);
     photoIds = nextIds;
     photoAttributes = nextAttributes;

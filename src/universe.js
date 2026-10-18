@@ -29,6 +29,7 @@ import { assignOrbitPhotos } from "./photo-textures.js";
 import { createUniverseGPU } from "./universe-gpu.js";
 import { createDiskStream } from "./disk-stream.js";
 import { createSpaceBackdrop } from "./space-background.js";
+import { sharpenPortrait, PORTRAIT_CAPACITY } from "./portrait-textures.js";
 
 const PLATE_URL = `${import.meta.env.BASE_URL}art/gargantua.webp`;
 
@@ -81,6 +82,16 @@ export function createUniverse(canvas) {
     signature;
   const thumbnails = new Map();
   const softenedThumbnails = new WeakMap();
+  const portraitDetails = new Map();
+  function portraitDetail(source) {
+    let image = portraitDetails.get(source);
+    if (!image) image = sharpenPortrait(source);
+    portraitDetails.delete(source);
+    portraitDetails.set(source, image);
+    if (portraitDetails.size > PORTRAIT_CAPACITY)
+      portraitDetails.delete(portraitDetails.keys().next().value);
+    return image;
+  }
   let photosReady = Promise.resolve();
   const aspect = 1672 / 941;
   const orbit = createOrbit(gpu ? PARTICLE_COUNT : 8192);
@@ -114,19 +125,20 @@ export function createUniverse(canvas) {
         points.push({ ...point, ...projected, source: point, index: i, photoId: photoIds[i] });
     }
     points.sort((a, b) => b.depth - a.depth);
-    function paint(point, opacity = 1, maskRear = true, photographic = false, isPhoto = true) {
+    function paint(point, opacity = 1, maskRear = true, photographic = false, isPhoto = true, focused = false) {
       const { x, y, seed, depth } = point;
       const sourcePoint = point.source || point;
       const middle = photographic ? middlePhotoEmphasis(seed, showcase) : 0;
       const atmosphere = isPhoto ? photoDepthAt(sourcePoint, camera, middle) : { opacity: 1, brightness: 1, detail: 1, scale: 1 };
       const size = point.size * atmosphere.scale;
+      const nearClarity = focused ? ease((size - 32) / 96) * atmosphere.detail : 0;
       const readable = (photographic
         ? ease((size - 1.5) / 3.5)
         : ease((size - 2) / (26 - 16 * showcase))) * atmosphere.detail;
       const coupled = lightField ? 1 - ease((Math.abs(camera.cx) / camera.distance - 0.07) / 0.18) : 0;
       const u = clamp((x - camera.x) / camera.width), v = clamp((y - camera.y) / camera.height);
       const light = lightField?.[Math.min(71, Math.floor(v * 72)) * 128 + Math.min(127, Math.floor(u * 128))] || 0;
-      const lightFloor = 0.24 + 0.34 * middle;
+      const lightFloor = 0.24 + 0.34 * middle + 0.22 * nearClarity;
       const localLight = 1 - coupled + coupled * (lightFloor + (1 - lightFloor) * ease((light - 0.025) / 0.525));
       ctx.save();
       if (maskRear && depth >= rearDepth) ctx.clip(shadowMask, "evenodd");
@@ -140,10 +152,11 @@ export function createUniverse(canvas) {
         point.opacity *
         (0.38 + readable * 0.6) *
         ease((depth - 0.028) / 0.047);
-      const integration = Math.max(field * (photographic ? 1 : 0.4), coupled * 0.65) * (1 - 0.55 * middle);
+      const integration = Math.max(field * (photographic ? 1 : 0.4), coupled * 0.65) * (1 - 0.55 * middle) * (1 - 0.45 * nearClarity);
       if (photographic) ctx.globalAlpha *= 0.78 + 0.18 * middle;
       const source = images[point.photoId];
-      const image = photographic ? softenedThumbnails.get(source) || source : source;
+      const image = photographic ? softenedThumbnails.get(source) || source :
+        source && nearClarity > 0.05 ? portraitDetail(source) : source;
       const ratio = source ? source.width / source.height : 0.8;
       const cardWidth = size * Math.min(ratio, 1);
       const cardHeight =
@@ -151,6 +164,7 @@ export function createUniverse(canvas) {
         Math.min(1 / ratio, 1) *
         (photographic ? 1 : 0.28 + 0.72 * ease((size - 1.5) / 10.5));
       if (image && readable > 0.01) {
+        ctx.imageSmoothingQuality = "high";
         ctx.drawImage(
           image,
           -cardWidth / 2,
@@ -233,6 +247,7 @@ export function createUniverse(canvas) {
       paint(
         { ...point, ...projected, source: point, photoId: photoIds[index] },
         alpha * blend,
+        true, false, true, true,
       );
     canvas.dataset.focusPhotos = String(
       focused.filter((p) => p.alpha * p.point.opacity > 0.5).length,
@@ -641,6 +656,7 @@ export function createUniverse(canvas) {
     );
     if (current !== generation) return;
     images = loaded.filter(Boolean);
+    portraitDetails.clear();
     const unreadable = sources.length - images.length;
     if (unreadable) window.dispatchEvent(new CustomEvent("photosrendererror", {
       detail: `${unreadable} foto belum terbaca. Unggah ulang foto tersebut; foto lain tetap tersimpan.`,
