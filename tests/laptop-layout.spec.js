@@ -46,7 +46,7 @@ for (const [width, height] of [[1280, 580], [1280, 620], [1366, 768], [1920, 930
       ['#poem-title', '#poem-text', '#next-poem'],
       ['#quote-heading', '.garden-flowers'],
       ['#letter-heading', '#open-letter', '#open-letter-text'],
-      ['#music-title', '.track-list', '#ambient-toggle'],
+      ['#music-title', '.music-credit'],
       ['#wish-title', '#ready-wish'],
     ];
     for (let i = 1; i <= 6; i++) {

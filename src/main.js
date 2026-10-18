@@ -48,10 +48,8 @@ let introRun = 0,
 let store,
   settings = {},
   localTrackUrl,
-  audio,
-  ambient;
+  audio;
 let autoMusicPending = true,
-  autoplayBlocked = false,
   musicAttempt = 0;
 let storyVersion = 0,
   letterRun = 0,
@@ -91,7 +89,7 @@ const nextLabels = [
 ];
 
 $("#app").innerHTML = `
-<header class="story-header"><a href="#semesta" id="home-link" aria-label="Kembali ke awal">a little universe <i>for you.</i></a><button id="sound-toggle" aria-pressed="false" aria-label="Putar musik"><span aria-hidden="true">♫</span><span id="sound-label">Suara mati</span></button></header>
+<header class="story-header"><a href="#semesta" id="home-link" aria-label="Kembali ke awal">a little universe <i>for you.</i></a></header>
 <main id="main" tabindex="-1"><div class="stage" id="stage">
   <section class="scene universe-scene is-active" id="semesta" aria-labelledby="cover-title" data-scene="0" data-phase="idle">
     <canvas id="universe" aria-hidden="true"></canvas>
@@ -117,7 +115,7 @@ $("#app").innerHTML = `
     <div class="letter-intro" id="letter-intro"><p class="eyebrow">YANG INI, KUTULIS SENDIRI</p><h2 id="letter-heading" tabindex="-1">Tidak semua rasa<br>muat dalam puisi.<br><em>Jadi, ini suratku.</em></h2><button id="open-letter" class="envelope" aria-label="Buka surat untukmu"><span class="envelope-back"></span><span class="envelope-paper">dear, you.</span><span class="envelope-front"></span><span class="envelope-flap"></span><span class="wax-seal">a.</span></button><button id="open-letter-text" class="text-button">Ketuk untuk membuka surat ${arrow}</button></div>
     <article id="letter-reading" class="letter-scroll" aria-label="Surat untukmu" hidden></article>
   </div></section>
-  <section class="scene music-scene" data-scene="5" aria-labelledby="music-title" hidden inert><div class="scene-inner music-layout"><div class="record-composition"><div class="record-sleeve">${photo("moment2", "Tentang kita")}</div><div class="vinyl" aria-hidden="true"><div>a.</div></div><span class="handwritten">if this feeling had a sound.</span></div><div class="music-copy"><p class="eyebrow">BERHENTI SEBENTAR DI SINI</p><h2 id="music-title" tabindex="-1">Some songs<br><em>sound like you.</em></h2><p>Kalau ingin, biarkan satu lagu menemani sisa cerita ini.</p><div class="track-list">${content.tracks.map((t, i) => `<button class="track" data-track="${i}"><span class="track-state">▷</span><span><strong>${esc(t.title)}</strong><small>${esc(t.artist)}</small></span></button>`).join("")}</div><p id="track-status" role="status">Country, untuk menemani cerita ini.</p><button class="text-button" id="ambient-toggle" aria-pressed="false">Putar nada lembut ♫</button></div></div></section>
+  <section class="scene music-scene" data-scene="5" aria-labelledby="music-title" hidden inert><div class="scene-inner music-layout"><div class="record-composition"><div class="record-sleeve">${photo("moment2", "Tentang kita")}</div><div class="vinyl" aria-hidden="true"><div>a.</div></div><span class="handwritten">if this feeling had a sound.</span></div><div class="music-copy"><p class="eyebrow">BERHENTI SEBENTAR DI SINI</p><h2 id="music-title" tabindex="-1">This song<br><em>sounds like you.</em></h2><p>Ada rasa yang lebih mudah disampaikan lewat nada.<br>Lagu ini, untuk menemani kita.</p><div class="music-credit"><span class="eyebrow">LAGU UNTUK CERITA INI</span><p>${esc(content.tracks[0].title)} <span>— ${esc(content.tracks[0].artist)}</span></p></div><p id="track-status" role="status"></p></div></div></section>
   <section class="scene wish-scene" data-scene="6" aria-labelledby="wish-title" hidden inert><div class="wish-halo"></div><div class="celebration-particles" aria-hidden="true">${Array.from({ length: 32 }, (_, i) => `<span style="--i:${i};--x:${(i * 37) % 100}%;--delay:${(i % 8) * 0.08}s"></span>`).join("")}</div><div class="scene-inner wish-layout">
     <div class="wish-copy"><p class="eyebrow" id="wish-step">SATU HAL TERAKHIR. YANG PALING PENTING.</p><h2 id="wish-title" tabindex="-1">Hari ini,<br><em>milikmu.</em></h2><p id="wish-instruction">Semua cahaya ini untukmu.<br>Sudah siap membuat satu harapan?</p><div class="wish-steps" aria-label="Langkah perayaan"><span class="current" data-wish-step="0">01 <i>Buat harapan</i></span><span data-wish-step="1">02 <i>Tiup lilin</i></span><span data-wish-step="2">03 <i>Rayakan</i></span></div><button class="primary light" id="ready-wish">Aku siap buat harapan ${arrow}</button><button class="primary light blow-button" id="blow-candle" hidden>Tiup lilinnya <span aria-hidden="true">♡</span></button><p class="wish-hint" id="wish-hint">Ambil waktu sebanyak yang kamu butuhkan.</p></div>
     <div class="cake-composition" id="cake" aria-hidden="true"><div class="candle-glow"></div><div class="cake-candle"><div class="flame"></div><span class="smoke"></span><div class="wick"></div><div class="candle-body"></div></div><div class="cake-top"></div><div class="cake-body"><span class="cake-ribbon">for you, always.</span></div><div class="cake-bottom"></div><div class="cake-plate"></div><div class="cake-stand"></div><div class="cake-foot"></div><div class="cake-spark spark-one">✧</div><div class="cake-spark spark-two">✧</div></div>
@@ -537,48 +535,34 @@ $("#relight").onclick = () => resetWish();
 function pauseTrack() {
   musicAttempt++;
   audio?.pause();
-  soundLabels();
+  syncMusic();
 }
-function soundLabels() {
-  const trackOn = !!audio && !audio.paused && !audio.error;
-  const playing = !!ambient || (trackOn && audio.readyState >= 3);
-  $("#sound-toggle").setAttribute("aria-pressed", String(!!ambient || trackOn));
-  $("#sound-toggle").setAttribute("aria-label", ambient || trackOn ? "Jeda musik" : "Putar musik");
-  $("#sound-label").textContent = playing ? "Suara menyala"
-    : trackOn ? "Menyiapkan musik…"
-    : autoplayBlocked ? "Ketuk untuk musik" : "Suara mati";
-  $("#ambient-toggle").textContent = ambient ? "Jeda nada lembut Ⅱ" : "Putar nada lembut ♫";
-  $("#ambient-toggle").setAttribute("aria-pressed", String(!!ambient));
-  $$(".track").forEach((button, i) => {
-    const selected = trackOn && audio.datasetIndex === i;
-    button.classList.toggle("playing", selected);
-    button.querySelector(".track-state").textContent = selected ? "Ⅱ" : "▷";
-  });
-  $(".vinyl").classList.toggle("playing", trackOn);
+function syncMusic() {
+  const playing = !!audio && !audio.paused && !audio.error;
+  $(".vinyl").classList.toggle("playing", playing);
+  if (audio) audio.dataset.playback = audio.error ? "error"
+    : audio.paused ? "paused" : audio.readyState >= 3 ? "playing" : "loading";
 }
-function cancelAutoMusic() {
-  autoMusicPending = false;
-  autoplayBlocked = false;
-}
-function prepareTrack(index) {
-  const src = index === 0 ? localTrackUrl || content.tracks[index]?.src : content.tracks[index]?.src;
+function prepareTrack() {
+  const src = localTrackUrl || content.tracks[0].src;
   if (!src) return null;
   if (!audio) {
     audio = new Audio();
     audio.id = "story-audio";
     audio.preload = "auto";
     audio.volume = 0.6;
+    audio.loop = true;
     document.body.append(audio);
-    ["play", "pause", "waiting", "canplay", "ended"].forEach(name => audio.addEventListener(name, soundLabels));
+    ["play", "pause", "waiting", "canplay", "ended"].forEach(name => audio.addEventListener(name, syncMusic));
     audio.addEventListener("playing", () => {
-      cancelAutoMusic();
-      $("#track-status").textContent = content.tracks[audio.datasetIndex].title;
-      soundLabels();
+      autoMusicPending = false;
+      $("#track-status").textContent = "";
+      syncMusic();
     });
     audio.addEventListener("error", () => {
-      cancelAutoMusic();
-      $("#track-status").textContent = "Lagu belum bisa dimuat. Coba putar lagi.";
-      soundLabels();
+      autoMusicPending = true;
+      $("#track-status").textContent = "Lagu belum bisa dimuat. Coba muat ulang halaman.";
+      syncMusic();
     });
   }
   if (audio.src !== new URL(src, location.href).href || audio.error) {
@@ -586,106 +570,37 @@ function prepareTrack(index) {
     audio.src = src;
     audio.load();
   }
-  audio.datasetIndex = index;
-  audio.loop = index === 0;
   return audio;
 }
-async function playTrack(index, startup = false) {
-  const current = prepareTrack(index);
-  if (!current) {
-    $("#track-status").textContent = "Lagu ini belum diisi. Kamu tetap bisa menikmati nada lembut di bawah.";
-    return;
-  }
-  // Invoke play in the original tap's call stack: awaiting IndexedDB, an
-  // animation or AudioContext.close here would lose activation on Safari.
-  void stopAmbient();
+async function playTrack() {
+  const current = prepareTrack();
+  if (!current || !current.paused) return;
   const attempt = ++musicAttempt;
-  autoplayBlocked = false;
+  // Play stays inside the tap, before countdown, animation or other awaits.
   try {
     await current.play();
     if (attempt !== musicAttempt) return;
-    cancelAutoMusic();
-    $("#track-status").textContent = content.tracks[index].title;
+    autoMusicPending = false;
+    $("#track-status").textContent = "";
   } catch (error) {
     if (attempt !== musicAttempt || error.name === "AbortError") return;
-    autoplayBlocked = error.name === "NotAllowedError";
-    autoMusicPending = startup && autoplayBlocked;
-    $("#track-status").textContent = autoplayBlocked
-      ? "Ketuk Buka semesta kita atau tombol musik untuk memulai lagunya."
-      : "Lagu belum bisa diputar. Periksa format atau lokasi filenya.";
+    autoMusicPending = true;
+    $("#track-status").textContent = error.name === "NotAllowedError"
+      ? "Musik akan menemani setelah ketukan pertamamu."
+      : "Lagu belum bisa diputar. Coba muat ulang halaman.";
   }
-  soundLabels();
+  syncMusic();
 }
-async function stopAmbient() {
-  if (ambient) {
-    const current = ambient;
-    ambient = undefined;
-    await current.close();
-  }
-}
-async function toggleAmbient() {
-  if (ambient) {
-    await stopAmbient();
-    soundLabels();
-    return;
-  }
-  pauseTrack();
-  try {
-    const context = new AudioContext();
-    await context.resume();
-    ambient = context;
-    const master = context.createGain();
-    master.gain.value = 0.04;
-    master.connect(context.destination);
-    [130.81, 164.81, 196, 261.63, 329.63].forEach((frequency, i) => {
-      const osc = context.createOscillator(),
-        gain = context.createGain();
-      osc.frequency.value = frequency;
-      gain.gain.setValueAtTime(0, context.currentTime);
-      gain.gain.linearRampToValueAtTime(
-        0.17,
-        context.currentTime + 2 + i * 0.3,
-      );
-      osc.connect(gain);
-      gain.connect(master);
-      osc.start();
-    });
-  } catch {
-    $("#track-status").textContent = "Audio belum bisa diputar di browser ini.";
-  }
-  soundLabels();
-}
-$("#ambient-toggle").onclick = () => {
-  cancelAutoMusic();
-  void toggleAmbient();
-};
-$("#sound-toggle").onclick = () => {
-  cancelAutoMusic();
-  if (ambient) void stopAmbient().then(soundLabels);
-  else if (audio && !audio.paused) pauseTrack();
-  else if (prepareTrack(audio?.datasetIndex ?? 0)) void playTrack(audio.datasetIndex);
-  else void toggleAmbient();
-};
-$$("[data-track]").forEach(button => {
-  button.onclick = () => {
-    cancelAutoMusic();
-    const index = Number(button.dataset.track);
-    if (audio && !audio.paused && audio.datasetIndex === index) pauseTrack();
-    else void playTrack(index);
-  };
-});
-// A blocked page-load attempt falls back to the first real tap, including the
-// opening button. Music controls keep their own explicit play/pause intent.
+// One background song accompanies the opening and every chapter. A real tap
+// retries playback if the browser blocked the initial page-load attempt.
 document.addEventListener("click", event => {
-  if (!autoMusicPending || !event.isTrusted ||
-      event.target.closest("#sound-toggle, #ambient-toggle, [data-track], #audio-upload, #reset-local")) return;
-  void playTrack(0, true);
+  if (autoMusicPending && event.isTrusted) void playTrack();
 }, true);
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) {
+    autoMusicPending = true;
     pauseTrack();
-    stopAmbient().then(soundLabels);
-  }
+  } else if (autoMusicPending) void playTrack();
 });
 
 function setBlob(key, blob) {
@@ -694,6 +609,18 @@ function setBlob(key, blob) {
   urls.set(key, url);
   if (key === "track") localTrackUrl = url;
   else localPhotos.set(key, url);
+}
+async function applyLocalTrack(blob) {
+  const original = content.tracks[0].originalUpload;
+  if (original && blob.size === original.bytes && crypto.subtle) {
+    const digest = await crypto.subtle.digest("SHA-256", await blob.arrayBuffer());
+    const hash = [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, "0")).join("");
+    if (hash === original.sha256) {
+      localTrackUrl = undefined;
+      return;
+    }
+  }
+  setBlob("track", blob);
 }
 function applyPhotos() {
   $$("[data-photo]").forEach((el) => {
@@ -771,6 +698,7 @@ const storageReady = openMemories()
     store = s;
     for (const [key, value] of await s.all()) {
       if (key === "settings") settings = value;
+      else if (key === "track" && value instanceof Blob) await applyLocalTrack(value);
       else if (value instanceof Blob) setBlob(key, value);
     }
     applySettings();
@@ -877,11 +805,11 @@ $("#audio-upload").onchange = async (e) => {
   }
   try {
     if (!store) throw Error();
-    cancelAutoMusic();
     pauseTrack();
     await store.put("track", file);
-    setBlob("track", file);
-    soundLabels();
+    await applyLocalTrack(file);
+    autoMusicPending = true;
+    void playTrack();
     status("Lagu pertama tersimpan di browser ini.");
   } catch {
     status("Lagu belum bisa disimpan.");
@@ -893,7 +821,6 @@ $("#reset-local").onclick = async () => {
   try {
     if (!store) throw Error();
     await store.clear();
-    cancelAutoMusic();
     pauseTrack();
     for (const url of urls.values()) URL.revokeObjectURL(url);
     urls.clear();
@@ -902,7 +829,8 @@ $("#reset-local").onclick = async () => {
     settings = {};
     applySettings();
     applyPhotos();
-    soundLabels();
+    autoMusicPending = true;
+    void playTrack();
     status("Semua isian lokal dihapus. Konten bawaan dipulihkan.");
   } catch {
     status("Isian lokal belum bisa dihapus.");
@@ -915,7 +843,12 @@ setInterval(updateCountdown, 1000);
 
 // Preload immediately; neither the Gargantua assets nor a chapter transition
 // gates the music. Existing locally selected music still takes precedence.
-prepareTrack(0);
+prepareTrack();
+if (!document.hidden) void playTrack();
 void storageReady.then(() => {
-  if (autoMusicPending && !document.hidden) void playTrack(0, true);
+  if (localTrackUrl) {
+    prepareTrack();
+    autoMusicPending = true;
+  }
+  if (autoMusicPending && !document.hidden) void playTrack();
 });

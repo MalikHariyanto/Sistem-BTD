@@ -68,17 +68,12 @@ export const content = {
     {
       title: "Country",
       artist: "Koshun Nakao",
-      src: "/music/koshun-nakao-country.mp3",
-    },
-    {
-      title: "Saat dunia melambat",
-      artist: "Putar ketika kamu rindu",
-      src: "",
-    },
-    {
-      title: "Tentang kita",
-      artist: "Simpan satu tempat untuk lagu kita",
-      src: "",
+      src: "/music/koshun-nakao-country-intro-cut.mp3",
+      // Reuse the edited soundtrack when an old preview contains the raw upload.
+      originalUpload: {
+        bytes: 2230113,
+        sha256: "3a3c4750f6cb0a68ab5948c1fa12def73ee5902c01bb51a1616548691e58cab7",
+      },
     },
   ],
   // Foto menemani setiap bait surat saat di-scroll, memakai slot unggahan yang ada.

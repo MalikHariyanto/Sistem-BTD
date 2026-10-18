@@ -2299,3 +2299,14 @@ body.intro-running .story-header > button {
     font-size: 10px;
   }
 }
+
+/* A quiet song dedication, with no player switches or playlist choices. */
+.music-credit { margin-top: 26px; padding-top: 18px; border-top: 1px solid #beac9155; }
+.music-credit .eyebrow { font-size: 8px; }
+.music-credit p { font: 24px/1.5 var(--serif); margin: 10px 0 14px; }
+.music-credit p span { color: #82705a; }
+@media (max-width: 600px) {
+  .music-layout { gap: 48px; }
+  .music-credit { margin-top: 18px; padding-top: 14px; }
+  .music-credit p { font-size: 20px; }
+}
