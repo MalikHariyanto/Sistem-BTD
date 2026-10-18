@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { cameraAt, createOrbit } from "../src/universe-camera.js";
+import { cameraAt, createOrbit, orbitRateAt } from "../src/universe-camera.js";
 import { assignOrbitPhotos } from "../src/photo-textures.js";
 import { createOrbitComposition } from "../src/orbit-composition.js";
 
@@ -27,6 +27,7 @@ test("portraits have breathing room and follow the near orbit off the left edge 
   for (const [width, height] of [
     [320, 568],
     [390, 664],
+    [390, 844],
     [1440, 900],
   ]) {
     const camera = cameraAt(1, width, height),
@@ -40,14 +41,14 @@ test("portraits have breathing room and follow the near orbit off the left edge 
       minVisible = Infinity,
       maxVisible = 0,
       maxAlphaStep = 0;
-    // The ending slows physical time to 2.5%. Observe 15 seconds at 30 fps,
+    // Observe the actual responsive ending speed for 15 seconds at 30 fps,
     // including admission, continuous movement, fade and complete departures.
     for (let frame = 0; frame < 450; frame++) {
       const portraits = composition.update({
         camera,
         width,
         height,
-        time: 7 + (frame / 30) * 0.025,
+        time: 7 + (frame / 30) * orbitRateAt(1, width),
         photoIds,
         ratios,
         now: 1000 + (frame / 30) * 1000,
@@ -76,7 +77,7 @@ test("portraits have breathing room and follow the near orbit off the left edge 
       previous = new Map(portraits.map((p) => [p.index, p]));
     }
     expect(minVisible).toBeGreaterThanOrEqual(4);
-    expect(maxVisible).toBeLessThanOrEqual(width < 700 ? 8 : 16);
+    expect(maxVisible).toBeLessThanOrEqual(width < 700 ? 10 : 16);
     expect(duplicates).toBe(0);
     expect(collisions).toBe(0);
     expect(reversals).toBe(0);
@@ -84,4 +85,37 @@ test("portraits have breathing room and follow the near orbit off the left edge 
     expect(tracked).toBeGreaterThan(1000);
     expect(exits).toBeGreaterThanOrEqual(1);
   }
+});
+
+test('phone endings show a modestly fuller selection while the middle keeps its original slow rotation', () => {
+  for (const width of [320, 360, 390, 430]) {
+    for (const progress of [0, .16, .3, .42, .7, .78])
+      expect(orbitRateAt(progress, width)).toBe(orbitRateAt(progress, 1440));
+    expect(orbitRateAt(1, width) / orbitRateAt(1, 1440)).toBeCloseTo(1.8);
+    expect(orbitRateAt(1, width)).toBeLessThan(.05);
+  }
+  const orbit = createOrbit(), photoIds = assignOrbitPhotos(orbit, 120);
+  const ratios = Array.from({ length: 120 }, (_, i) => i % 3 === 0 ? 320 / 180 : 180 / 260);
+  for (const [width, height, average] of [[360, 640, 6], [390, 844, 8]]) {
+    const camera = cameraAt(1, width, height), composition = createOrbitComposition(orbit);
+    let total = 0;
+    for (let frame = 0; frame < 150; frame++) {
+      const visible = composition.update({ camera, width, height,
+        time: 7 + frame / 30 * orbitRateAt(1, width), photoIds, ratios,
+        now: 1000 + frame / 30 * 1000, reduced: frame === 0,
+      }).filter(photo => photo.alpha > .5);
+      expect(visible.length).toBeLessThanOrEqual(10);
+      expect(new Set(visible.map(photo => photoIds[photo.index])).size).toBe(visible.length);
+      total += visible.length;
+    }
+    expect(total / 150).toBeGreaterThan(average);
+  }
+  // Even skipping straight to the ending with the six default photo mounts
+  // should leave a fuller selection, rather than just four oversized cards.
+  const initial = createOrbitComposition(orbit).update({
+    camera: cameraAt(1, 390, 844), width: 390, height: 844, time: 0,
+    photoIds: assignOrbitPhotos(orbit, 6), ratios: Array(6).fill(.8), now: 1000, reduced: true,
+  }).filter(photo => photo.alpha > .5);
+  expect(initial.length).toBeGreaterThanOrEqual(5);
+  expect(initial.length).toBeLessThanOrEqual(10);
 });

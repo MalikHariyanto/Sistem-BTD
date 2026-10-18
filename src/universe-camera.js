@@ -45,9 +45,10 @@ export const orbitFieldSize = (seed, width) =>
   (seed * 97.13) % 1 > 0.76
     ? (0.0032 + seed * 0.0016) * (width < 700 ? 1.3 : 1)
     : 0;
-export const orbitRateAt = (p) =>
+export const orbitRateAt = (p, width = Infinity) =>
   (0.025 + 0.975 * (1 - ease((p - 0.7) / 0.3))) *
-  (1 - 0.15 * photoShowcaseAt(p));
+  (1 - 0.15 * photoShowcaseAt(p)) *
+  (width < 700 ? 1 + 0.8 * ease((p - 0.78) / 0.22) : 1);
 
 // Stable particle identities: an uploaded image changes the texture, never its
 // orbit. A single packed buffer is shared by the GPU and the Canvas fallback.

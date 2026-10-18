@@ -514,7 +514,7 @@ export function createUniverse(canvas) {
         progress = motion.matches
           ? clamp((now - started) / duration)
           : journeyProgress(now - started);
-      if (!motion.matches) flowSeconds += dt * orbitRateAt(progress);
+      if (!motion.matches) flowSeconds += dt * orbitRateAt(progress, width);
       draw();
       if (traveling && progress >= 1) {
         traveling = false;

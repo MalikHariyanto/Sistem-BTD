@@ -75,14 +75,15 @@ export function createOrbitComposition(orbit) {
         ? Math.min(0.1, Math.max(0, (now - previous) / 1000))
         : 1;
       previous = now;
-      const gap = width < 700 ? 8 : 15;
-      const limit = width < 700 ? 8 : 16;
+      const mobileEnding = width < 700 && camera.progress >= .9;
+      const gap = width < 700 ? (mobileEnding ? 6 : 8) : 15;
+      const limit = width < 700 ? (mobileEnding ? 10 : 8) : 16;
       const records = [];
       for (const index of candidates) {
         const point = orbitAt(orbit, index, time);
         const projected = focusProjection(point, camera, width, height);
         const minimum = mix(
-          width < 700 ? 34 : 55,
+          width < 700 ? (mobileEnding ? 28 : 34) : 55,
           width < 700 ? 18 : 24,
           camera.showcase || 0,
         );
@@ -129,6 +130,12 @@ export function createOrbitComposition(orbit) {
             width,
             height,
           ) || projected;
+        // Tall phones have room for more medium portraits around the greeting.
+        // Existing portraits keep priority and their original size.
+        const preferred = width * .25;
+        const portraitPriority = mobileEnding && height >= width * 2
+          ? Math.min(projected.size, preferred) - Math.max(0, projected.size - preferred) * .8
+          : projected.size;
         records.push({
           index,
           point,
@@ -144,7 +151,7 @@ export function createOrbitComposition(orbit) {
             100 *
               (camera.showcase || 0) *
               (1 - ease(Math.abs(point.radius - 0.14) / 0.06)) +
-            projected.size * quiet * front +
+            portraitPriority * quiet * front +
             point.seed * 10,
         });
       }
