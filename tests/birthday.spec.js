@@ -122,7 +122,7 @@ test("chapters dissolve without content modals; poems and sourced wishes can be 
   await expect(page.locator('[data-scene="2"]')).toHaveAttribute("inert", "");
 });
 
-test("letter opens in place and follows the scroll; music remains user triggered", async ({
+test("letter opens in place and follows the scroll; music controls remain synchronized", async ({
   page,
 }) => {
   await enter(page);
@@ -143,11 +143,10 @@ test("letter opens in place and follows the scroll; music remains user triggered
     "Aku tidak bisa menjanjikan",
   );
   await chapter(page, "Nada kita");
-  await expect(page.locator("#sound-toggle")).toHaveAttribute(
-    "aria-pressed",
-    "false",
-  );
+  await expect(page.locator("#sound-toggle")).toHaveAttribute("aria-pressed", "true");
   await page.locator('[data-track="0"]').click();
+  await expect(page.locator("#sound-toggle")).toHaveAttribute("aria-pressed", "false");
+  await page.locator('[data-track="1"]').click();
   await expect(page.locator("#track-status")).toContainText("belum diisi");
   await page.locator("#ambient-toggle").click();
   await expect(page.locator("#sound-toggle")).toHaveAttribute(

@@ -66,9 +66,9 @@ export const content = {
   ],
   tracks: [
     {
-      title: "Untuk perjalanan pulang",
-      artist: "Satu lagu, seribu ingatan",
-      src: "",
+      title: "Country",
+      artist: "Koshun Nakao",
+      src: "/music/koshun-nakao-country.mp3",
     },
     {
       title: "Saat dunia melambat",
