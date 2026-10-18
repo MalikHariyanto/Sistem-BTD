@@ -29,16 +29,17 @@ function neighborRepeats(orbit, ids, time) {
 }
 
 test("photo assignment reduces close duplicates, balances the full library and stays stable", () => {
-  expect(ORBIT_PHOTO_COUNT).toBe(120);
-  expect(Object.keys(content.photos)).toHaveLength(129);
+  expect(ORBIT_PHOTO_COUNT).toBe(200);
+  expect(Object.keys(content.photos)).toHaveLength(209);
   expect(content.photos).toHaveProperty("orbit24");
   expect(content.photos).toHaveProperty("orbit120");
+  expect(content.photos).toHaveProperty("orbit200");
   const orbit = createOrbit(),
-    assigned = assignOrbitPhotos(orbit, 129);
+    assigned = assignOrbitPhotos(orbit, 209);
   const old = Float32Array.from({ length: assigned.length }, (_, i) =>
-    Math.floor(orbit[i * 4 + 3] * 129),
+    Math.floor(orbit[i * 4 + 3] * 209),
   );
-  const uses = new Array(129).fill(0);
+  const uses = new Array(209).fill(0);
   for (const id of assigned) uses[id]++;
   expect(Math.min(...uses)).toBeGreaterThan(0);
   expect(Math.max(...uses) - Math.min(...uses)).toBeLessThan(40);
@@ -48,52 +49,51 @@ test("photo assignment reduces close duplicates, balances the full library and s
     expect(baseline.repeats).toBeGreaterThan(100);
     expect(current.repeats).toBeLessThan(baseline.repeats * 0.35);
   }
-  expect(assignOrbitPhotos(orbit, 129)).toEqual(assigned);
+  expect(assignOrbitPhotos(orbit, 209)).toEqual(assigned);
   expect([...assignOrbitPhotos(createOrbit(32), 1)]).toEqual(
     new Array(32).fill(0),
   );
   for (const maxSize of [1024, 2048, 4096, 8192]) {
-    const atlas = planPhotoAtlas(129, maxSize);
+    const atlas = planPhotoAtlas(209, maxSize);
     expect(atlas.width).toBeLessThanOrEqual(maxSize);
     expect(atlas.height).toBeLessThanOrEqual(maxSize);
     expect(atlas.width * atlas.height).toBeLessThanOrEqual(8_000_000);
-    expect(atlas.columns * atlas.rows).toBeGreaterThanOrEqual(129);
+    expect(atlas.columns * atlas.rows).toBeGreaterThanOrEqual(209);
   }
 });
 
-test("all 120 orbit inputs upload in a batch, persist and fit a valid WebGL atlas", async ({
+test("all 200 orbit inputs upload in a batch, persist and fit a valid WebGL atlas", async ({
   page,
 }) => {
   test.setTimeout(60000);
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
   await page.locator("#open-editor").click();
-  await expect(page.locator("[data-upload]")).toHaveCount(129);
+  await expect(page.locator("[data-upload]")).toHaveCount(209);
   const photos = await page.evaluate(() => {
     const c = document.createElement("canvas");
     c.width = 80;
     c.height = 100;
     const p = c.getContext("2d");
-    return Array.from({ length: 120 }, (_, i) => {
+    return Array.from({ length: 200 }, (_, i) => {
       p.fillStyle = `hsl(${(i * 137.5) % 360} 100% 50%)`;
       p.fillRect(0, 0, 80, 100);
       return c.toDataURL().split(",")[1];
     });
   });
   const buffer = Buffer.from(photos[0], "base64");
+  const files = photos.map((photo, i) => ({
+    name: `memory-${i + 1}.png`, mimeType: "image/png", buffer: Buffer.from(photo, "base64"),
+  }));
   await page.locator("#bulk-photos").setInputFiles(
-    Array.from({ length: 120 }, (_, i) => ({
-      name: `memory-${i + 1}.png`,
-      mimeType: "image/png",
-      buffer: Buffer.from(photos[i], "base64"),
-    })),
+    files.slice(0, 120),
   );
   await expect(page.locator("#editor-status")).toHaveText(
     "120 foto tersimpan.",
     { timeout: 40000 },
   );
   await expect(page.locator("#photo-count")).toHaveText(
-    "120 foto terisi · 9 tempat kosong",
+    "120 foto terisi · 89 tempat kosong",
   );
   await expect(page.locator("#universe")).toHaveAttribute(
     "data-photo-sources",
@@ -106,6 +106,26 @@ test("all 120 orbit inputs upload in a batch, persist and fit a valid WebGL atla
     "120",
     { timeout: 15000 },
   );
+  await page.locator("#open-editor").click();
+  await page.locator("#bulk-photos").setInputFiles(files.slice(120));
+  await expect(page.locator("#editor-status")).toHaveText("80 foto tersimpan.", { timeout: 40000 });
+  await expect(page.locator("#photo-count")).toHaveText("200 foto terisi · 9 tempat kosong");
+  await page.reload();
+  await expect(page.locator("#universe")).toHaveAttribute("data-photo-sources", "200", { timeout: 15000 });
+  // Every existing key survives the capacity increase; none is overwritten.
+  const stored = await page.evaluate(async () => {
+    const { openMemories } = await import("/src/memories.js");
+    const entries = await (await openMemories()).all();
+    return Promise.all(entries.filter(([key]) => key.startsWith("orbit")).map(async ([key, blob]) => {
+      const image = await createImageBitmap(blob);
+      const c = document.createElement("canvas"); c.width = c.height = 1;
+      c.getContext("2d").drawImage(image, 0, 0, 1, 1); image.close();
+      return { key, rgb: [...c.getContext("2d").getImageData(0, 0, 1, 1).data].slice(0, 3) };
+    }));
+  });
+  expect(stored).toHaveLength(200);
+  expect(stored.find(p => p.key === "orbit01").rgb[0]).toBeGreaterThan(240);
+  expect(stored.find(p => p.key === "orbit200")).toBeTruthy();
   expect(
     await page.locator("#universe").evaluate((c) => {
       const gl = c.getContext("webgl");
@@ -125,7 +145,7 @@ test("all 120 orbit inputs upload in a batch, persist and fit a valid WebGL atla
   await expect(page.locator("#editor-status")).toContainText("Foto tersimpan");
   await expect(page.locator("#universe")).toHaveAttribute(
     "data-photo-sources",
-    "121",
+    "201",
   );
   await page.keyboard.press("Escape");
   await page.locator("#begin").click();

@@ -1,6 +1,6 @@
 // Semua konten permanen dapat diganti di sini. Path foto/audio relatif ke public/.
 // Contoh: photo: '/photos/portrait.webp'. Kosong = bingkai tanpa foto.
-export const ORBIT_PHOTO_COUNT = 120;
+export const ORBIT_PHOTO_COUNT = 200;
 
 export const content = {
   recipient: "Kamu",
@@ -16,7 +16,7 @@ export const content = {
     moment1: "",
     moment2: "",
     moment3: "",
-    // 120 foto untuk Gargantua. Slot lama orbit01–orbit24 tetap dipertahankan.
+    // 200 foto untuk Gargantua. Semua kunci lama tetap dipertahankan.
     ...Object.fromEntries(
       Array.from({ length: ORBIT_PHOTO_COUNT }, (_, i) => [
         `orbit${String(i + 1).padStart(2, "0")}`,

@@ -585,20 +585,28 @@ export function createUniverse(canvas) {
     if (thumbnails.has(src)) return Promise.resolve(thumbnails.get(src));
     return new Promise((resolve) => {
       const im = new Image();
-      im.onload = () => {
-        const thumb = document.createElement("canvas");
-        // Preserve the whole image and its original orientation. The atlas may
-        // pack rectangles uniformly, but each sprite restores this aspect ratio.
-        const scale = Math.min(1, 320 / Math.max(im.width, im.height));
-        thumb.width = Math.max(1, Math.round(im.width * scale));
-        thumb.height = Math.max(1, Math.round(im.height * scale));
-        thumb.getContext("2d").drawImage(im, 0, 0, thumb.width, thumb.height);
-        thumbnails.set(src, thumb);
+      const finish = (image) => {
         im.onload = im.onerror = null;
         im.src = "";
-        resolve(thumb);
+        resolve(image);
       };
-      im.onerror = () => resolve(null);
+      im.onload = () => {
+        try {
+          if (!im.naturalWidth || !im.naturalHeight) throw Error("Empty photo");
+          const thumb = document.createElement("canvas");
+          // Preserve the whole image and its original orientation. The atlas may
+          // pack rectangles uniformly, but each sprite restores this aspect ratio.
+          const scale = Math.min(1, 320 / Math.max(im.width, im.height));
+          thumb.width = Math.max(1, Math.round(im.width * scale));
+          thumb.height = Math.max(1, Math.round(im.height * scale));
+          thumb.getContext("2d").drawImage(im, 0, 0, thumb.width, thumb.height);
+          thumbnails.set(src, thumb);
+          finish(thumb);
+        } catch {
+          finish(null);
+        }
+      };
+      im.onerror = () => finish(null);
       im.src = src;
     });
   }
@@ -623,6 +631,10 @@ export function createUniverse(canvas) {
     );
     if (current !== generation) return;
     images = loaded.filter(Boolean);
+    const unreadable = sources.length - images.length;
+    if (unreadable) window.dispatchEvent(new CustomEvent("photosrendererror", {
+      detail: `${unreadable} foto belum terbaca. Unggah ulang foto tersebut; foto lain tetap tersimpan.`,
+    }));
     if (gpu) gpu.setPhotos(images);
     else {
       // Bake the small, softened disk textures once. Applying a Canvas filter
@@ -640,7 +652,7 @@ export function createUniverse(canvas) {
       }
       photoIds = assignOrbitPhotos(orbit, images.length);
     }
-    canvas.dataset.photoSources = String(images.length);
+    if (!gpu) canvas.dataset.photoSources = String(images.length);
     for (const key of thumbnails.keys())
       if (!sources.includes(key)) thumbnails.delete(key);
     draw();

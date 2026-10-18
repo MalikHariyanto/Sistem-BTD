@@ -1,15 +1,16 @@
 import { orbitAt } from "./universe-camera.js";
 
 // Keep both the hardware size and decoded GPU memory bounded as libraries grow.
-export function planPhotoAtlas(count, maxSize = 4096) {
+export function planPhotoAtlas(count, maxSize = 4096, maxTile = 256) {
   const columns = Math.min(count, Math.ceil(Math.sqrt(count * 1.25)));
   const rows = Math.ceil(count / columns);
   for (const tileWidth of [256, 192, 128, 96, 64, 32]) {
+    if (tileWidth > maxTile) continue;
     const tileHeight = tileWidth * 1.25;
     const width = columns * tileWidth,
       height = rows * tileHeight;
     if (width <= maxSize && height <= maxSize && width * height <= 8_000_000)
-      return { columns, rows, tileWidth, tileHeight, width, height };
+      return { columns, rows, tileWidth, tileHeight, width, height, gutter: 2 };
   }
   throw new Error("Photo atlas exceeds the supported texture size.");
 }

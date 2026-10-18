@@ -713,6 +713,7 @@ function updateCountdown() {
     : "Hari spesialmu sudah tiba. Selamat ulang tahun ♡";
 }
 const status = (message) => ($("#editor-status").textContent = message);
+window.addEventListener("photosrendererror", (event) => status(event.detail));
 $("#open-editor").onclick = () => {
   $("#editor-dialog").showModal();
   universe.setPaused(true);

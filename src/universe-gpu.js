@@ -224,8 +224,9 @@ uniform vec4 uFlight;
 uniform vec2 uCenter;
 varying float vPhotoId;
 varying float vAspect;
-uniform sampler2D uPhotos;
+uniform highp sampler2D uPhotos;
 uniform vec3 uAtlas;
+uniform vec2 uAtlasInset;
 uniform float uShade;
 uniform float uLayer;
 uniform float uComposition;
@@ -276,7 +277,7 @@ void main(){
   vec2 local=p+vec2(.5);
   float id=clamp(floor(vPhotoId+.5),0.0,uAtlas.z-1.0);
   vec2 tile=vec2(mod(id,uAtlas.x),floor(id/uAtlas.x));
-  vec3 photo=texture2D(uPhotos,(tile+mix(vec2(.006),vec2(.994),local))/uAtlas.xy).rgb;
+  vec3 photo=texture2D(uPhotos,(tile+mix(uAtlasInset,vec2(1.0)-uAtlasInset,local))/uAtlas.xy).rgb;
   float border=smoothstep(.48,.495,edge)*readable;
   photo=mix(photo,vec3(.91,.87,.79),border*(uLayer>2.5?.15:.55));
   // Warm reflected light and compressed contrast embed the photographs in the
@@ -311,6 +312,70 @@ void main(){
 }
 `;
 
+function buildPhotoSheet(images, plan) {
+  const count = images.length || 6;
+  const {
+    columns: cols,
+    tileWidth,
+    tileHeight,
+    width,
+    height,
+    gutter,
+  } = plan;
+  const sheet = document.createElement("canvas");
+  sheet.width = width;
+  sheet.height = height;
+  const ctx = sheet.getContext("2d");
+  for (let i = 0; i < count; i++) {
+    const x = (i % cols) * tileWidth,
+      y = Math.floor(i / cols) * tileHeight;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(x, y, tileWidth, tileHeight);
+    ctx.clip();
+    ctx.translate(x + gutter, y + gutter);
+    const innerWidth = tileWidth - gutter * 2,
+      innerHeight = tileHeight - gutter * 2;
+    if (images.length) ctx.drawImage(images[i], 0, 0, innerWidth, innerHeight);
+    else {
+      ctx.scale(innerWidth / 256, innerHeight / 320);
+      // Blank, warm photo mounts until the owner supplies personal images.
+      ctx.fillStyle = [
+        "#928375",
+        "#c3b7a4",
+        "#ad9c87",
+        "#776b5f",
+        "#d6cbb8",
+        "#a38a72",
+      ][i];
+      ctx.fillRect(0, 0, 256, 320);
+      ctx.strokeStyle = "#f1e7d9a0";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(12, 12, 232, 296);
+      ctx.strokeStyle = "#f3e9d350";
+      ctx.beginPath();
+      ctx.arc(128, 138, 28, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(70, 210);
+      ctx.lineTo(110, 175);
+      ctx.lineTo(140, 194);
+      ctx.lineTo(180, 160);
+      ctx.stroke();
+    }
+    ctx.restore();
+    // Extruded padding plus half-texel UV bounds prevents another photo's
+    // rows from bleeding into this one, including small mobile atlases.
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(sheet, x + gutter, y + gutter, innerWidth, 1, x + gutter, y, innerWidth, gutter);
+    ctx.drawImage(sheet, x + gutter, y + tileHeight - gutter - 1, innerWidth, 1, x + gutter, y + tileHeight - gutter, innerWidth, gutter);
+    ctx.drawImage(sheet, x + gutter, y, 1, tileHeight, x, y, gutter, tileHeight);
+    ctx.drawImage(sheet, x + tileWidth - gutter - 1, y, 1, tileHeight, x + tileWidth - gutter, y, gutter, tileHeight);
+    ctx.imageSmoothingEnabled = true;
+  }
+  return sheet;
+}
+
 export function createUniverseGPU(canvas) {
   const gl = canvas.getContext("webgl", {
     alpha: false,
@@ -336,6 +401,8 @@ export function createUniverseGPU(canvas) {
   let photoAttributes = new Float32Array(PARTICLE_COUNT * 2);
   const maxTextureSize = Math.min(4096, gl.getParameter(gl.MAX_TEXTURE_SIZE));
   let atlas = [1, 1, 1];
+  let atlasInset = [0, 0],
+    pendingPhotos;
   const pointLimit = gl.getParameter(gl.ALIASED_POINT_SIZE_RANGE)[1];
   function compile(type, code) {
     const shader = gl.createShader(type);
@@ -429,6 +496,7 @@ export function createUniverseGPU(canvas) {
         "uCamera",
         "uPlateReady",
         "uAtlas",
+        "uAtlasInset",
         "uShade",
         "uCover",
       ],
@@ -525,6 +593,7 @@ export function createUniverseGPU(canvas) {
     gl.uniform1f(u.uPortraitScale, portraitScaleAt(camera.zoom));
     gl.uniform1i(u.uPhotos, 2);
     gl.uniform3fv(u.uAtlas, atlas);
+    gl.uniform2fv(u.uAtlasInset, atlasInset);
     gl.uniform1f(u.uShade, camera.shade);
     gl.uniform1f(u.uCover, cover);
     gl.uniform1f(u.uComposition, compositionAt(camera.zoom));
@@ -593,67 +662,111 @@ export function createUniverseGPU(canvas) {
     gl.disable(gl.DEPTH_TEST);
   }
   function setPhotos(images) {
-    const count = images.length || 6;
-    ratios = images.map((image) => image.width / image.height);
-    const {
-      columns: cols,
-      rows,
-      tileWidth,
-      tileHeight,
-      width,
-      height,
-    } = planPhotoAtlas(count, maxTextureSize);
-    const sheet = document.createElement("canvas");
-    sheet.width = width;
-    sheet.height = height;
-    const ctx = sheet.getContext("2d");
-    for (let i = 0; i < count; i++) {
-      const x = (i % cols) * tileWidth,
-        y = Math.floor(i / cols) * tileHeight;
-      if (images.length) ctx.drawImage(images[i], x, y, tileWidth, tileHeight);
-      else {
-        // Blank, warm photo mounts until the owner supplies personal images.
-        ctx.fillStyle = [
-          "#928375",
-          "#c3b7a4",
-          "#ad9c87",
-          "#776b5f",
-          "#d6cbb8",
-          "#a38a72",
-        ][i];
-        ctx.fillRect(x, y, 256, 320);
-        ctx.strokeStyle = "#f1e7d9a0";
-        ctx.lineWidth = 2;
-        ctx.strokeRect(x + 12, y + 12, 232, 296);
-        ctx.strokeStyle = "#f3e9d350";
-        ctx.beginPath();
-        ctx.arc(x + 128, y + 138, 28, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(x + 70, y + 210);
-        ctx.lineTo(x + 110, y + 175);
-        ctx.lineTo(x + 140, y + 194);
-        ctx.lineTo(x + 180, y + 160);
-        ctx.stroke();
-      }
+    if (gl.isContextLost()) {
+      pendingPhotos = images;
+      canvas.dataset.photosStatus = "waiting";
+      return false;
     }
-    photoIds = images.length
+    const count = images.length || 6;
+    const nextIds = images.length
       ? assignOrbitPhotos(orbit, count)
       : Float32Array.from({ length: PARTICLE_COUNT }, (_, i) => i % count);
-    photoAttributes = new Float32Array(PARTICLE_COUNT * 2);
+    const nextAttributes = new Float32Array(PARTICLE_COUNT * 2);
     for (let i = 0; i < PARTICLE_COUNT; i++) {
-      const image = images[photoIds[i]];
-      photoAttributes[i * 2] = photoIds[i];
-      photoAttributes[i * 2 + 1] = image ? image.width / image.height : 0.8;
+      const image = images[nextIds[i]];
+      nextAttributes[i * 2] = nextIds[i];
+      nextAttributes[i * 2 + 1] = image ? image.width / image.height : 0.8;
     }
-    gl.bindBuffer(gl.ARRAY_BUFFER, photoBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, photoAttributes, gl.STATIC_DRAW);
-    canvas.dataset.atlasWidth = String(width);
-    canvas.dataset.atlasHeight = String(height);
-    canvas.dataset.atlasTile = String(tileWidth);
-    atlas = [cols, rows, count];
-    sources.photos = sheet;
-    upload(2, sheet);
+    let nextSheet, nextTexture, nextBuffer, plan;
+    // Stage and validate the texture BEFORE changing IDs or atlas dimensions.
+    // If a device rejects an upload, retry a smaller atlas as one complete unit.
+    for (let maxTile = 256; maxTile >= 32; ) {
+      try {
+        plan = planPhotoAtlas(count, maxTextureSize, maxTile);
+      } catch {
+        break;
+      }
+      let sheet;
+      try {
+        sheet = buildPhotoSheet(images, plan);
+      } catch {
+        break;
+      }
+      const candidate = gl.createTexture();
+      if (!candidate) {
+        maxTile = plan.tileWidth - 1;
+        continue;
+      }
+      gl.activeTexture(gl.TEXTURE2);
+      gl.bindTexture(gl.TEXTURE_2D, candidate);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+      let error = gl.INVALID_OPERATION;
+      try {
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, sheet);
+        error = gl.getError();
+      } catch {
+        // A rejected canvas source must not replace the working collection.
+      }
+      let candidateBuffer;
+      if (error === gl.NO_ERROR && !gl.isContextLost()) {
+        candidateBuffer = gl.createBuffer();
+        if (candidateBuffer) {
+          gl.bindBuffer(gl.ARRAY_BUFFER, candidateBuffer);
+          gl.bufferData(gl.ARRAY_BUFFER, nextAttributes, gl.STATIC_DRAW);
+          error = gl.getError();
+        } else error = gl.OUT_OF_MEMORY;
+      }
+      if (error === gl.NO_ERROR && !gl.isContextLost()) {
+        nextSheet = sheet;
+        nextTexture = candidate;
+        nextBuffer = candidateBuffer;
+        break;
+      }
+      gl.deleteTexture(candidate);
+      if (candidateBuffer) gl.deleteBuffer(candidateBuffer);
+      if (gl.isContextLost()) {
+        pendingPhotos = images;
+        break;
+      }
+      maxTile = plan.tileWidth - 1;
+    }
+    if (!nextTexture) {
+      gl.activeTexture(gl.TEXTURE2);
+      gl.bindTexture(gl.TEXTURE_2D, textures[2]);
+      gl.bindBuffer(gl.ARRAY_BUFFER, photoBuffer);
+      canvas.dataset.photosStatus = gl.isContextLost() ? "waiting" : "error";
+      if (!gl.isContextLost())
+        window.dispatchEvent(new CustomEvent("photosrendererror", {
+          detail: "Foto tetap tersimpan. Perangkat belum berhasil menampilkan koleksi; coba muat ulang halaman.",
+        }));
+      return false;
+    }
+    ratios = images.map((image) => image.width / image.height);
+    photoIds = nextIds;
+    photoAttributes = nextAttributes;
+    const previousBuffer = photoBuffer;
+    photoBuffer = nextBuffer;
+    gl.deleteBuffer(previousBuffer);
+    const previousTexture = textures[2];
+    textures[2] = nextTexture;
+    gl.deleteTexture(previousTexture);
+    canvas.dataset.atlasWidth = String(plan.width);
+    canvas.dataset.atlasHeight = String(plan.height);
+    canvas.dataset.atlasTile = String(plan.tileWidth);
+    canvas.dataset.photosStatus = "ready";
+    canvas.dataset.photoSources = String(images.length);
+    pendingPhotos = undefined;
+    atlas = [plan.columns, plan.rows, count];
+    atlasInset = [
+      (plan.gutter + 0.5) / plan.tileWidth,
+      (plan.gutter + 0.5) / plan.tileHeight,
+    ];
+    sources.photos = nextSheet;
+    return true;
   }
   setPhotos([]);
   canvas.addEventListener("webglcontextlost", (event) =>
@@ -661,6 +774,11 @@ export function createUniverseGPU(canvas) {
   );
   canvas.addEventListener("webglcontextrestored", () => {
     initialize();
+    if (pendingPhotos) {
+      const pending = pendingPhotos;
+      pendingPhotos = undefined;
+      setPhotos(pending);
+    }
     if (last) draw(last);
   });
   return {
