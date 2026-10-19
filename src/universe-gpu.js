@@ -237,6 +237,7 @@ uniform vec2 uPortraitGrid;
 uniform vec2 uPortraitInset;
 uniform vec3 uAtlas;
 uniform vec2 uAtlasInset;
+uniform vec2 uAtlasTexel;
 uniform float uShade;
 uniform float uLayer;
 uniform float uComposition;
@@ -294,6 +295,18 @@ void main(){
   vec2 photoUV=(tile+mix(inset,vec2(1.0)-inset,local))/grid;
   vec3 photo=detailed?texture2D(uPortraits,photoUV).rgb:texture2D(uPhotos,photoUV).rgb;
   float nearClarity=uLayer>1.5&&uLayer<2.5?smoothstep(32.0,128.0,size)*(1.0-vAtmosphere.x)*vAtmosphere.y:0.0;
+  // Resolve the actual rotating disk cards during the approach, separately
+  // from the large portraits selected for the ending. Distant dust stays soft.
+  float diskClarity=uLayer>2.5?smoothstep(10.0,32.0,size)*(1.0-vAtmosphere.x)*vAtmosphere.y:0.0;
+  if(diskClarity>.01){
+    vec2 low=(tile+inset)/grid,high=(tile+vec2(1.0)-inset)/grid;
+    vec3 neighbors=(
+      texture2D(uPhotos,clamp(photoUV+vec2(uAtlasTexel.x,0.0),low,high)).rgb+
+      texture2D(uPhotos,clamp(photoUV-vec2(uAtlasTexel.x,0.0),low,high)).rgb+
+      texture2D(uPhotos,clamp(photoUV+vec2(0.0,uAtlasTexel.y),low,high)).rgb+
+      texture2D(uPhotos,clamp(photoUV-vec2(0.0,uAtlasTexel.y),low,high)).rgb)*.25;
+    photo+=clamp((photo-neighbors)*.40,vec3(-.04),vec3(.04))*diskClarity;
+  }
   float border=smoothstep(.48,.495,edge)*readable;
   photo=mix(photo,vec3(.91,.87,.79),border*(uLayer>2.5?.15:.55));
   // Warm reflected light and compressed contrast embed the photographs in the
@@ -301,7 +314,7 @@ void main(){
   float photoLum=dot(photo,vec3(.2126,.7152,.0722));
   vec3 softened=mix(vec3(photoLum),photo,.58+.20*vMiddle)*.70+vec3(.16,.11,.07);
   softened=mix(softened,vec3(.98,.73,.45),.13+vHeat*.10);
-  photo=mix(photo,softened,uPhotoField*(uLayer>2.5?1.0:.4)*(1.0-.65*nearClarity));
+  photo=mix(photo,softened,uPhotoField*(uLayer>2.5?1.0:.4)*(1.0-.65*nearClarity)*(1.0-.55*diskClarity));
   float lum=dot(photo,vec3(.2126,.7152,.0722));
   vec3 ember=mix(vec3(.68,.30,.095),vec3(1.0,.90,.66),vHeat+.22)*(.65+lum*.75);
   vec3 color=mix(ember,photo,readable);
@@ -317,9 +330,9 @@ void main(){
   vec3 diskLight=texture2D(uWide,clamp(uv,0.0,1.0)).rgb;
   float light=dot(diskLight,vec3(.2126,.7152,.0722));
   float coupled=uPlateReady*(1.0-softstep(.07,.25,abs(uFlight.x)/uFlight.z));
-  float lightFloor=.24+.34*vMiddle+.22*nearClarity;
+  float lightFloor=.24+.34*vMiddle+.22*nearClarity+.16*diskClarity;
   opacity*=mix(1.0,lightFloor+(1.0-lightFloor)*smoothstep(.025,.55,light),coupled);
-  color=mix(color,mix(color*.72,vec3(1.0,.78,.49),.22+.18*light),coupled*.65*(1.0-.55*vMiddle)*(1.0-.45*nearClarity));
+  color=mix(color,mix(color*.72,vec3(1.0,.78,.49),.22+.18*light),coupled*.65*(1.0-.55*vMiddle)*(1.0-.45*nearClarity)*(1.0-.35*diskClarity));
   if(opacity<.025)discard;
   vec2 screen=gl_FragCoord.xy/(uViewport*uDpr);
   float shade=uShade*(.65+.25*length(screen-.5))*(1.0-.25*nearClarity);
@@ -517,6 +530,7 @@ export function createUniverseGPU(canvas) {
         "uPlateReady",
         "uAtlas",
         "uAtlasInset",
+        "uAtlasTexel",
         "uShade",
         "uCover",
       ],
@@ -618,6 +632,7 @@ export function createUniverseGPU(canvas) {
     gl.uniform2f(u.uPortraitInset, 0, 0);
     gl.uniform3fv(u.uAtlas, atlas);
     gl.uniform2fv(u.uAtlasInset, atlasInset);
+    gl.uniform2f(u.uAtlasTexel, 1 / (sources.photos?.width || 256), 1 / (sources.photos?.height || 320));
     gl.uniform1f(u.uShade, camera.shade);
     gl.uniform1f(u.uCover, cover);
     gl.uniform1f(u.uComposition, compositionAt(camera.zoom));

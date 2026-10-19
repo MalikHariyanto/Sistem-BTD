@@ -94,7 +94,8 @@ test("GPU resolves uploaded textures across the middle disk rather than showing 
     ctx.fillStyle = "#00ffff"; ctx.fillRect(0, 0, 100, 140);
     // Two contrasting halves ensure this is an actual sampled image texture.
     ctx.fillStyle = "#ff0066"; ctx.fillRect(50, 0, 50, 140);
-    gpu.setPhotos([photo]);
+    // Exercise the smaller atlas tiles used by a full uploaded collection.
+    gpu.setPhotos(Array(200).fill(photo));
     const gl = canvas.getContext("webgl"), camera = cameraAt(0.3, width, height);
     function capture(progress) {
       gpu.draw({ camera: { ...camera, progress }, width, height, time: 6, detail: 0, cover: 0, showcase: 1, reduced: true });
@@ -131,6 +132,61 @@ test("GPU resolves uploaded textures across the middle disk rather than showing 
   expect(coverage.dim.error).toBe(0);
   expect(coverage.dim.extraCyan, JSON.stringify(coverage.dim)).toBeGreaterThan(coverage.width < 700 ? 100 : 300);
   expect(coverage.dim.cells).toBeGreaterThan(coverage.width < 700 ? 5 : 20);
+});
+
+test("close rotating disk photographs retain readable image contrast during slowmo with 200 uploads", async ({ page, isMobile }) => {
+  test.setTimeout(60000);
+  await page.setViewportSize(isMobile ? { width: 390, height: 844 } : { width: 1280, height: 800 });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  await page.locator("#open-editor").click();
+  const result = await page.evaluate(async () => {
+    const { createUniverseGPU } = await import("/src/universe-gpu.js");
+    const m = await import("/src/universe-camera.js");
+    const width = innerWidth, height = innerHeight;
+    const canvas = document.createElement("canvas"); canvas.width = width; canvas.height = height;
+    const gpu = createUniverseGPU(canvas), gl = canvas.getContext("webgl");
+    const photo = document.createElement("canvas"); photo.width = 256; photo.height = 320;
+    const ctx = photo.getContext("2d");
+    ctx.fillStyle = "#303030"; ctx.fillRect(0, 0, 128, 320);
+    ctx.fillStyle = "#d0d0d0"; ctx.fillRect(128, 0, 128, 320);
+    gpu.setPhotos(Array(200).fill(photo));
+    const dark = document.createElement("canvas"); dark.width = dark.height = 32;
+    dark.getContext("2d").fillRect(0, 0, 32, 32);
+    gpu.setPlate(dark);
+    const camera = m.cameraAt(.32, width, height);
+    gpu.draw({ camera, width, height, time: 6, detail: 0, cover: 0, showcase: camera.showcase, reduced: true });
+    const pixels = new Uint8Array(width * height * 4);
+    gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+    function luminance(x, y) {
+      const i = ((height - 1 - Math.round(y)) * width + Math.round(x)) * 4;
+      return pixels[i] * .2126 + pixels[i + 1] * .7152 + pixels[i + 2] * .0722;
+    }
+    const orbit = m.createOrbit(), front = [], rear = [];
+    for (let i = 0; i < orbit.length / 4; i++) {
+      const point = m.orbitAt(orbit, i, 6);
+      const fieldSize = m.orbitFieldSize(point.seed, width, camera.showcase);
+      if (!fieldSize) continue;
+      const projected = m.projectOrbit(point, camera, width, height, fieldSize);
+      if (!projected) continue;
+      const emphasis = m.middlePhotoEmphasis(point.seed, camera.showcase);
+      const size = Math.min(m.orbitFieldLimit(width, emphasis), projected.size) * m.photoDepthAt(point, camera, emphasis).scale;
+      if (size < 25 || projected.x < size || projected.x > width - size || projected.y < size || projected.y > height - size) continue;
+      // Sample the two halves inside actual orbit cards, not the ending portraits
+      // or the bright outline of a photo against the background.
+      const contrast = luminance(projected.x + size * .8 * .22, projected.y) - luminance(projected.x - size * .8 * .22, projected.y);
+      if (projected.depth < camera.distance * .95) front.push(contrast);
+      else if (projected.depth > camera.distance * 1.1) rear.push(contrast);
+    }
+    const mean = values => values.reduce((sum, value) => sum + value, 0) / values.length;
+    return { front: mean(front), rear: mean(rear), readable: front.filter(value => value > 45).length, count: front.length, field: m.photoFieldAt(.32), error: gl.getError() };
+  });
+  expect(result.field).toBe(1);
+  expect(result.count).toBeGreaterThan(8);
+  expect(result.readable / result.count).toBeGreaterThan(.55);
+  expect(result.front).toBeGreaterThan(isMobile ? 65 : 40);
+  expect(result.front).toBeGreaterThan(result.rear * 1.4);
+  expect(result.error).toBe(0);
 });
 
 test("Canvas fallback also shows uploaded photographs across the middle and can continue into the story", async ({ page }) => {

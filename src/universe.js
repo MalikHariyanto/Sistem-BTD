@@ -132,13 +132,16 @@ export function createUniverse(canvas) {
       const atmosphere = isPhoto ? photoDepthAt(sourcePoint, camera, middle) : { opacity: 1, brightness: 1, detail: 1, scale: 1 };
       const size = point.size * atmosphere.scale;
       const nearClarity = focused ? ease((size - 32) / 96) * atmosphere.detail : 0;
+      const diskClarity = photographic ? ease((size - 10) / 22) *
+        (1 - ease((depth / camera.distance - 0.98) / 0.36)) *
+        ease((sourcePoint.radius - 0.108) / 0.082) : 0;
       const readable = (photographic
         ? ease((size - 1.5) / 3.5)
         : ease((size - 2) / (26 - 16 * showcase))) * atmosphere.detail;
       const coupled = lightField ? 1 - ease((Math.abs(camera.cx) / camera.distance - 0.07) / 0.18) : 0;
       const u = clamp((x - camera.x) / camera.width), v = clamp((y - camera.y) / camera.height);
       const light = lightField?.[Math.min(71, Math.floor(v * 72)) * 128 + Math.min(127, Math.floor(u * 128))] || 0;
-      const lightFloor = 0.24 + 0.34 * middle + 0.22 * nearClarity;
+      const lightFloor = 0.24 + 0.34 * middle + 0.22 * nearClarity + 0.16 * diskClarity;
       const localLight = 1 - coupled + coupled * (lightFloor + (1 - lightFloor) * ease((light - 0.025) / 0.525));
       ctx.save();
       if (maskRear && depth >= rearDepth) ctx.clip(shadowMask, "evenodd");
@@ -152,7 +155,7 @@ export function createUniverse(canvas) {
         point.opacity *
         (0.38 + readable * 0.6) *
         ease((depth - 0.028) / 0.047);
-      const integration = Math.max(field * (photographic ? 1 : 0.4), coupled * 0.65) * (1 - 0.55 * middle) * (1 - 0.45 * nearClarity);
+      const integration = Math.max(field * (photographic ? 1 : 0.4), coupled * 0.65) * (1 - 0.55 * middle) * (1 - 0.45 * nearClarity) * (1 - 0.35 * diskClarity);
       if (photographic) ctx.globalAlpha *= 0.78 + 0.18 * middle;
       const source = images[point.photoId];
       const image = photographic ? softenedThumbnails.get(source) || source :
@@ -172,9 +175,9 @@ export function createUniverse(canvas) {
           cardWidth,
           cardHeight,
         );
-        if (middle > 0.01 && image !== source) {
+        if ((middle > 0.01 || diskClarity > 0.01) && image !== source) {
           const opacity = ctx.globalAlpha;
-          ctx.globalAlpha *= middle * 0.36;
+          ctx.globalAlpha *= 1 - (1 - middle * 0.36) * (1 - diskClarity * 0.7);
           ctx.drawImage(source, -cardWidth / 2, -cardHeight / 2, cardWidth, cardHeight);
           ctx.globalAlpha = opacity;
         }
