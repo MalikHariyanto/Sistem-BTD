@@ -21,13 +21,20 @@
 }
 :root {
   font-family: "DM Sans", Arial, sans-serif;
-  color: #342d25;
-  background: #100f0e;
+  color: #10182f;
+  background: #10182f;
   font-synthesis: none;
-  --paper: #f1ece2;
-  --ink: #342d25;
-  --muted: #786b5c;
-  --line: #bba98e;
+  /* Midnight Universe: shared surfaces, readable text and quiet gold accents. */
+  --night: #10182f;
+  --night-blue: #202c49;
+  --gold: #e8d8b0;
+  --cream: #f5efe4;
+  --night-muted: #c7cddd;
+  --night-line: #e8d8b047;
+  --paper: var(--cream);
+  --ink: var(--night);
+  --muted: #5a647b;
+  --line: var(--night-line);
   --serif: "Cormorant Garamond", Georgia, serif;
 }
 * {
@@ -62,7 +69,7 @@ button:focus-visible,
 a:focus-visible,
 input:focus-visible,
 summary:focus-visible {
-  outline: 2px solid #bd8254;
+  outline: 2px solid currentColor;
   outline-offset: 6px;
 }
 h1:focus,
@@ -102,8 +109,8 @@ button {
   display: none !important;
 }
 ::selection {
-  background: #c5a27d;
-  color: #fff;
+  background: var(--gold);
+  color: var(--night);
 }
 .eyebrow {
   font-size: 9px;
@@ -137,7 +144,7 @@ button {
 }
 .primary:hover {
   transform: translateY(-3px);
-  background: #75553b;
+  background: var(--night-blue);
 }
 .primary.light {
   background: var(--paper);
@@ -145,7 +152,7 @@ button {
   color: var(--ink);
 }
 .primary.light:hover {
-  background: #dcc8aa;
+  background: var(--gold);
 }
 .text-button {
   border: 0;
@@ -162,7 +169,7 @@ button {
 .round {
   height: 44px;
   width: 44px;
-  border: 1px solid #a79376;
+  border: 1px solid var(--night-line);
   border-radius: 50%;
   font:
     20px Arial,
@@ -173,7 +180,7 @@ button {
   flex-shrink: 0;
 }
 .round:hover {
-  background: #b29d7c25;
+  background: #e8d8b019;
 }
 .page-controls {
   display: flex;
@@ -194,7 +201,7 @@ button {
   align-items: center;
   padding: 29px 5vw;
   pointer-events: none;
-  color: var(--ink);
+  color: var(--cream);
   transition: color 0.7s;
 }
 .story-header > a,
@@ -206,7 +213,7 @@ button {
   letter-spacing: 0.3px;
 }
 .story-header > a i {
-  color: #9e7c56;
+  color: var(--gold);
 }
 .story-header button {
   display: flex;
@@ -223,10 +230,10 @@ button {
 }
 .dark-scene .story-header,
 .dark-scene .edit-trigger {
-  color: #e8dbc6;
+  color: var(--cream);
 }
 .dark-scene .story-header > a i {
-  color: #c6a77d;
+  color: var(--gold);
 }
 .stage {
   height: 100svh;
@@ -241,7 +248,9 @@ button {
   overflow: auto;
   overscroll-behavior: contain;
   padding: 95px 7vw 125px;
-  background: var(--paper);
+  background: var(--night);
+  color: var(--cream);
+  color-scheme: dark;
   will-change: transform, opacity;
 }
 .scene.is-active {
@@ -256,6 +265,9 @@ button {
 }
 .scene h2 {
   margin-bottom: 25px;
+}
+.scene:not(.universe-scene) h2 em {
+  color: var(--gold);
 }
 .scene p {
   font-size: 12px;
@@ -398,17 +410,17 @@ button {
 }
 .dedication-copy p:not(.eyebrow) {
   max-width: 400px;
-  color: var(--muted);
+  color: var(--night-muted);
   font-size: 13px;
   line-height: 1.9;
 }
 .dedication-copy p:nth-of-type(2) {
-  color: var(--ink);
+  color: var(--cream);
   font-family: var(--serif);
   font-size: 23px;
 }
 .dedication-copy .handwritten {
-  color: #8a684a;
+  color: var(--gold);
   font-size: 25px;
   display: block;
   margin-top: 26px;
@@ -419,7 +431,7 @@ button {
 }
 .memory {
   position: absolute;
-  border: 7px solid #faf5e9;
+  border: 7px solid var(--cream);
   border-bottom-width: 27px;
   box-shadow: 0 12px 30px #3d2d1d16;
 }
@@ -474,12 +486,12 @@ button {
   text-align: center;
   font-size: 27px;
   transform: rotate(-5deg);
-  color: #8a684a;
+  color: var(--gold);
 }
 .photo-slot {
   position: relative;
   min-height: 120px;
-  background: linear-gradient(145deg, #d6c8b1, #b29b7d 60%, #856e53);
+  background: linear-gradient(145deg, var(--cream), var(--gold));
   display: grid;
   place-content: center;
   gap: 12px;
@@ -508,14 +520,14 @@ button {
 }
 .aperture {
   font: 36px var(--serif);
-  color: #efe5cf;
+  color: var(--night-blue);
 }
 .photo-label {
   font:
     7px/1.5 Arial,
     sans-serif;
   letter-spacing: 1.3px;
-  color: #534632;
+  color: var(--night);
   text-transform: uppercase;
   padding: 0 8px;
 }
@@ -531,7 +543,7 @@ button {
   visibility: hidden;
 }
 .poems-scene {
-  background: #e7dfd0;
+  background: var(--night);
 }
 .poem-layout {
   grid-template-columns: 1fr 1fr;
@@ -544,7 +556,7 @@ button {
 }
 .poem-visual > #poem-photo {
   transform: rotate(-5deg);
-  border: 10px solid #f9f5ec;
+  border: 10px solid var(--cream);
   border-bottom-width: 50px;
   box-shadow: 0 12px 35px #66513c20;
 }
@@ -555,7 +567,7 @@ button {
   position: absolute;
   bottom: -15px;
   right: -25px;
-  border: 6px solid #f8f1e4;
+  border: 6px solid var(--cream);
   border-bottom-width: 24px;
   width: 38%;
   transform: rotate(12deg);
@@ -571,7 +583,7 @@ button {
   left: 4%;
   font-size: 23px;
   transform: rotate(-5deg);
-  color: #776047;
+  color: var(--night-blue);
 }
 .poem-paper {
   padding: 10px 0;
@@ -579,7 +591,7 @@ button {
 .poem-paper .eyebrow {
   font-size: 8px;
   letter-spacing: 1.5px;
-  border-bottom: 1px solid #b5a58b;
+  border-bottom: 1px solid var(--night-line);
   padding-bottom: 18px;
   margin-bottom: 25px;
 }
@@ -589,7 +601,7 @@ button {
 }
 .poem-subtitle {
   font-size: 10px !important;
-  color: #7b6954;
+  color: var(--gold);
   margin-bottom: 25px;
 }
 .poem-text {
@@ -600,14 +612,14 @@ button {
 }
 .poem-paper .page-controls {
   padding-top: 18px;
-  border-top: 1px solid #b5a58b;
+  border-top: 1px solid var(--night-line);
 }
 .quotes-scene {
-  background: #664834;
-  color: #f2e5cf;
+  background: var(--night-blue);
+  color: var(--cream);
 }
 .letter-scene {
-  background: #e4d5bd;
+  background: var(--night);
 }
 .letter-layout {
   display: flex;
@@ -640,31 +652,31 @@ button {
 .envelope-back {
   position: absolute;
   inset: 0;
-  background: #b79b74;
+  background: var(--night-blue);
   box-shadow: 0 15px 45px #6b45201f;
 }
 .envelope-paper {
   position: absolute;
   inset: 12px 16px 0;
-  background: #f1e8d6;
+  background: var(--cream);
   display: block;
   padding: 25px;
   font: italic 30px var(--serif);
-  color: #775637;
+  color: var(--night);
   transition: transform 0.65s 0.15s;
   z-index: 1;
 }
 .envelope-front {
   position: absolute;
   inset: 0;
-  background: linear-gradient(125deg, #d6bf98, #c9ad80);
+  background: linear-gradient(125deg, var(--cream), var(--gold));
   clip-path: polygon(0 0, 50% 55%, 100% 0, 100% 100%, 0 100%);
   z-index: 2;
 }
 .envelope-flap {
   position: absolute;
   inset: 0;
-  background: linear-gradient(#e0cba8, #c3a579);
+  background: linear-gradient(var(--cream), var(--gold));
   clip-path: polygon(0 0, 100% 0, 50% 62%);
   transform-origin: top center;
   transition: transform 0.65s;
@@ -677,8 +689,8 @@ button {
   height: 48px;
   width: 48px;
   border-radius: 48% 52% 46% 54%;
-  background: #725038;
-  color: #e8cba1;
+  background: var(--night);
+  color: var(--gold);
   box-shadow:
     2px 3px 8px #5b3b2155,
     inset 0 0 0 4px #b4834f33;
@@ -702,7 +714,7 @@ button {
   transform: translateY(-85px);
 }
 .music-scene {
-  background: #eae4d7;
+  background: var(--night);
 }
 .music-layout {
   grid-template-columns: 1fr 1fr;
@@ -717,7 +729,7 @@ button {
   position: absolute;
   inset: 15px 70px 35px 0;
   transform: rotate(-7deg);
-  border: 10px solid #d8c8ae;
+  border: 10px solid var(--cream);
   z-index: 2;
   box-shadow: 0 8px 25px #35281d20;
 }
@@ -731,7 +743,7 @@ button {
   font-size: 24px;
   z-index: 3;
   transform: rotate(-5deg);
-  color: #8b6b4a;
+  color: var(--gold);
 }
 .vinyl {
   width: 300px;
@@ -755,14 +767,14 @@ button {
   place-items: center;
   width: 95px;
   height: 95px;
-  background: #9d7851;
+  background: var(--night-blue);
   border-radius: 50%;
   font: italic 52px var(--serif);
-  color: #e5d1b0;
+  color: var(--gold);
 }
 .music-copy > p:not(.eyebrow) {
   font-size: 12px;
-  color: var(--muted);
+  color: var(--night-muted);
 }
 .music-copy h2 {
   font-size: clamp(48px, 5vw, 76px);
@@ -807,8 +819,8 @@ button {
   min-height: 32px;
 }
 .wish-scene {
-  color: #f0e1c5;
-  background: #15110e;
+  color: var(--cream);
+  background: var(--night);
 }
 .wish-halo {
   position: absolute;
@@ -824,7 +836,7 @@ button {
   z-index: 1;
 }
 .wish-copy .eyebrow {
-  color: #d9b781;
+  color: var(--gold);
   font-size: 8px;
 }
 .wish-copy h2 {
@@ -833,18 +845,18 @@ button {
   margin: 30px 0;
 }
 .wish-copy h2 em {
-  color: #dfbd89;
+  color: var(--gold);
 }
 .wish-copy > p:not(.eyebrow) {
   font-size: 13px;
-  color: #cbb79a;
+  color: var(--night-muted);
   line-height: 1.8;
 }
 .wish-steps {
   display: flex;
   gap: 26px;
   margin: 35px 0;
-  color: #756149;
+  color: var(--night-muted);
   font-size: 9px;
   letter-spacing: 1px;
 }
@@ -861,14 +873,14 @@ button {
   left: 0;
   top: 0;
   height: 2px;
-  background: #594b38;
+  background: var(--night-line);
   width: 50px;
 }
 .wish-steps span.current {
-  color: #f0d3a4;
+  color: var(--gold);
 }
 .wish-steps span.current:before {
-  background: #dcaf6e;
+  background: var(--gold);
   box-shadow: 0 0 15px #dcaf6e40;
 }
 .wish-steps i {
@@ -881,7 +893,7 @@ button {
 }
 .wish-copy .wish-hint {
   font-size: 10px !important;
-  color: #ab9473 !important;
+  color: var(--night-muted) !important;
   margin: 18px 0;
 }
 .cake-composition {
@@ -1117,7 +1129,7 @@ button {
   position: relative;
 }
 .wish-result > .eyebrow {
-  color: #caac79;
+  color: var(--gold);
 }
 .wish-result h2 {
   font-size: clamp(70px, 8vw, 120px);
@@ -1125,18 +1137,18 @@ button {
   margin: 30px 0;
 }
 .wish-result h2 em {
-  color: #dfbd89;
+  color: var(--gold);
   overflow-wrap: anywhere;
 }
 .wish-result > p:not(.eyebrow) {
-  color: #cdb798;
+  color: var(--night-muted);
   font-size: 13px;
 }
 .wish-result > .handwritten {
   display: block;
   font-size: 35px;
   margin: 35px 0;
-  color: #dbc29a;
+  color: var(--gold);
 }
 .wish-result > div {
   display: flex;
@@ -1145,7 +1157,7 @@ button {
   gap: 30px;
 }
 .wish-result .text-button {
-  color: #bc9e76;
+  color: var(--gold);
   font-size: 10px;
 }
 .story-nav {
@@ -1159,7 +1171,7 @@ button {
   gap: 20px;
   align-items: center;
   pointer-events: none;
-  color: var(--ink);
+  color: var(--cream);
   transition: color 0.7s;
 }
 .story-nav button {
@@ -1215,12 +1227,13 @@ button {
 .progress-lines > button[aria-current] > span {
   opacity: 1;
   height: 2px;
+  background: var(--gold);
 }
 .progress-lines > button.passed > span {
   opacity: 0.5;
 }
 .dark-scene .story-nav {
-  color: #d2b996;
+  color: var(--gold);
 }
 .edit-trigger {
   position: fixed;
@@ -1228,7 +1241,7 @@ button {
   bottom: 9px;
   border: 0;
   background: none;
-  color: #7e6a50;
+  color: var(--gold);
   font-size: 8px;
   letter-spacing: 0.3px;
   padding: 7px 0;
@@ -1903,7 +1916,7 @@ summary {
     background: linear-gradient(transparent, #100f0e 45%);
   }
   body[data-chapter="3"] .story-nav:before {
-    background: linear-gradient(transparent, #664834 45%);
+    background: linear-gradient(transparent, var(--night-blue) 45%);
   }
   body[data-chapter="6"] .story-nav:before {
     background: linear-gradient(transparent, #15110e 45%);
@@ -2301,10 +2314,10 @@ body.intro-running .story-header > button {
 }
 
 /* A quiet song dedication, with no player switches or playlist choices. */
-.music-credit { margin-top: 26px; padding-top: 18px; border-top: 1px solid #beac9155; }
+.music-credit { margin-top: 26px; padding-top: 18px; border-top: 1px solid var(--night-line); }
 .music-credit .eyebrow { font-size: 8px; }
 .music-credit p { font: 24px/1.5 var(--serif); margin: 10px 0 14px; }
-.music-credit p span { color: #82705a; }
+.music-credit p span { color: var(--night-muted); }
 @media (max-width: 600px) {
   .music-layout { gap: 48px; }
   .music-credit { margin-top: 18px; padding-top: 14px; }

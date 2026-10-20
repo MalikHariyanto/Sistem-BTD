@@ -1,30 +1,27 @@
 /* Header, reading viewport and navigation get their own rows. Scrolling any
    chapter can never carry a photo or a prayer underneath either control row. */
 #app {
-  --scene-surface: var(--paper);
+  --scene-surface: var(--night);
   display: grid;
   grid-template-rows: 64px minmax(0, 1fr) 72px;
   height: 100svh;
   overflow: hidden;
   background: var(--scene-surface);
 }
+/* A few static points of light keep the reading chapters connected to space.
+   No images, canvas or extra animation loop are needed. */
+body:not([data-chapter="0"]) #app {
+  background-image:
+    radial-gradient(circle at 31px 41px, #e8d8b033 0 0.7px, transparent 1.2px),
+    radial-gradient(circle at 173px 119px, #f5efe426 0 0.6px, transparent 1px),
+    radial-gradient(circle at 291px 73px, #e8d8b026 0 0.8px, transparent 1.3px);
+  background-size: 349px 263px, 521px 367px, 853px 617px;
+}
 body[data-chapter="0"] #app {
   --scene-surface: #000;
 }
-body[data-chapter="2"] #app {
-  --scene-surface: #e7dfd0;
-}
-body[data-chapter="4"] #app {
-  --scene-surface: #e4d5bd;
-}
-body[data-chapter="5"] #app {
-  --scene-surface: #eae4d7;
-}
 body[data-chapter="3"] #app {
-  --scene-surface: #664834;
-}
-body[data-chapter="6"] #app {
-  --scene-surface: #15110e;
+  --scene-surface: var(--night-blue);
 }
 .story-header {
   position: relative;
@@ -54,7 +51,7 @@ body[data-chapter="0"] .stage {
   scroll-padding-block: 16px 28px;
   background: transparent;
   scrollbar-width: thin;
-  scrollbar-color: #9e7c5666 transparent;
+  scrollbar-color: #e8d8b066 transparent;
 }
 /* Keep the approved cinematic framing at the full viewport size. Only the
    reading chapters use the space between the header and navigation rows. */
@@ -108,7 +105,7 @@ body[data-chapter="0"] .story-header {
   padding-top: 0;
 }
 .garden-note {
-  padding: 26px 0 30px;
+  padding: 26px clamp(14px, 2vw, 24px) 30px;
   scroll-margin-block: 20px;
 }
 .garden-note-heading {
@@ -123,7 +120,7 @@ body[data-chapter="0"] .story-header {
 .garden-note .garden-wish {
   font-size: clamp(16px, 1.2vw, 18px);
   line-height: 1.85;
-  color: #fff3e5;
+  color: var(--cream);
   max-width: 59ch;
   margin-bottom: 20px;
 }
@@ -156,7 +153,7 @@ body[data-chapter="0"] .story-header {
   padding-bottom: 12px;
 }
 .garden-note:focus-visible {
-  outline: 1px solid #e4c9a0;
+  outline: 1px solid var(--gold);
 }
 @media (max-width: 700px) {
   #app {
@@ -237,8 +234,8 @@ body[data-chapter="0"] .story-header {
   display: flex;
   gap: 8px;
   padding: 10px 0 12px;
-  background: #664834;
-  border-bottom: 1px solid #d3b89640;
+  background: var(--night-blue);
+  border-bottom: 1px solid var(--night-line);
 }
 .garden-picks[hidden] { display: none; }
 .garden-picks button {
@@ -250,16 +247,16 @@ body[data-chapter="0"] .story-header {
   min-width: 0;
   flex: 1;
   padding: 5px 9px;
-  color: #f2e5cf;
-  background: #f2e5cf08;
-  border: 1px solid #d3b89655;
+  color: var(--cream);
+  background: #f5efe408;
+  border: 1px solid var(--night-line);
   border-radius: 3px;
   font-size: 12px;
 }
 .garden-picks img { width: 24px; height: 36px; object-fit: contain; }
-.pick-check { visibility: hidden; color: #e8c795; font-size: 11px; }
+.pick-check { visibility: hidden; color: var(--gold); font-size: 11px; }
 .garden-picks [aria-expanded="true"] .pick-check { visibility: visible; }
-.garden-picks [aria-expanded="true"] { border-color: #e8c795; }
+.garden-picks [aria-expanded="true"] { border-color: var(--gold); }
 .garden-scene { scroll-padding-top: 98px; }
 @media (max-width: 700px) {
   .garden-picks { gap: 6px; }
