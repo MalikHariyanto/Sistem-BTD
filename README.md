@@ -1,8 +1,8 @@
 # Ambis Copenhagen
 
-Hadiah ulang tahun dalam tujuh adegan: perjalanan Gargantua → ucapan personal → puisi → tiga doa dari kutipan sastra → surat → musik → perayaan lilin. Tema **Midnight Universe** yang dilembutkan memakai navy abu-abu `#262D38`, biru `#303A48`, emas redup `#B8AC91`, dan teks krem abu-abu `#D3D3CE`. Vanilla JavaScript, CSS, dan WebGL dengan fallback Canvas 2D; tanpa framework runtime, backend, atau video animasi besar.
+Hadiah ulang tahun dalam tujuh adegan: perjalanan Gargantua → ucapan personal → puisi → tiga doa dari kutipan sastra → surat → musik → perayaan lilin. Tema **Midnight Universe** memakai navy `#10182F`, biru `#202C49`, emas `#E8D8B0`, dan krem `#F5EFE4`. Vanilla JavaScript, CSS, dan WebGL dengan fallback Canvas 2D; tanpa framework runtime, backend, atau video animasi besar.
 
-Warna bersama berada di variabel `:root` pada `src/style.css`. Halaman baca memakai latar navy abu-abu, bagian doa memakai biru dengan bidang narasi navy, teks krem abu-abu, serta aksen emas redup. Header, navigasi, dan panel yang menetap saat scroll mengikuti warna babnya. Album memakai variabel `--album-*` tersendiri: bingkai slate `#47515E`, isi foto kosong yang sedikit lebih gelap, dan caption terang `#C7CBD0`. Pemisahan ini menghindari bidang krem besar yang menyala di atas latar gelap; album yang diisi tetap menampilkan foto unggahan tanpa filter tambahan. Teks utama memiliki rasio kontras sekitar 9,2:1 terhadap latar, sedangkan caption sekitar 4,9:1 terhadap bingkai. Amplop mengikuti warna album. Bintang kecil yang redup dibuat dengan CSS statis, tanpa aset atau animasi tambahan. Warna alami bunga dan animasi Gargantua tetap dipertahankan.
+Warna bersama berada di variabel `:root` pada `src/style.css`. Halaman baca memakai latar navy, bagian doa memakai biru dengan bidang narasi navy, teks krem, serta aksen emas. Header, navigasi, dan panel yang menetap saat scroll mengikuti warna babnya; bingkai foto tetap berupa kertas krem dengan caption navy. Bintang kecil di area baca dibuat dengan CSS statis, tanpa aset atau animasi tambahan. Warna alami bunga dan animasi Gargantua tetap dipertahankan.
 
 ## Menjalankan
 
