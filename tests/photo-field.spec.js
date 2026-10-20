@@ -1,141 +1,111 @@
 import { test, expect } from "@playwright/test";
-import { cameraAt, createOrbit, orbitAt, orbitFieldSize, projectOrbit, photoFieldAt, middlePhotoEmphasis, orbitFieldLimit, photoDepthAt } from "../src/universe-camera.js";
+import { cameraAt, createOrbit, orbitAt, projectOrbit, photoFieldAt } from "../src/universe-camera.js";
+import { assignOrbitPhotos } from "../src/photo-textures.js";
+import { createOrbitComposition } from "../src/orbit-composition.js";
 
-test("the middle contains hundreds of small photographs on real orbits and leaves opening and ending clear", () => {
-  const orbit = createOrbit();
+test("the moving middle stays full of light with clear, spaced photos and stable identities", () => {
+  const orbit = createOrbit(), photoIds = assignOrbitPhotos(orbit, 200);
+  const ratios = Array.from({ length: 200 }, (_, i) => [.8, 1.6, 1][i % 3]);
+  expect(orbit.length / 4).toBe(32768);
   expect(photoFieldAt(0)).toBe(0);
   expect(photoFieldAt(1)).toBe(0);
-  for (const [width, height] of [[390, 664], [1440, 900]]) {
-    for (const p of [0.26, 0.3, 0.36, 0.4]) {
-      expect(photoFieldAt(p)).toBe(1);
-      const camera = cameraAt(p, width, height);
-      let visible = 0, distinctRadii = new Set();
-      for (let i = 0; i < orbit.length / 4; i++) {
-        const point = orbitAt(orbit, i, 6), size = orbitFieldSize(point.seed, width);
-        if (!size) continue;
-        const projected = projectOrbit(point, camera, width, height, size);
-        if (projected && projected.size >= 4) {
-          visible++;
-          distinctRadii.add(Math.floor(point.radius * 100));
+  for (const [width, height] of [[320, 568], [390, 844], [1280, 800]]) {
+    const composition = createOrbitComposition(orbit);
+    let previous = new Map(), tracked = 0, total = 0, minVisible = Infinity, maxVisible = 0;
+    let overlaps = 0, duplicates = 0, movedFromOrbit = 0, maxAlphaStep = 0, minSize = Infinity, maxSize = 0;
+    // Five seconds of real movement, mixed image ratios, and a moving camera.
+    // Include retiring cards, not just the newly selected target population.
+    for (let frame = 0; frame < 150; frame++) {
+      const progress = .26 + frame / 149 * .1, camera = cameraAt(progress, width, height);
+      const time = 6 + frame / 30 * .85;
+      const photos = composition.update({ camera, width, height, time, photoIds, ratios,
+        now: 1000 + frame / 30 * 1000, reduced: frame === 0 });
+      const visible = photos.filter(photo => photo.alpha > .5);
+      minVisible = Math.min(minVisible, visible.length);
+      maxVisible = Math.max(maxVisible, visible.length);
+      duplicates += visible.length - new Set(visible.map(photo => photoIds[photo.index])).size;
+      total += visible.length;
+      for (let i = 0; i < visible.length; i++) {
+        const photo = visible[i], a = photo.projected, ratio = ratios[photoIds[photo.index]];
+        // Use the larger footprint so a departing card is not culled as dust.
+        const physical = projectOrbit(orbitAt(orbit, photo.index, time), camera, width, height, .02);
+        if (!physical || Math.hypot(a.x - physical.x, a.y - physical.y) > .00001) movedFromOrbit++;
+        minSize = Math.min(minSize, a.size); maxSize = Math.max(maxSize, a.size);
+        for (let j = i + 1; j < visible.length; j++) {
+          const b = visible[j].projected, other = ratios[photoIds[visible[j].index]];
+          if (Math.abs(a.x - b.x) < (a.size * Math.min(ratio, 1) + b.size * Math.min(other, 1)) / 2 &&
+            Math.abs(a.y - b.y) < (a.size * Math.min(1 / ratio, 1) + b.size * Math.min(1 / other, 1)) / 2) overlaps++;
         }
       }
-      expect(visible).toBeGreaterThan(width < 700 ? 500 : 1000);
-      expect(distinctRadii.size).toBeGreaterThan(20);
-    }
-  }
-  let previous = 0;
-  for (let i = 0; i <= 1000; i++) {
-    const strength = photoFieldAt(i / 1000);
-    expect(Math.abs(strength - previous)).toBeLessThan(0.02);
-    previous = strength;
-  }
-});
-
-test("slowmo exposes readable photos while preserving the small distant population and physical occlusion", () => {
-  const orbit = createOrbit();
-  for (const [width, height] of [[390, 844], [1440, 900]]) {
-    for (const progress of [0.26, 0.3, 0.34]) {
-      const camera = cameraAt(progress, width, height);
-      let readable = 0, ambient = 0;
-      for (let i = 0; i < orbit.length / 4; i++) {
-        const point = orbitAt(orbit, i, 6);
-        const emphasis = middlePhotoEmphasis(point.seed, camera.showcase);
-        const fieldSize = orbitFieldSize(point.seed, width, camera.showcase);
-        if (!fieldSize) continue;
-        const projected = projectOrbit(point, camera, width, height, fieldSize);
-        if (!projected) continue;
-        const size = Math.min(orbitFieldLimit(width, emphasis), projected.size) * photoDepthAt(point, camera).scale;
-        if (emphasis > 0.25 && size >= 20) readable++;
-        if (!emphasis) ambient++;
+      for (const photo of photos) {
+        const before = previous.get(photo.index);
+        if (before) {
+          maxAlphaStep = Math.max(maxAlphaStep, Math.abs(photo.alpha - before.alpha));
+          tracked++;
+        }
       }
-      // Dozens of individually readable cards, with thousands of smaller ones.
-      expect(readable).toBeGreaterThan(width < 700 ? 40 : 70);
-      expect(readable).toBeLessThan(width < 700 ? 120 : 200);
-      expect(ambient).toBeGreaterThan(readable * 15);
+      previous = new Map(photos.map(photo => [photo.index, photo]));
     }
-    // The gain has no effect on the cover, ending or majority of dust particles.
-    for (let i = 0; i < 1000; i++) {
-      const seed = orbit[i * 4 + 3];
-      for (const progress of [0, 0.16, 0.42, 0.8, 1])
-        expect(orbitFieldSize(seed, width, cameraAt(progress, width, height).showcase)).toBe(orbitFieldSize(seed, width));
-    }
-    // A magnified photo still dissolves near the horizon and remains dimmer far away.
-    const camera = cameraAt(0.3, width, height);
-    const near = { x: .35, y: .14, depth: .25, radius: .43 };
-    const far = { ...near, depth: -.25, y: .26 * .35 - .19 * .25 };
-    expect(photoDepthAt(far, camera, 1).brightness).toBeLessThan(photoDepthAt(near, camera, 1).brightness);
-    expect(photoDepthAt({ ...near, radius: .105 }, camera, 1).opacity).toBe(0);
-    const seed = Array.from(orbit).filter((_, i) => i % 4 === 3).find(s => middlePhotoEmphasis(s, 1) > .9);
-    let previous = orbitFieldSize(seed, width, 0);
-    for (let i = 1; i <= 1000; i++) {
-      const size = orbitFieldSize(seed, width, i / 1000);
-      expect(size - previous).toBeGreaterThanOrEqual(0);
-      expect(size - previous).toBeLessThan(.0001);
-      previous = size;
-    }
+    expect(minVisible).toBeGreaterThanOrEqual(width < 700 ? 14 : 28);
+    expect(maxVisible).toBeLessThanOrEqual(width < 700 ? 22 : 44);
+    expect(total / 150).toBeGreaterThan(width < 700 ? 18 : 38);
+    expect(minSize).toBeGreaterThanOrEqual(width < 700 ? 20 : 26);
+    expect(maxSize).toBeLessThanOrEqual(width < 700 ? 54 : 74);
+    expect(overlaps).toBe(0);
+    expect(duplicates).toBe(0);
+    expect(movedFromOrbit).toBe(0);
+    expect(maxAlphaStep).toBeLessThan(.14);
+    expect(tracked).toBeGreaterThan(2000);
   }
 });
 
-test("GPU resolves uploaded textures across the middle disk rather than showing only a few portraits", async ({ page }) => {
+test("uploaded image colors stay visible on the clean middle disk, including dark regions", async ({ page }) => {
   test.setTimeout(60000);
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
-  const coverage = await page.evaluate(async () => {
+  await page.locator("#open-editor").click();
+  const result = await page.evaluate(async () => {
     const { createUniverseGPU } = await import("/src/universe-gpu.js");
     const { cameraAt } = await import("/src/universe-camera.js");
     const width = innerWidth, height = innerHeight;
-    const canvas = document.createElement("canvas");
-    canvas.width = width; canvas.height = height;
+    const canvas = document.createElement("canvas"); canvas.width = width; canvas.height = height;
     const gpu = createUniverseGPU(canvas);
     if (!gpu) throw Error("WebGL initialization failed");
-    const photo = document.createElement("canvas");
-    photo.width = 100; photo.height = 140;
+    const photo = document.createElement("canvas"); photo.width = 256; photo.height = 320;
     const ctx = photo.getContext("2d");
-    ctx.fillStyle = "#00ffff"; ctx.fillRect(0, 0, 100, 140);
-    // Two contrasting halves ensure this is an actual sampled image texture.
-    ctx.fillStyle = "#ff0066"; ctx.fillRect(50, 0, 50, 140);
-    // Exercise the smaller atlas tiles used by a full uploaded collection.
+    ctx.fillStyle = "#00ffff"; ctx.fillRect(0, 0, 128, 320);
+    ctx.fillStyle = "#ff0066"; ctx.fillRect(128, 0, 128, 320);
     gpu.setPhotos(Array(200).fill(photo));
-    const gl = canvas.getContext("webgl"), camera = cameraAt(0.3, width, height);
-    function capture(progress) {
-      gpu.draw({ camera: { ...camera, progress }, width, height, time: 6, detail: 0, cover: 0, showcase: 1, reduced: true });
-      const pixels = new Uint8Array(width * height * 4);
-      gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
-      return pixels;
-    }
-    function measure() {
-      const before = capture(0), after = capture(0.3), cells = new Set();
-      let extraCyan = 0, extraPink = 0, chroma = 0;
-      for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
-        const i = (y * width + x) * 4;
-        const cyan = p => p[i + 1] > p[i] + 30 && p[i + 2] > p[i] + 20;
-        const pink = p => p[i] > p[i + 1] + 45 && p[i + 2] > p[i + 1] + 5;
-        if (cyan(after) && !cyan(before)) { extraCyan++; chroma += Math.max(after[i],after[i+1],after[i+2])-Math.min(after[i],after[i+1],after[i+2]); cells.add(`${x >> 4},${y >> 4}`); }
-        if (pink(after) && !pink(before)) extraPink++;
-      }
-      return { extraCyan, extraPink, chroma: chroma / extraCyan, cells: cells.size, width, error: gl.getError() };
-    }
-    const normal = measure();
-    // Dark disk regions used to multiply opacity down until image detail vanished.
+    const gl = canvas.getContext("webgl"), camera = cameraAt(.32, width, height);
     const dark = document.createElement("canvas"); dark.width = dark.height = 32;
-    const darkContext = dark.getContext("2d");
-    darkContext.fillStyle = "#08090b"; darkContext.fillRect(0, 0, 32, 32);
+    dark.getContext("2d").fillRect(0, 0, 32, 32);
     gpu.setPlate(dark);
-    return { ...normal, dim: measure() };
+    gpu.draw({ camera, width, height, time: 6, detail: 0, cover: 0, showcase: camera.showcase, reduced: true });
+    const pixels = new Uint8Array(width * height * 4);
+    gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+    let cyan = 0, pink = 0;
+    const cells = new Set();
+    for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+      const i = (y * width + x) * 4;
+      if (pixels[i + 1] > pixels[i] + 30 && pixels[i + 2] > pixels[i] + 20) {
+        cyan++; cells.add(`${x >> 4},${y >> 4}`);
+      }
+      if (pixels[i] > pixels[i + 1] + 45 && pixels[i + 2] > pixels[i + 1] + 5) pink++;
+    }
+    return { cyan, pink, cells: cells.size, width, photos: Number(canvas.dataset.diskPhotos),
+      filaments: Number(canvas.dataset.filaments), error: gl.getError() };
   });
-  expect(coverage.error).toBe(0);
-  expect(coverage.chroma).toBeGreaterThan(25);
-  expect(coverage.chroma).toBeLessThan(160);
-  expect(coverage.extraCyan).toBeGreaterThan(coverage.width < 700 ? 1500 : 10000);
-  expect(coverage.extraPink).toBeGreaterThan(coverage.width < 700 ? 1500 : 10000);
-  expect(coverage.cells).toBeGreaterThan(coverage.width < 700 ? 35 : 100);
-  expect(coverage.dim.error).toBe(0);
-  expect(coverage.dim.extraCyan, JSON.stringify(coverage.dim)).toBeGreaterThan(coverage.width < 700 ? 100 : 300);
-  expect(coverage.dim.cells).toBeGreaterThan(coverage.width < 700 ? 5 : 20);
+  expect(result.error).toBe(0);
+  expect(result.filaments).toBe(32768);
+  expect(result.photos).toBeGreaterThan(result.width < 700 ? 14 : 28);
+  expect(result.photos).toBeLessThanOrEqual(result.width < 700 ? 22 : 44);
+  // Both halves must survive integration into the warm light, even over black.
+  expect(result.cyan, JSON.stringify(result)).toBeGreaterThan(result.width < 700 ? 1500 : 8000);
+  expect(result.pink).toBeGreaterThan(result.width < 700 ? 1500 : 8000);
+  expect(result.cells).toBeGreaterThan(result.width < 700 ? 35 : 100);
 });
 
-test("close rotating disk photographs retain readable image contrast during slowmo with 200 uploads", async ({ page, isMobile }) => {
-  test.setTimeout(60000);
+test("close disk photographs retain readable internal image contrast with 200 uploads", async ({ page, isMobile }) => {
   await page.setViewportSize(isMobile ? { width: 390, height: 844 } : { width: 1280, height: 800 });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
@@ -143,6 +113,8 @@ test("close rotating disk photographs retain readable image contrast during slow
   const result = await page.evaluate(async () => {
     const { createUniverseGPU } = await import("/src/universe-gpu.js");
     const m = await import("/src/universe-camera.js");
+    const { createOrbitComposition } = await import("/src/orbit-composition.js");
+    const { assignOrbitPhotos } = await import("/src/photo-textures.js");
     const width = innerWidth, height = innerHeight;
     const canvas = document.createElement("canvas"); canvas.width = width; canvas.height = height;
     const gpu = createUniverseGPU(canvas), gl = canvas.getContext("webgl");
@@ -162,31 +134,21 @@ test("close rotating disk photographs retain readable image contrast during slow
       const i = ((height - 1 - Math.round(y)) * width + Math.round(x)) * 4;
       return pixels[i] * .2126 + pixels[i + 1] * .7152 + pixels[i + 2] * .0722;
     }
-    const orbit = m.createOrbit(), front = [], rear = [];
-    for (let i = 0; i < orbit.length / 4; i++) {
-      const point = m.orbitAt(orbit, i, 6);
-      const fieldSize = m.orbitFieldSize(point.seed, width, camera.showcase);
-      if (!fieldSize) continue;
-      const projected = m.projectOrbit(point, camera, width, height, fieldSize);
-      if (!projected) continue;
-      const emphasis = m.middlePhotoEmphasis(point.seed, camera.showcase);
-      const size = Math.min(m.orbitFieldLimit(width, emphasis), projected.size) * m.photoDepthAt(point, camera, emphasis).scale;
-      if (size < 25 || projected.x < size || projected.x > width - size || projected.y < size || projected.y > height - size) continue;
-      // Sample the two halves inside actual orbit cards, not the ending portraits
-      // or the bright outline of a photo against the background.
-      const contrast = luminance(projected.x + size * .8 * .22, projected.y) - luminance(projected.x - size * .8 * .22, projected.y);
-      if (projected.depth < camera.distance * .95) front.push(contrast);
-      else if (projected.depth > camera.distance * 1.1) rear.push(contrast);
-    }
-    const mean = values => values.reduce((sum, value) => sum + value, 0) / values.length;
-    return { front: mean(front), rear: mean(rear), readable: front.filter(value => value > 45).length, count: front.length, field: m.photoFieldAt(.32), error: gl.getError() };
+    const orbit = m.createOrbit(), photoIds = assignOrbitPhotos(orbit, 200);
+    const photos = createOrbitComposition(orbit).update({ camera, width, height, time: 6, photoIds,
+      ratios: Array(200).fill(.8), now: 1000, reduced: true });
+    const contrasts = photos.filter(photo => photo.alpha > .8 && photo.point.radius > .2).map(photo => {
+      const { x, y } = photo.projected;
+      const size = photo.projected.size * m.photoDepthAt(photo.point, camera, 1).scale;
+      return luminance(x + size * .8 * .22, y) - luminance(x - size * .8 * .22, y);
+    });
+    return { contrast: contrasts.reduce((sum, value) => sum + value, 0) / contrasts.length,
+      readable: contrasts.filter(value => value > 65).length, count: contrasts.length, error: gl.getError() };
   });
-  expect(result.field).toBe(1);
-  expect(result.count).toBeGreaterThan(8);
-  expect(result.readable / result.count).toBeGreaterThan(.55);
-  expect(result.front).toBeGreaterThan(isMobile ? 65 : 40);
-  expect(result.front).toBeGreaterThan(result.rear * 1.4);
   expect(result.error).toBe(0);
+  expect(result.count).toBeGreaterThan(isMobile ? 12 : 28);
+  expect(result.readable / result.count, JSON.stringify(result)).toBeGreaterThan(.8);
+  expect(result.contrast).toBeGreaterThan(85);
 });
 
 test("Canvas fallback also shows uploaded photographs across the middle and can continue into the story", async ({ page }) => {
@@ -216,9 +178,12 @@ test("Canvas fallback also shows uploaded photographs across the middle and can 
     let cyan = 0;
     for (let i = 0; i < pixels.length; i += 16)
       if (pixels[i + 1] > pixels[i] + 30 && pixels[i + 2] > pixels[i] + 20) cyan++;
-    return { fraction: cyan / (pixels.length / 16), progress: Number(canvas.dataset.progress), renderer: canvas.dataset.renderer };
+    return { fraction: cyan / (pixels.length / 16), progress: Number(canvas.dataset.progress), renderer: canvas.dataset.renderer, photos: Number(canvas.dataset.diskPhotos), filaments: Number(canvas.dataset.filaments) };
   });
   expect(image.renderer).toBe("canvas2d");
+  expect(image.filaments).toBe(8192);
+  expect(image.photos).toBeGreaterThan(10);
+  expect(image.photos).toBeLessThanOrEqual(await page.evaluate(() => innerWidth < 700 ? 22 : 44));
   expect(image.progress).toBeGreaterThanOrEqual(0.3);
   expect(image.progress).toBeLessThan(0.41);
   expect(image.fraction).toBeGreaterThan(0.006);

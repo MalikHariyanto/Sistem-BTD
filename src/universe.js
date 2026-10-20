@@ -5,9 +5,6 @@ import {
   journeyProgress,
   photoShowcaseAt,
   photoFieldAt,
-  orbitFieldSize,
-  orbitFieldLimit,
-  middlePhotoEmphasis,
   orbitRateAt,
   DISK,
   PARTICLE_COUNT,
@@ -81,7 +78,6 @@ export function createUniverse(canvas) {
     generation = 0,
     signature;
   const thumbnails = new Map();
-  const softenedThumbnails = new WeakMap();
   const portraitDetails = new Map();
   function portraitDetail(source) {
     let image = portraitDetails.get(source);
@@ -125,19 +121,17 @@ export function createUniverse(canvas) {
         points.push({ ...point, ...projected, source: point, index: i, photoId: photoIds[i] });
     }
     points.sort((a, b) => b.depth - a.depth);
-    function paint(point, opacity = 1, maskRear = true, photographic = false, isPhoto = true, focused = false) {
+    function paint(point, opacity = 1, maskRear = true, isPhoto = true, focused = false) {
       const { x, y, seed, depth } = point;
       const sourcePoint = point.source || point;
-      const middle = photographic ? middlePhotoEmphasis(seed, showcase) : 0;
+      const middle = focused ? field : 0;
       const atmosphere = isPhoto ? photoDepthAt(sourcePoint, camera, middle) : { opacity: 1, brightness: 1, detail: 1, scale: 1 };
       const size = point.size * atmosphere.scale;
-      const nearClarity = focused ? ease((size - 32) / 96) * atmosphere.detail : 0;
-      const diskClarity = photographic ? ease((size - 10) / 22) *
+      const diskClarity = focused ? field * ease((size - 12) / 18) *
         (1 - ease((depth / camera.distance - 0.98) / 0.36)) *
         ease((sourcePoint.radius - 0.108) / 0.082) : 0;
-      const readable = (photographic
-        ? ease((size - 1.5) / 3.5)
-        : ease((size - 2) / (26 - 16 * showcase))) * atmosphere.detail;
+      const nearClarity = focused ? Math.max(ease((size - 32) / 96) * atmosphere.detail, .9 * diskClarity) : 0;
+      const readable = ease((size - 2) / (26 - 16 * showcase)) * atmosphere.detail * (isPhoto ? 1 : 1 - field);
       const coupled = lightField ? 1 - ease((Math.abs(camera.cx) / camera.distance - 0.07) / 0.18) : 0;
       const u = clamp((x - camera.x) / camera.width), v = clamp((y - camera.y) / camera.height);
       const light = lightField?.[Math.min(71, Math.floor(v * 72)) * 128 + Math.min(127, Math.floor(u * 128))] || 0;
@@ -155,17 +149,18 @@ export function createUniverse(canvas) {
         point.opacity *
         (0.38 + readable * 0.6) *
         ease((depth - 0.028) / 0.047);
-      const integration = Math.max(field * (photographic ? 1 : 0.4), coupled * 0.65) * (1 - 0.55 * middle) * (1 - 0.45 * nearClarity) * (1 - 0.35 * diskClarity);
-      if (photographic) ctx.globalAlpha *= 0.78 + 0.18 * middle;
+      const integration = Math.max(field * 0.12, coupled * 0.65) * (1 - 0.55 * middle) * (1 - 0.45 * nearClarity) * (1 - 0.35 * diskClarity);
+      if (!isPhoto) ctx.globalAlpha *= 1 - .25 * field;
       const source = images[point.photoId];
-      const image = photographic ? softenedThumbnails.get(source) || source :
-        source && nearClarity > 0.05 ? portraitDetail(source) : source;
+      // The decoded source is already ample for the small middle cards. Keep
+      // unsharp processing cached for the few large ending portraits only.
+      const image = source && nearClarity > .05 && field < .01 ? portraitDetail(source) : source;
       const ratio = source ? source.width / source.height : 0.8;
       const cardWidth = size * Math.min(ratio, 1);
       const cardHeight =
         size *
         Math.min(1 / ratio, 1) *
-        (photographic ? 1 : 0.28 + 0.72 * ease((size - 1.5) / 10.5));
+        (0.28 + 0.72 * ease((size - 1.5) / 10.5));
       if (image && readable > 0.01) {
         ctx.imageSmoothingQuality = "high";
         ctx.drawImage(
@@ -175,12 +170,6 @@ export function createUniverse(canvas) {
           cardWidth,
           cardHeight,
         );
-        if ((middle > 0.01 || diskClarity > 0.01) && image !== source) {
-          const opacity = ctx.globalAlpha;
-          ctx.globalAlpha *= 1 - (1 - middle * 0.36) * (1 - diskClarity * 0.7);
-          ctx.drawImage(source, -cardWidth / 2, -cardHeight / 2, cardWidth, cardHeight);
-          ctx.globalAlpha = opacity;
-        }
         ctx.fillStyle = `rgba(227,161,77,${(1 - readable) * 0.85 + integration * 0.16})`;
         ctx.fillRect(-cardWidth / 2, -cardHeight / 2, cardWidth, cardHeight);
         if (atmosphere.brightness < 1) {
@@ -197,7 +186,7 @@ export function createUniverse(canvas) {
         );
       }
       if (readable > 0.65) {
-        ctx.strokeStyle = photographic ? "#cbb28b55" : "#e7dcc9";
+        ctx.strokeStyle = field > .5 ? "#cbb28b55" : "#e7dcc9";
         ctx.lineWidth = Math.max(0.5, size * 0.009);
         ctx.strokeRect(-cardWidth / 2, -cardHeight / 2, cardWidth, cardHeight);
       }
@@ -220,18 +209,7 @@ export function createUniverse(canvas) {
         height,
         orbitDustSize(point.seed),
       );
-      if (dust) paint({ ...point, ...dust }, 1 - 0.4 * blend, false, false, false);
-      const fieldSize = field > 0 ? orbitFieldSize(point.seed, width, showcase) : 0;
-      if (fieldSize) {
-        const photo = projectOrbit(point.source, camera, width, height, fieldSize);
-        if (photo)
-          paint(
-            { ...point, ...photo, size: Math.min(orbitFieldLimit(width, middlePhotoEmphasis(point.seed, showcase)), photo.size) },
-            field,
-            false,
-            true,
-          );
-      }
+      if (dust) paint({ ...point, ...dust }, 1 - 0.4 * blend, false, false);
       if (blend < 1 && orbitPhotoSize(point.seed) > orbitDustSize(point.seed))
         paint(point, 1 - blend, false);
     }
@@ -250,8 +228,10 @@ export function createUniverse(canvas) {
       paint(
         { ...point, ...projected, source: point, photoId: photoIds[index] },
         alpha * blend,
-        true, false, true, true,
+        true, true, true,
       );
+    canvas.dataset.diskPhotos = String(field > .5 ? focused.filter(p => p.alpha * p.point.opacity > .5).length : 0);
+    canvas.dataset.filaments = String(orbit.length / 4);
     canvas.dataset.focusPhotos = String(
       focused.filter((p) => p.alpha * p.point.opacity > 0.5).length,
     );
@@ -666,19 +646,6 @@ export function createUniverse(canvas) {
     }));
     if (gpu) gpu.setPhotos(images);
     else {
-      // Bake the small, softened disk textures once. Applying a Canvas filter
-      // to thousands of draw calls each frame can stall software rendering.
-      for (const image of images) {
-        if (softenedThumbnails.has(image)) continue;
-        const thumb = document.createElement("canvas");
-        const scale = Math.min(1, 96 / Math.max(image.width, image.height));
-        thumb.width = Math.max(1, Math.round(image.width * scale));
-        thumb.height = Math.max(1, Math.round(image.height * scale));
-        const context = thumb.getContext("2d");
-        context.filter = "saturate(0.58) contrast(0.7)";
-        context.drawImage(image, 0, 0, thumb.width, thumb.height);
-        softenedThumbnails.set(image, thumb);
-      }
       photoIds = assignOrbitPhotos(orbit, images.length);
     }
     if (!gpu) canvas.dataset.photoSources = String(images.length);

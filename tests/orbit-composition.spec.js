@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { cameraAt, createOrbit, orbitRateAt } from "../src/universe-camera.js";
+import { cameraAt, createOrbit, orbitRateAt, journeyProgress, JOURNEY_MS } from "../src/universe-camera.js";
 import { assignOrbitPhotos } from "../src/photo-textures.js";
 import { createOrbitComposition } from "../src/orbit-composition.js";
 
@@ -118,4 +118,27 @@ test('phone endings show a modestly fuller selection while the middle keeps its 
   }).filter(photo => photo.alpha > .5);
   expect(initial.length).toBeGreaterThanOrEqual(5);
   expect(initial.length).toBeLessThanOrEqual(10);
+});
+
+test("middle photos dissolve before growing ending portraits enter their space", () => {
+  const orbit = createOrbit(), photoIds = assignOrbitPhotos(orbit, 200);
+  const ratios = Array.from({ length: 200 }, (_, i) => [.8, 1.6, 1][i % 3]);
+  for (const [width, height] of [[390, 844], [1280, 800]]) {
+    const composition = createOrbitComposition(orbit);
+    let time = 2, collisions = 0, framesWithPhotos = 0;
+    for (let frame = 0; frame <= JOURNEY_MS / 1000 * 30; frame++) {
+      const progress = journeyProgress(frame / 30 * 1000);
+      time += orbitRateAt(progress, width) / 30;
+      const photos = composition.update({
+        camera: cameraAt(progress, width, height), width, height, time,
+        photoIds, ratios, now: 1000 + frame / 30 * 1000,
+      }).filter(photo => photo.alpha * photo.point.opacity > .5);
+      if (photos.length) framesWithPhotos++;
+      for (let i = 0; i < photos.length; i++)
+        for (let j = i + 1; j < photos.length; j++)
+          if (intersects(photos[i], photos[j], ratios, photoIds)) collisions++;
+    }
+    expect(framesWithPhotos).toBeGreaterThan(200);
+    expect(collisions).toBe(0);
+  }
 });

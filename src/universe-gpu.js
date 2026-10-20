@@ -8,7 +8,7 @@ import {
   HORIZON,
   ASPECT,
   photoFieldAt,
-  MIDDLE_PHOTOS,
+  DISK_PHOTOS,
 } from "./universe-camera.js";
 import { createOrbitComposition, compositionAt } from "./orbit-composition.js";
 import { assignOrbitPhotos, planPhotoAtlas } from "./photo-textures.js";
@@ -170,7 +170,7 @@ void main(){
   float scale=uFlight.w*5.0/max(.028,distance);
   vec2 pixel=uCenter+vec2(x-uFlight.x,(y-uFlight.y)/1.776833)*scale;
   float grain=fract(seed*97.13);
-  float middle=uLayer>2.5?uShowcase*softstep(${MIDDLE_PHOTOS.start},${MIDDLE_PHOTOS.full},grain):0.0;
+  float middle=uLayer>1.5?uPhotoField:0.0;
   vMiddle=middle;
   float dustSize=.00018+seed*.00038;
   float heroSize=.003+seed*.0018;
@@ -178,13 +178,8 @@ void main(){
   if(uLayer>.5){
     worldSize=heroSize*(1.0+.8*uShowcase);
     if(uLayer<1.5)mask*=step(.90,grain)*(1.0-uComposition);
-    else if(uLayer>2.5){
-      worldSize=(.0032+seed*.0016)*(uViewport.x<700.0?1.3:1.0);
-      worldSize*=1.0+${MIDDLE_PHOTOS.ambientBoost}*uShowcase+${MIDDLE_PHOTOS.focusBoost}*middle;
-      mask*=step(.76,grain)*uPhotoField;
-    }
     else {
-      worldSize*=1.35*uPortraitScale;
+      worldSize*=1.35*uPortraitScale*mix(1.0,${DISK_PHOTOS.scale.toFixed(1)},uPhotoField);
       mask*=aFade*uComposition;
     }
   }
@@ -193,9 +188,9 @@ void main(){
     worldSize*=.6+.4*infall;
   }
   float sizeLimit=min(190.0,uViewport.x*.36);
-  if(uLayer>1.5&&uLayer<2.5)sizeLimit*=uPortraitScale;
-  float fieldLimit=mix(24.0,uViewport.x<700.0?${MIDDLE_PHOTOS.phoneLimit.toFixed(1)}:${MIDDLE_PHOTOS.desktopLimit.toFixed(1)},middle);
-  float size=min(uLayer>2.5?fieldLimit:sizeLimit,worldSize*scale);
+  if(uLayer>1.5)sizeLimit=mix(sizeLimit*uPortraitScale,
+    uViewport.x<700.0?${DISK_PHOTOS.phoneLimit.toFixed(1)}:${DISK_PHOTOS.desktopLimit.toFixed(1)},uPhotoField);
+  float size=min(sizeLimit,worldSize*scale);
   mask*=smoothstep(.028,.075,distance);
   if(distance<=.028||pixel.x < -size||pixel.x>uViewport.x+size||pixel.y < -size||pixel.y>uViewport.y+size)mask=0.0;
   // Keep partially visible cards alive when their centers leave the viewport.
@@ -208,7 +203,8 @@ void main(){
   gl_PointSize=mask>.001?min(uPointLimit,footprint*uDpr):1.0;
   // Tiny tilted cards merge into light filaments. The same cards become legible
   // through perspective magnification, with no new grid or new positions.
-  float readable=uLayer>2.5?smoothstep(1.5,5.0,size):smoothstep(2.0,mix(28.0,12.0,uShowcase),size);
+  float readable=smoothstep(2.0,mix(28.0,12.0,uShowcase),size);
+  if(uLayer<.5)readable*=1.0-uPhotoField;
   if(uLayer>.5)readable*=(1.0-(.3-.16*middle)*far)*infall;
   float omega=${ORBIT_SPEED.toFixed(8)}*pow(.28/r,1.5);
   // Follow the derivative of the bent optical path, not a screen-space spin.
@@ -277,13 +273,14 @@ void main(){
     float rear=softstep(uFlight.z-.035,uFlight.z+.040,vDepth);
     limb=mix(1.0,softstep(${(HORIZON.radius + 0.001).toFixed(8)},${(HORIZON.radius + 0.023).toFixed(8)},closest),rear);
   }
-  float size=vPhoto.y, readable=uLayer>2.5?smoothstep(1.5,5.0,size):smoothstep(2.0,mix(28.0,12.0,uShowcase),size);
+  float size=vPhoto.y, readable=smoothstep(2.0,mix(28.0,12.0,uShowcase),size);
+  if(uLayer<.5)readable*=1.0-uPhotoField;
   if(uLayer>.5)readable*=(1.0-(.3-.16*vMiddle)*vAtmosphere.x)*vAtmosphere.y;
   vec2 p=(gl_PointCoord-vec2(.5)+vOffset)*1.3;
   float c=cos(vPhoto.z),s=sin(vPhoto.z);
   p=mat2(c,-s,s,c)*p;
   p.x/=min(vAspect,1.0);
-  p.y/=min(1.0/vAspect,1.0)*(uLayer>2.5?1.0:mix(.28,1.0,smoothstep(1.5,12.0,size)));
+  p.y/=min(1.0/vAspect,1.0)*mix(.28,1.0,smoothstep(1.5,12.0,size));
   float edge=max(abs(p.x),abs(p.y));
   if(edge>.5)discard;
   vec2 local=p+vec2(.5);
@@ -295,10 +292,11 @@ void main(){
   vec2 photoUV=(tile+mix(inset,vec2(1.0)-inset,local))/grid;
   vec3 photo=detailed?texture2D(uPortraits,photoUV).rgb:texture2D(uPhotos,photoUV).rgb;
   float nearClarity=uLayer>1.5&&uLayer<2.5?smoothstep(32.0,128.0,size)*(1.0-vAtmosphere.x)*vAtmosphere.y:0.0;
-  // Resolve the actual rotating disk cards during the approach, separately
-  // from the large portraits selected for the ending. Distant dust stays soft.
-  float diskClarity=uLayer>2.5?smoothstep(10.0,32.0,size)*(1.0-vAtmosphere.x)*vAtmosphere.y:0.0;
-  if(diskClarity>.01){
+  // One admitted photo population serves the approach AND the ending. The
+  // unresolved particles remain light rather than thousands of tiny cards.
+  float diskClarity=uLayer>1.5?uPhotoField*smoothstep(12.0,30.0,size)*(1.0-vAtmosphere.x)*vAtmosphere.y:0.0;
+  nearClarity=max(nearClarity,.9*diskClarity);
+  if(diskClarity>.01&&!detailed){
     vec2 low=(tile+inset)/grid,high=(tile+vec2(1.0)-inset)/grid;
     vec3 neighbors=(
       texture2D(uPhotos,clamp(photoUV+vec2(uAtlasTexel.x,0.0),low,high)).rgb+
@@ -308,21 +306,20 @@ void main(){
     photo+=clamp((photo-neighbors)*.40,vec3(-.04),vec3(.04))*diskClarity;
   }
   float border=smoothstep(.48,.495,edge)*readable;
-  photo=mix(photo,vec3(.91,.87,.79),border*(uLayer>2.5?.15:.55));
+  photo=mix(photo,vec3(.91,.87,.79),border*mix(.55,.16,vMiddle));
   // Warm reflected light and compressed contrast embed the photographs in the
   // disk, while keeping facial detail and differences between images visible.
   float photoLum=dot(photo,vec3(.2126,.7152,.0722));
   vec3 softened=mix(vec3(photoLum),photo,.58+.20*vMiddle)*.70+vec3(.16,.11,.07);
   softened=mix(softened,vec3(.98,.73,.45),.13+vHeat*.10);
-  photo=mix(photo,softened,uPhotoField*(uLayer>2.5?1.0:.4)*(1.0-.65*nearClarity)*(1.0-.55*diskClarity));
+  photo=mix(photo,softened,uPhotoField*.12*(1.0-.65*nearClarity));
   float lum=dot(photo,vec3(.2126,.7152,.0722));
   vec3 ember=mix(vec3(.68,.30,.095),vec3(1.0,.90,.66),vHeat+.22)*(.65+lum*.75);
   vec3 color=mix(ember,photo,readable);
   if(uLayer>.5)color*=(1.0-.4*vAtmosphere.x)*(.68+.32*vAtmosphere.y);
   float opacity=mix(.72,.98,readable)*vPhoto.w*limb;
   opacity*=mix(1.0-smoothstep(.20,.5,edge),1.0,readable);
-  if(uLayer<.5)opacity*=mix(1.0,.60,uComposition);
-  if(uLayer>2.5)opacity*=.78+.18*vMiddle;
+  if(uLayer<.5)opacity*=mix(1.0,.60,uComposition)*(1.0-.25*uPhotoField);
   // Photographs inherit the very same local light as the unresolved disk.
   // In shadow they recede into its dust; on the luminous arc they pick up its
   // amber glow. Fade this optical coupling as the camera reaches the portraits.
@@ -649,10 +646,8 @@ export function createUniverseGPU(canvas) {
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL);
     gl.drawArrays(gl.POINTS, 0, PARTICLE_COUNT);
-    if (field > 0) {
-      gl.uniform1f(u.uLayer, 3);
-      gl.drawArrays(gl.POINTS, 0, PARTICLE_COUNT);
-    }
+    // Option A leaves all 32,768 small orbits as filaments. Only the
+    // spaced, readable subset below becomes photographs; no field overlay.
     gl.uniform1f(u.uLayer, 1);
     if (compositionAt(camera.zoom) < 1)
       gl.drawArrays(gl.POINTS, 0, PARTICLE_COUNT);
@@ -704,6 +699,8 @@ export function createUniverseGPU(canvas) {
     // Keep the focal portraits clear of the ambient photographic dust.
     gl.clear(gl.DEPTH_BUFFER_BIT);
     gl.drawArrays(gl.POINTS, 0, focused.length);
+    canvas.dataset.diskPhotos = String(field > .5 ? focused.filter(p => p.alpha * p.point.opacity > .5).length : 0);
+    canvas.dataset.filaments = String(PARTICLE_COUNT);
     canvas.dataset.focusPhotos = String(
       focused.filter((p) => p.alpha * p.point.opacity > 0.5).length,
     );

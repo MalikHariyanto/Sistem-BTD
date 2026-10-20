@@ -42,7 +42,7 @@ test("a photo travels continuously from the near disk around the upper rear imag
   expect(plain).toBeGreaterThan(2000);
 });
 
-test("GPU carries actual uploaded photo detail through the upper halo and keeps the black center opaque", async ({ page }) => {
+test("GPU carries fine moving photographic light around the rear halo and keeps the black center opaque", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
   const result = await page.evaluate(async () => {
@@ -86,7 +86,7 @@ test("GPU carries actual uploaded photo detail through the upper halo and keeps 
       gpu.draw({ camera, width, height, time: 0, detail: 0, cover: 0, showcase: 1, reduced: true });
       const pixels = new Uint8Array(width * height * 4);
       gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
-      let cyan = 0, pink = 0, centerLeaks = 0, changed = 0;
+      let grains = 0, centerLeaks = 0, changed = 0;
       const core = {
         x: camera.centerX - camera.cx * camera.baseWidth * 5 / camera.distance,
         y: camera.centerY + (HORIZON.y - camera.cy / ASPECT) * camera.baseWidth * 5 / camera.distance,
@@ -94,24 +94,21 @@ test("GPU carries actual uploaded photo detail through the upper halo and keeps 
       };
       for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
         const i = ((height - y - 1) * width + x) * 4;
-        const isCyan = pixels[i + 1] > pixels[i] + 30 && pixels[i + 2] > pixels[i] + 20;
-        const isPink = pixels[i] > pixels[i + 1] + 45 && pixels[i + 2] > pixels[i + 1] + 5;
+        const light = Math.max(pixels[i], pixels[i + 1], pixels[i + 2]);
         const v = (y - camera.y) / camera.height;
         if (v > 0.1 && v < 0.31) {
-          if (isCyan) cyan++;
-          if (isPink) pink++;
-          if (captures[0] && Math.abs(pixels[i + 1] - captures[0].pixels[i + 1]) > 35) changed++;
+          if (light > 25) grains++;
+          if (captures[0] && Math.abs(pixels[i + 1] - captures[0].pixels[i + 1]) > 15) changed++;
         }
-        if (Math.hypot(x - core.x, y - core.y) < core.radius && (isCyan || isPink)) centerLeaks++;
+        if (Math.hypot(x - core.x, y - core.y) < core.radius && light > 25) centerLeaks++;
       }
-      captures.push({ cyan, pink, centerLeaks, changed, pixels });
+      captures.push({ grains, centerLeaks, changed, pixels });
     }
     return { frames: captures.map(({ pixels, ...counts }) => counts), error: gl.getError() };
   });
   expect(result.error).toBe(0);
   for (const frame of result.frames) {
-    expect(frame.cyan).toBeGreaterThan(200);
-    expect(frame.pink).toBeGreaterThan(200);
+    expect(frame.grains, JSON.stringify(result)).toBeGreaterThan(200);
     expect(frame.centerLeaks).toBe(0);
   }
   expect(result.frames[1].changed).toBeGreaterThan(500);

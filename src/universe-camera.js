@@ -41,25 +41,17 @@ export const photoShowcaseAt = (p) =>
 // light grains and the sparse, readable foreground portraits.
 export const photoFieldAt = (p) =>
   ease((p - 0.14) / 0.12) * (1 - ease((p - 0.4) / 0.18));
-// A stable, sparse subset resolves into readable photographs during slowmo.
-// The same particles keep their original paths; the rest retain the dense dust.
-export const MIDDLE_PHOTOS = {
-  start: 0.99,
-  full: 0.998,
-  ambientBoost: 0.12,
-  focusBoost: 2.4,
-  phoneLimit: 48,
-  desktopLimit: 64,
+// Option A: retain every orbit as fine light, but admit only photographs large
+// enough to read. The same selected cards persist into the ending composition.
+export const DISK_PHOTOS = {
+  scale: 1.5,
+  phoneLimit: 54,
+  desktopLimit: 74,
+  phoneCount: 22,
+  desktopCount: 44,
+  phoneMinimum: 20,
+  desktopMinimum: 26,
 };
-export const middlePhotoEmphasis = (seed, showcase) =>
-  showcase * ease(((seed * 97.13) % 1 - MIDDLE_PHOTOS.start) / (MIDDLE_PHOTOS.full - MIDDLE_PHOTOS.start));
-export const orbitFieldSize = (seed, width, showcase = 0) =>
-  (seed * 97.13) % 1 > 0.76
-    ? (0.0032 + seed * 0.0016) * (width < 700 ? 1.3 : 1) *
-      (1 + MIDDLE_PHOTOS.ambientBoost * showcase + MIDDLE_PHOTOS.focusBoost * middlePhotoEmphasis(seed, showcase))
-    : 0;
-export const orbitFieldLimit = (width, emphasis) =>
-  mix(24, width < 700 ? MIDDLE_PHOTOS.phoneLimit : MIDDLE_PHOTOS.desktopLimit, emphasis);
 export const orbitRateAt = (p, width = Infinity) =>
   (0.025 + 0.975 * (1 - ease((p - 0.7) / 0.3))) *
   (1 - 0.15 * photoShowcaseAt(p)) *

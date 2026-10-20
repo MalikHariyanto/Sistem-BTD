@@ -93,7 +93,7 @@ test("the middle shows the hole with a limited, non-overlapping set of real orbi
         .filter((p) => p.alpha * p.point.opacity > 0.5);
       max = Math.max(max, photos.length);
       if (photos.some((p) => p.point.radius < 0.22)) nearHorizonFrames++;
-      expect(photos.length).toBeLessThanOrEqual(width < 700 ? 8 : 16);
+      expect(photos.length).toBeLessThanOrEqual(width < 700 ? 22 : 44);
       expect(new Set(photos.map((p) => ids[p.index])).size).toBe(photos.length);
       for (let i = 0; i < photos.length; i++) {
         const photo = photos[i],
@@ -169,6 +169,7 @@ test("GPU clips a rear photo's corners at the horizon while retaining real foreg
       gl.uniform1f(gl.getUniformLocation(program, name), value);
     set("uComposition", 1);
     set("uShowcase", 1);
+    set("uPhotoField", 0);
     set("uLayer", 2);
     set("uTime", 0);
     set("uShade", 0);
@@ -266,7 +267,7 @@ test("GPU clips a rear photo's corners at the horizon while retaining real foreg
     }
     return outputs;
   });
-  expect(result[0].layers).toEqual([0, 3, 2]);
+  expect(result[0].layers).toEqual([0, 2]);
   expect(result[0].forbidden).toBeGreaterThan(300);
   // The near limb now dissolves a rear photo before the sphere cuts it.
   // Four actual GPU probes verify a gradual fade instead of a binary cutoff.

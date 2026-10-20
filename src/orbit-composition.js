@@ -6,6 +6,9 @@ import {
   projectOrbit,
   portraitScaleAt,
   mix,
+  photoFieldAt,
+  photoSizeLimit,
+  DISK_PHOTOS,
 } from "./universe-camera.js";
 
 // Only the camera-facing arc carries readable portraits in the close-up. The
@@ -19,14 +22,22 @@ export function frontArc(point, camera) {
 }
 export const compositionAt = (zoom) => ease((zoom - 1.15) / 0.5);
 export function focusProjection(point, camera, width, height) {
-  return projectOrbit(
+  const projected = projectOrbit(
     point,
     camera,
     width,
     height,
-    (0.003 + point.seed * 0.0018) * 1.35 * (1 + 0.8 * (camera.showcase || 0)),
+    (0.003 + point.seed * 0.0018) * 1.35 * (1 + 0.8 * (camera.showcase || 0)) *
+      mix(1, DISK_PHOTOS.scale, photoFieldAt(camera.progress ?? 0)),
     portraitScaleAt(camera.zoom),
   );
+  if (projected) {
+    const field = photoFieldAt(camera.progress ?? 0);
+    const limit = mix(photoSizeLimit(width) * portraitScaleAt(camera.zoom),
+      width < 700 ? DISK_PHOTOS.phoneLimit : DISK_PHOTOS.desktopLimit, field);
+    projected.size = Math.min(projected.size, limit);
+  }
+  return projected;
 }
 
 function bounds(point, ratio, gap) {
@@ -76,17 +87,19 @@ export function createOrbitComposition(orbit) {
         : 1;
       previous = now;
       const mobileEnding = width < 700 && camera.progress >= .9;
-      const gap = width < 700 ? (mobileEnding ? 6 : 8) : 15;
-      const limit = width < 700 ? (mobileEnding ? 10 : 8) : 16;
+      const field = photoFieldAt(camera.progress ?? 0);
+      const gap = mix(width < 700 ? (mobileEnding ? 6 : 8) : 15, width < 700 ? 4 : 7, field);
+      const limit = Math.round(mix(width < 700 ? (mobileEnding ? 10 : 8) : 16,
+        width < 700 ? DISK_PHOTOS.phoneCount : DISK_PHOTOS.desktopCount, field));
       const records = [];
       for (const index of candidates) {
         const point = orbitAt(orbit, index, time);
         const projected = focusProjection(point, camera, width, height);
-        const minimum = mix(
+        const minimum = mix(mix(
           width < 700 ? (mobileEnding ? 28 : 34) : 55,
           width < 700 ? 18 : 24,
           camera.showcase || 0,
-        );
+        ), width < 700 ? DISK_PHOTOS.phoneMinimum : DISK_PHOTOS.desktopMinimum, field);
         if (!projected || projected.size < minimum) continue;
         const existing = active.has(index);
         if (!existing && point.opacity < 0.8) continue;
@@ -125,7 +138,7 @@ export function createOrbitComposition(orbit) {
           continue;
         const future =
           focusProjection(
-            orbitAt(orbit, index, time + 0.12),
+            orbitAt(orbit, index, time + mix(0.12, 0.6, field)),
             camera,
             width,
             height,
@@ -158,6 +171,14 @@ export function createOrbitComposition(orbit) {
       records.sort((a, b) => b.priority - a.priority);
       const selected = [],
         usage = new Map();
+      // A retiring card still owns its space until its dissolve is almost
+      // complete. Do not fill that space with a second translucent photograph.
+      const held = [];
+      if (field > 0) for (const [index, state] of active) {
+        if (state.alpha <= .08) continue;
+        const projected = focusProjection(orbitAt(orbit, index, time), camera, width, height);
+        if (projected) held.push({ index, id: photoIds[index], rect: bounds(projected, ratios[photoIds[index]] || .8, gap) });
+      }
       const available = ratios.length || 6;
       const perPhoto = Math.max(1, Math.ceil(limit / available));
       // Keep a few real inner orbits visible, so the plunge/fade can be seen.
@@ -184,6 +205,9 @@ export function createOrbitComposition(orbit) {
           )
         )
           continue;
+        if (!active.has(record.index) && held.some(other =>
+          overlap(record.rect, other.rect) || (available >= limit && record.id === other.id)))
+          continue;
         selected.push(record);
         if (record.innerArc) innerCount++;
         else outerCount++;
@@ -196,8 +220,12 @@ export function createOrbitComposition(orbit) {
       for (const [index, state] of active) {
         const record = targets.get(index);
         const target = record?.target || 0;
+        // Keep departures short through the tail of the middle dissolve, so
+        // retiring cards clear the space before the ending portraits grow.
+        const response = target < state.alpha && field > 0
+          ? .24 : mix(.65, .55, field);
         state.alpha +=
-          (target - state.alpha) * (reduced ? 1 : 1 - Math.exp(-dt / 0.65));
+          (target - state.alpha) * (reduced ? 1 : 1 - Math.exp(-dt / response));
         if (state.alpha < 0.005 && !target) {
           active.delete(index);
           continue;
