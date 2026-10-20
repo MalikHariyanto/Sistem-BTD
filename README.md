@@ -1,8 +1,6 @@
 # Ambis Copenhagen
 
-Hadiah ulang tahun dalam tujuh adegan: perjalanan Gargantua → ucapan personal → puisi → tiga doa dari kutipan sastra → surat → musik → perayaan lilin. Tema **Midnight Universe** memakai navy `#10182F`, biru `#202C49`, emas `#E8D8B0`, dan krem `#F5EFE4`. Vanilla JavaScript, CSS, dan WebGL dengan fallback Canvas 2D; tanpa framework runtime, backend, atau video animasi besar.
-
-Warna bersama berada di variabel `:root` pada `src/style.css`. Halaman baca memakai latar navy, bagian doa memakai biru dengan bidang narasi navy, teks krem, serta aksen emas. Header, navigasi, dan panel yang menetap saat scroll mengikuti warna babnya; bingkai foto tetap berupa kertas krem dengan caption navy. Bintang kecil di area baca dibuat dengan CSS statis, tanpa aset atau animasi tambahan. Warna alami bunga dan animasi Gargantua tetap dipertahankan.
+Hadiah ulang tahun dalam tujuh adegan: perjalanan Gargantua → ucapan personal → puisi → tiga doa dari kutipan sastra → surat → musik → perayaan lilin. Warna ivory, cokelat hangat, dan cahaya keemasan. Vanilla JavaScript, CSS, dan WebGL dengan fallback Canvas 2D; tanpa framework runtime, backend, atau video animasi besar.
 
 ## Menjalankan
 

@@ -19,26 +19,26 @@
   scroll-margin-top: 24px;
 }
 .letter-stanza:first-child { min-height: calc(100cqh - 52px); padding-top: 8px; }
-.letter-bait-number { display: flex; align-items: center; gap: 16px; color: var(--gold); margin-bottom: 24px; }
+.letter-bait-number { display: flex; align-items: center; gap: 16px; color: #967551; margin-bottom: 24px; }
 .letter-bait-number span { font-size: 10px; letter-spacing: 2px; }
-.letter-bait-number i { width: 48px; height: 1px; background: var(--night-line); }
-.letter-stanza .eyebrow { color: var(--gold); font-size: 8px; line-height: 1.8; }
+.letter-bait-number i { width: 48px; height: 1px; background: #ac8b635c; }
+.letter-stanza .eyebrow { color: #806345; font-size: 8px; line-height: 1.8; }
 .letter-stanza h2 { font-size: clamp(40px, 8cqh, 68px); margin-block: 8px 24px; }
-.letter-stanza h3 { color: var(--gold); font-size: clamp(30px, 5.8cqh, 46px); font-style: italic; margin-bottom: 20px; line-height: 1.12; }
+.letter-stanza h3 { font-size: clamp(30px, 5.8cqh, 46px); font-style: italic; margin-bottom: 20px; line-height: 1.12; }
 .letter-stanza .letter-bait-number i { transition: width .7s ease, background-color .7s ease; }
-.letter-stanza.is-current .letter-bait-number i { width: 78px; background: var(--gold); }
+.letter-stanza.is-current .letter-bait-number i { width: 78px; background: #956c46; }
 .letter-stanza .letter-verse {
   font: 400 clamp(21px, 3.9cqh, 28px)/1.75 var(--serif);
   white-space: pre-line;
   margin-bottom: 0;
-  color: var(--cream);
+  color: #564332;
 }
-.letter-scroll-hint { display: flex; align-items: center; gap: 18px; font-size: 10px; color: var(--gold); margin-top: 28px; }
+.letter-scroll-hint { display: flex; align-items: center; gap: 18px; font-size: 10px; color: #876947; margin-top: 28px; }
 .letter-scroll-hint span { font: 22px var(--serif); }
 .letter-signoff { padding: 24px 0 64px; }
-.letter-signoff > span { font: 36px var(--serif); color: var(--gold); }
-.letter-signoff .handwritten { font-size: 29px; color: var(--gold); margin: 14px 0 8px; }
-.letter-signoff .letter-sender { font-size: 12px; line-height: 1.8; color: var(--night-muted); }
+.letter-signoff > span { font: 36px var(--serif); color: #9b7351; }
+.letter-signoff .handwritten { font-size: 29px; color: #896745; margin: 14px 0 8px; }
+.letter-signoff .letter-sender { font-size: 12px; line-height: 1.8; color: #70563e; }
 .letter-signoff .text-button { min-height: 44px; margin-top: 18px; font-size: 11px; }
 .letter-gallery {
   position: sticky;
@@ -48,7 +48,7 @@
   justify-self: center;
   padding: 10px 0 16px;
 }
-.letter-gallery-note { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 18px; color: var(--gold); }
+.letter-gallery-note { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 18px; color: #886947; }
 .letter-gallery-note .eyebrow { font-size: 7px; letter-spacing: 1.4px; }
 .letter-photo-count { font-size: 9px; letter-spacing: 2px; white-space: nowrap; }
 .letter-photo-stack { position: relative; aspect-ratio: 3/4; isolation: isolate; }
@@ -57,8 +57,8 @@
   inset: 0;
   margin: 0;
   padding: 8px 8px 39px;
-  background: var(--cream);
-  box-shadow: 0 14px 35px #00000033;
+  background: #f6eddd;
+  box-shadow: 0 14px 35px #61452517;
   opacity: 0;
   visibility: hidden;
   transform: rotate(1deg) scale(1.035);
@@ -67,12 +67,12 @@
 .letter-frame.is-current { opacity: 1; visibility: visible; transform: rotate(-2deg) scale(1); transition-delay: 0s; z-index: 1; }
 .letter-frame .photo-slot { height: 100%; min-height: 0; }
 .letter-frame .photo-slot img { filter: saturate(.88) sepia(.08); }
-.letter-frame figcaption { text-align: center; font-size: clamp(16px, 3cqh, 24px); line-height: 1.4; margin-top: 7px; color: var(--night-blue); }
+.letter-frame figcaption { text-align: center; font-size: clamp(16px, 3cqh, 24px); line-height: 1.4; margin-top: 7px; color: #836144; }
 .letter-photo-stack .flower-letter { width: 34%; right: -10%; bottom: -7%; }
 .letter-thread { display: flex; align-items: center; gap: 12px; margin: 35px 16px 0; }
-.letter-thread > span { height: 1px; background: var(--night-line); flex: 1; position: relative; }
-.letter-thread > span::after { content: ''; position: absolute; inset: 0; background: var(--gold); transform-origin: left; transform: scaleX(var(--letter-progress)); }
-.letter-thread i { font: 19px var(--serif); color: var(--gold); }
+.letter-thread > span { height: 1px; background: #af8d6350; flex: 1; position: relative; }
+.letter-thread > span::after { content: ''; position: absolute; inset: 0; background: #956c46; transform-origin: left; transform: scaleX(var(--letter-progress)); }
+.letter-thread i { font: 19px var(--serif); color: #9b7351; }
 
 @media (max-width: 700px) {
   .letter-scroll { display: flex; flex-direction: column; gap: 0; }
@@ -87,8 +87,8 @@
     gap: 0 22px;
     align-items: center;
     padding: 14px 6px 22px 0;
-    background: var(--night);
-    border-bottom: 1px solid var(--night-line);
+    background: #e4d5bd;
+    border-bottom: 1px solid #ad8d6455;
   }
   .letter-gallery-note { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; margin: 0; }
   .letter-gallery-note .eyebrow { font-size: 8px; line-height: 1.8; }
@@ -102,7 +102,7 @@
   /* Match the preceding prayer chapter's mobile reading scale. */
   .letter-intro h2,
   .letter-stanza h2 { font-size: 35px; }
-  .letter-stanza h3 { color: var(--gold); font-size: 29px; }
+  .letter-stanza h3 { font-size: 29px; }
   .letter-stanza .letter-verse { font-size: 16px; line-height: 1.85; }
   .letter-bait-number { margin-bottom: 16px; }
   .letter-signoff { padding-bottom: 28px; }
