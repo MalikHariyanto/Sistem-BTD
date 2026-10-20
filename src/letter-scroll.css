@@ -57,7 +57,7 @@
   inset: 0;
   margin: 0;
   padding: 8px 8px 39px;
-  background: var(--cream);
+  background: var(--album-paper);
   box-shadow: 0 14px 35px #00000033;
   opacity: 0;
   visibility: hidden;
@@ -67,7 +67,7 @@
 .letter-frame.is-current { opacity: 1; visibility: visible; transform: rotate(-2deg) scale(1); transition-delay: 0s; z-index: 1; }
 .letter-frame .photo-slot { height: 100%; min-height: 0; }
 .letter-frame .photo-slot img { filter: saturate(.88) sepia(.08); }
-.letter-frame figcaption { text-align: center; font-size: clamp(16px, 3cqh, 24px); line-height: 1.4; margin-top: 7px; color: var(--night-blue); }
+.letter-frame figcaption { text-align: center; font-size: clamp(16px, 3cqh, 24px); line-height: 1.4; margin-top: 7px; color: var(--album-ink); }
 .letter-photo-stack .flower-letter { width: 34%; right: -10%; bottom: -7%; }
 .letter-thread { display: flex; align-items: center; gap: 12px; margin: 35px 16px 0; }
 .letter-thread > span { height: 1px; background: var(--night-line); flex: 1; position: relative; }

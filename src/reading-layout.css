@@ -12,9 +12,9 @@
    No images, canvas or extra animation loop are needed. */
 body:not([data-chapter="0"]) #app {
   background-image:
-    radial-gradient(circle at 31px 41px, #e8d8b033 0 0.7px, transparent 1.2px),
-    radial-gradient(circle at 173px 119px, #f5efe426 0 0.6px, transparent 1px),
-    radial-gradient(circle at 291px 73px, #e8d8b026 0 0.8px, transparent 1.3px);
+    radial-gradient(circle at 31px 41px, #b8ac911a 0 0.7px, transparent 1.2px),
+    radial-gradient(circle at 173px 119px, #d3d3ce14 0 0.6px, transparent 1px),
+    radial-gradient(circle at 291px 73px, #b8ac9114 0 0.8px, transparent 1.3px);
   background-size: 349px 263px, 521px 367px, 853px 617px;
 }
 body[data-chapter="0"] #app {
@@ -51,7 +51,7 @@ body[data-chapter="0"] .stage {
   scroll-padding-block: 16px 28px;
   background: transparent;
   scrollbar-width: thin;
-  scrollbar-color: #e8d8b066 transparent;
+  scrollbar-color: #abb3bf66 transparent;
 }
 /* Keep the approved cinematic framing at the full viewport size. Only the
    reading chapters use the space between the header and navigation rows. */
@@ -248,7 +248,7 @@ body[data-chapter="0"] .story-header {
   flex: 1;
   padding: 5px 9px;
   color: var(--cream);
-  background: #f5efe408;
+  background: #d3d3ce08;
   border: 1px solid var(--night-line);
   border-radius: 3px;
   font-size: 12px;

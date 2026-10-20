@@ -42,7 +42,7 @@
   height: 95%;
   left: 0;
   top: 0;
-  border: 6px solid var(--cream);
+  border: 6px solid var(--album-paper);
   border-bottom-width: 20px;
   transform: rotate(-9deg);
 }
