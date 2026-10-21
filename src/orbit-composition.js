@@ -224,6 +224,13 @@ export function createOrbitComposition(orbit) {
       }
       const available = ratios.length || 6;
       const perPhoto = Math.max(1, Math.ceil(limit / available));
+      // Reserve identity separately from space. In the intimate ending, a
+      // departing portrait owns its source until its dissolve is complete,
+      // even after losing its target slot. Keep the dense middle's existing
+      // threshold, where near-transparent retiring cards resolve into light.
+      const occupiedPhotos = new Set(field > 0
+        ? held.map(photo => photo.id)
+        : [...active.keys()].map(index => photoIds[index]));
       // Keep a few real inner orbits visible, so the plunge/fade can be seen.
       // The remaining slots retain the wider stream and its sense of depth.
       const innerLimit =
@@ -244,6 +251,7 @@ export function createOrbitComposition(orbit) {
         )
           continue;
         if ((usage.get(record.id) || 0) >= perPhoto) continue;
+        if (perPhoto === 1 && !active.has(record.index) && occupiedPhotos.has(record.id)) continue;
         if (
           selected.some(
             (other) =>
@@ -253,8 +261,7 @@ export function createOrbitComposition(orbit) {
           )
         )
           continue;
-        if (!active.has(record.index) && held.some(other =>
-          overlap(record.rect, other.rect) || (available >= limit && record.id === other.id)))
+        if (!active.has(record.index) && held.some(other => overlap(record.rect, other.rect)))
           continue;
         selected.push(record);
         if (record.projected.hero) heroCount++;

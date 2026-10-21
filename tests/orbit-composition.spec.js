@@ -120,6 +120,43 @@ test('phone endings show a modestly fuller selection while the middle keeps its 
   expect(initial.length).toBeLessThanOrEqual(10);
 });
 
+test("ending photos stay unique throughout arrivals and dissolves with a large library", () => {
+  const orbit = createOrbit();
+  for (const count of [120, 200]) {
+    const photoIds = assignOrbitPhotos(orbit, count);
+    const ratios = Array.from({ length: count }, (_, i) => [.8, 1.6, 1][i % 3]);
+    for (const [width, height, start] of [[1440, 900, 25], [390, 844, 10]]) {
+      const camera = cameraAt(1, width, height), composition = createOrbitComposition(orbit);
+      let duplicates = 0, tracked = 0, minVisible = Infinity, maxAlphaStep = 0;
+      let previous = new Map();
+      // Include the low-opacity retiring photographs that a > .5 check misses.
+      // A later orbital phase also exercises new arrivals after the first set.
+      for (let frame = 0; frame < 750; frame++) {
+        const photos = composition.update({
+          camera, width, height, time: start + frame / 15 * orbitRateAt(1, width),
+          photoIds, ratios, now: 1000 + frame / 15 * 1000, reduced: frame === 0,
+        });
+        const visible = photos.filter(photo => photo.alpha * photo.point.opacity > .01 &&
+          photo.projected.x > 0 && photo.projected.x < width &&
+          photo.projected.y > 0 && photo.projected.y < height);
+        duplicates += visible.length - new Set(visible.map(photo => photoIds[photo.index])).size;
+        minVisible = Math.min(minVisible, visible.filter(photo => photo.alpha > .5).length);
+        for (const photo of photos) {
+          const before = previous.get(photo.index);
+          if (!before) continue;
+          maxAlphaStep = Math.max(maxAlphaStep, Math.abs(photo.alpha - before.alpha));
+          tracked++;
+        }
+        previous = new Map(photos.map(photo => [photo.index, photo]));
+      }
+      expect(duplicates, `${count} photos at ${width}×${height}`).toBe(0);
+      expect(minVisible).toBeGreaterThanOrEqual(3);
+      expect(maxAlphaStep).toBeLessThan(.15);
+      expect(tracked).toBeGreaterThan(2000);
+    }
+  }
+});
+
 test("middle photos dissolve before growing ending portraits enter their space", () => {
   const orbit = createOrbit(), photoIds = assignOrbitPhotos(orbit, 200);
   const ratios = Array.from({ length: 200 }, (_, i) => [.8, 1.6, 1][i % 3]);
