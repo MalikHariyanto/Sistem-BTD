@@ -27,6 +27,7 @@ import { createUniverseGPU } from "./universe-gpu.js";
 import { createDiskStream } from "./disk-stream.js";
 import { createSpaceBackdrop } from "./space-background.js";
 import { sharpenPortrait, PORTRAIT_CAPACITY } from "./portrait-textures.js";
+import { photoSurfaceAt } from "./photo-surface.js";
 
 const PLATE_URL = `${import.meta.env.BASE_URL}art/gargantua.webp`;
 
@@ -141,7 +142,16 @@ export function createUniverse(canvas) {
       if (maskRear && depth >= rearDepth) ctx.clip(shadowMask, "evenodd");
       ctx.translate(x, y);
       const tangent = orbitTangent(sourcePoint, camera);
-      ctx.rotate(tangent * (1 - readable) + (seed - 0.5) * 0.18 * readable);
+      const surface = focused && field > 0 ? photoSurfaceAt(sourcePoint, flowSeconds, field,
+        images[point.photoId] ? images[point.photoId].width / images[point.photoId].height : .8) : null;
+      if (surface) {
+        ctx.rotate(surface.roll);
+        ctx.scale(surface.fit, surface.fit);
+        // Canvas keeps an inexpensive affine projection of the same paper
+        // normal. No image filters, mesh allocations or pixel reads per frame.
+        ctx.transform(Math.cos(surface.yaw), 0,
+          Math.sin(surface.yaw) * Math.sin(surface.pitch), Math.cos(surface.pitch), 0, 0);
+      } else ctx.rotate(tangent * (1 - readable) + (seed - 0.5) * 0.18 * readable);
       ctx.globalAlpha =
         opacity *
         atmosphere.opacity *
@@ -161,6 +171,10 @@ export function createUniverse(canvas) {
         size *
         Math.min(1 / ratio, 1) *
         (0.28 + 0.72 * ease((size - 1.5) / 10.5));
+      if (surface && readable > .6) {
+        ctx.fillStyle = "#392419";
+        ctx.fillRect(-cardWidth / 2 + .7, -cardHeight / 2 + .9, cardWidth, cardHeight);
+      }
       if (image && readable > 0.01) {
         ctx.imageSmoothingQuality = "high";
         ctx.drawImage(
@@ -176,6 +190,10 @@ export function createUniverse(canvas) {
           ctx.fillStyle = `rgba(0,0,0,${1 - atmosphere.brightness})`;
           ctx.fillRect(-cardWidth / 2, -cardHeight / 2, cardWidth, cardHeight);
         }
+        if (surface && surface.light < 1) {
+          ctx.fillStyle = `rgba(0,0,0,${1 - surface.light})`;
+          ctx.fillRect(-cardWidth / 2, -cardHeight / 2, cardWidth, cardHeight);
+        }
       } else {
         ctx.fillStyle = readable > 0.1 ? "#b8a68e" : "#f4c58e";
         ctx.fillRect(
@@ -189,6 +207,15 @@ export function createUniverse(canvas) {
         ctx.strokeStyle = field > .5 ? "#cbb28b55" : "#e7dcc9";
         ctx.lineWidth = Math.max(0.5, size * 0.009);
         ctx.strokeRect(-cardWidth / 2, -cardHeight / 2, cardWidth, cardHeight);
+        if (surface) {
+          ctx.strokeStyle = `rgba(240,204,150,${.18 + .15 * Math.max(0, -surface.normal[0] - surface.normal[1])})`;
+          ctx.lineWidth = .7;
+          ctx.beginPath();
+          ctx.moveTo(-cardWidth / 2, cardHeight / 2);
+          ctx.lineTo(-cardWidth / 2, -cardHeight / 2);
+          ctx.lineTo(cardWidth / 2, -cardHeight / 2);
+          ctx.stroke();
+        }
       }
       ctx.restore();
     }

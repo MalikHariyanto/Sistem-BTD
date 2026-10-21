@@ -13,9 +13,10 @@ import {
 import { createOrbitComposition, compositionAt } from "./orbit-composition.js";
 import { assignOrbitPhotos, planPhotoAtlas } from "./photo-textures.js";
 import { lensGLSL } from "./accretion-lens.js";
-import { createPortraitAtlas } from "./portrait-textures.js";
+import { createPortraitAtlas, selectPortraitIds } from "./portrait-textures.js";
 import { DISK_STREAM } from "./disk-stream.js";
 import { spaceGLSL } from "./space-background.js";
+import { photoPoseGLSL } from "./photo-surface.js";
 
 // A photographic halo plus 32,768 persistent orbiting photo sprites. No engine dependency.
 const vertex = `
@@ -138,11 +139,13 @@ varying vec2 vOffset;
 varying float vDepth;
 varying vec2 vAtmosphere; // far-side veil, inward material dissolution
 varying float vMiddle;
+varying vec4 vTilt;
 float softstep(float a,float b,float x){
   float t=clamp((x-a)/(b-a),0.0,1.0);
   return t*t*t*(t*(t*6.0-15.0)+10.0);
 }
 ${lensGLSL}
+${photoPoseGLSL}
 void main(){
   vPhotoId=aPhoto.x;
   vAspect=aPhoto.y;
@@ -174,6 +177,7 @@ void main(){
   vMiddle=middle;
   float dustSize=.00018+seed*.00038;
   float heroSize=.003+seed*.0018;
+  float hero=0.0;
   float worldSize=dustSize;
   if(uLayer>.5){
     worldSize=heroSize*(1.0+.8*uShowcase);
@@ -181,8 +185,9 @@ void main(){
     else {
       float facing=(uFlight.x*r*cos(theta)+uFlight.z*z)/r-r;
       float front=softstep(.012,.057,facing);
+      hero=step(.96,grain)*uPhotoField*front;
       float diskScale=mix(${DISK_PHOTOS.mediumScale.toFixed(1)},${DISK_PHOTOS.scale.toFixed(1)},max(softstep(.82,1.0,grain),front));
-      worldSize*=1.35*uPortraitScale*mix(1.0,diskScale,uPhotoField);
+      worldSize*=1.35*uPortraitScale*mix(1.0,diskScale,uPhotoField)*mix(1.0,${DISK_PHOTOS.heroGain},hero);
       mask*=aFade*uComposition;
     }
   }
@@ -193,6 +198,7 @@ void main(){
   float sizeLimit=min(190.0,uViewport.x*.36);
   if(uLayer>1.5)sizeLimit=mix(sizeLimit*uPortraitScale,
     uViewport.x<700.0?${DISK_PHOTOS.phoneLimit.toFixed(1)}:${DISK_PHOTOS.desktopLimit.toFixed(1)},uPhotoField);
+  if(uLayer>1.5)sizeLimit=mix(sizeLimit,uViewport.x<700.0?${DISK_PHOTOS.phoneHeroLimit.toFixed(1)}:${DISK_PHOTOS.desktopHeroLimit.toFixed(1)},hero);
   float size=min(sizeLimit,worldSize*scale);
   mask*=smoothstep(.028,.075,distance);
   if(distance<=.028||pixel.x < -size||pixel.x>uViewport.x+size||pixel.y < -size||pixel.y>uViewport.y+size)mask=0.0;
@@ -218,6 +224,12 @@ void main(){
   vec2 velocity=(next.xy-uFlight.xy)/(uFlight.z-next.z)-(apparent.xy-uFlight.xy)/distance;
   float tangent=atan(velocity.y/${ASPECT.toFixed(8)},velocity.x);
   vPhoto=vec4(seed,size,mix(tangent,(seed-.5)*.18,readable),mask);
+  vTilt=vec4(0.0,0.0,0.0,1.0);
+  if(uLayer>1.5){
+    vec4 pose=photoPose(seed,theta,uTime,uPhotoField);
+    vPhoto.z=mix(vPhoto.z,pose.z,uPhotoField);
+    vTilt=vec4(pose.xy,pose.w,uPhotoField>0.0?photoFit(vec4(pose.xy,vPhoto.z,pose.w),vAspect):1.0);
+  }
   vHeat=(1.0-smoothstep(.14,.64,r))*.36+seed*.20;
 }
 `;
@@ -251,6 +263,7 @@ varying vec2 vOffset;
 varying float vDepth;
 varying vec2 vAtmosphere; // far-side veil, inward material dissolution
 varying float vMiddle;
+varying vec4 vTilt;
 float softstep(float a,float b,float x){
   float t=clamp((x-a)/(b-a),0.0,1.0);
   return t*t*t*(t*(t*6.0-15.0)+10.0);
@@ -282,11 +295,26 @@ void main(){
   vec2 p=(gl_PointCoord-vec2(.5)+vOffset)*1.3;
   float c=cos(vPhoto.z),s=sin(vPhoto.z);
   p=mat2(c,-s,s,c)*p;
-  p.x/=min(vAspect,1.0);
-  p.y/=min(1.0/vAspect,1.0)*mix(.28,1.0,smoothstep(1.5,12.0,size));
+  vec2 extent=vec2(min(vAspect,1.0),min(1.0/vAspect,1.0)*mix(.28,1.0,smoothstep(1.5,12.0,size)));
+  if(uLayer>1.5&&uPhotoField>.001){
+    // Inverse ray/plane projection resolves a tilted photograph inside the
+    // same orbit footprint. Perspective correct sampling keeps the image
+    // intact as opposite edges approach/recede, instead of rotating a sticker.
+    p/=vTilt.w;
+    float cy=cos(vTilt.x),sy=sin(vTilt.x),cp=cos(vTilt.y),sp=sin(vTilt.y);
+    float a=extent.x*(cy+p.x*vTilt.z*sy);
+    float b=extent.y*(sy*sp-p.x*vTilt.z*cy*sp);
+    float c2=extent.x*p.y*vTilt.z*sy;
+    float d=extent.y*(cp-p.y*vTilt.z*cy*sp);
+    float determinant=a*d-b*c2;
+    p=vec2(d*p.x-b*p.y,a*p.y-c2*p.x)/max(.01,determinant);
+  }else p/=extent;
   float edge=max(abs(p.x),abs(p.y));
-  if(edge>.5)discard;
-  vec2 local=p+vec2(.5);
+  float surface=uLayer>1.5?uPhotoField:0.0;
+  float bevel=surface*min(.025,.85/max(12.0,size));
+  float aa=.65/max(12.0,size*uDpr);
+  if(edge>.5+bevel)discard;
+  vec2 local=clamp(p+vec2(.5),0.0,1.0);
   bool detailed=vPhotoId<0.0;
   float id=detailed?-vPhotoId-1.0:clamp(floor(vPhotoId+.5),0.0,uAtlas.z-1.0);
   vec2 grid=detailed?uPortraitGrid:uAtlas.xy;
@@ -333,6 +361,24 @@ void main(){
   float lightFloor=.24+.34*vMiddle+.22*nearClarity+.16*diskClarity;
   opacity*=mix(1.0,lightFloor+(1.0-lightFloor)*smoothstep(.025,.55,light),coupled);
   color=mix(color,mix(color*.72,vec3(1.0,.78,.49),.22+.18*light),coupled*.65*(1.0-.55*vMiddle)*(1.0-.45*nearClarity)*(1.0-.35*diskClarity));
+  if(surface>.001){
+    vec3 normal=vec3(sin(vTilt.x)*cos(vTilt.y),-sin(vTilt.y),cos(vTilt.x)*cos(vTilt.y));
+    float illumination=.82+.22*max(0.0,dot(normal,vec3(-.35,-.55,.76)));
+    color*=mix(1.0,illumination,surface);
+    // Directional light on the paper edge and a very restrained satin sheen
+    // give the print volume while retaining the photographic black levels.
+    vec2 toward=normalize((vec2(.5,.445)-uv)*vec2(1.0,${(1 / ASPECT).toFixed(8)})+vec2(.0001));
+    toward=mat2(c,-s,s,c)*toward;
+    float facing=clamp(dot(normalize(p+vec2(.0001)),toward),0.0,1.0);
+    float edgeLight=smoothstep(.44,.5,edge)*facing*surface;
+    color+=vec3(1.0,.72,.40)*edgeLight*(.025+.025*light);
+    float satin=pow(max(0.0,1.0-abs(p.x*.65+p.y*.35+vTilt.x*.55-vTilt.y*.7)),24.0);
+    color+=vec3(1.0,.85,.65)*satin*.012*surface;
+    vec3 paper=mix(vec3(.075,.048,.027),vec3(.80,.60,.35),facing*(.45+.35*light));
+    float face=smoothstep(.5-aa,.5,edge);
+    color=mix(color,paper,face);
+    opacity*=1.0-smoothstep(.5+bevel-aa,.5+bevel,edge);
+  }
   if(opacity<.025)discard;
   vec2 screen=gl_FragCoord.xy/(uViewport*uDpr);
   float shade=uShade*(.65+.25*length(screen-.5))*(1.0-.25*nearClarity);
@@ -664,10 +710,7 @@ export function createUniverseGPU(canvas) {
       now: performance.now(),
       reduced: args.reduced,
     });
-    const detailIds = [...new Set(focused
-      .filter(photo => photo.alpha > .05 && photo.projected.size >= 40)
-      .sort((a, b) => b.alpha - a.alpha || b.projected.size - a.projected.size)
-      .map(photo => photoIds[photo.index]))];
+    const detailIds = selectPortraitIds(focused, photoIds);
     const detailSlots = portraitAtlas.update(detailIds, portraitImages, sources.photos ? Number(canvas.dataset.atlasTile) : 256);
     const detailPlan = portraitAtlas.plan;
     if (detailPlan) {

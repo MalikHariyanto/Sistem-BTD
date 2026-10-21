@@ -30,7 +30,7 @@ test("the moving middle stays full of light with clear, spaced photos and stable
       for (let i = 0; i < visible.length; i++) {
         const photo = visible[i], a = photo.projected, ratio = ratios[photoIds[photo.index]];
         // Use the larger footprint so a departing card is not culled as dust.
-        const physical = projectOrbit(orbitAt(orbit, photo.index, time), camera, width, height, .02);
+        const physical = projectOrbit(orbitAt(orbit, photo.index, time), camera, width, height, .05);
         if (!physical || Math.hypot(a.x - physical.x, a.y - physical.y) > .00001) movedFromOrbit++;
         minSize = Math.min(minSize, a.size); maxSize = Math.max(maxSize, a.size);
         for (let j = i + 1; j < visible.length; j++) {
@@ -53,7 +53,7 @@ test("the moving middle stays full of light with clear, spaced photos and stable
     expect(maxVisible).toBeLessThanOrEqual(width < 700 ? 90 : 160);
     expect(total / 150).toBeGreaterThan(width < 700 ? 55 : 100);
     expect(minSize).toBeGreaterThanOrEqual(width < 700 ? 10 : 12);
-    expect(maxSize).toBeLessThanOrEqual(width < 700 ? 54 : 74);
+    expect(maxSize).toBeLessThanOrEqual(width < 700 ? 78 : 108);
     expect(regions.upper / 150).toBeGreaterThan(width < 700 ? 15 : 30);
     expect(regions.lower / 150).toBeGreaterThan(width < 700 ? 12 : 25);
     expect(regions.front / 150).toBeGreaterThan(7);
@@ -128,6 +128,7 @@ test("close disk photographs retain readable internal image contrast with 200 up
     const m = await import("/src/universe-camera.js");
     const { createOrbitComposition, photoRegion } = await import("/src/orbit-composition.js");
     const { assignOrbitPhotos } = await import("/src/photo-textures.js");
+    const { photoSurfaceAt, projectPhotoSurface } = await import("/src/photo-surface.js");
     const width = innerWidth, height = innerHeight;
     const canvas = document.createElement("canvas"); canvas.width = width; canvas.height = height;
     const gpu = createUniverseGPU(canvas), gl = canvas.getContext("webgl");
@@ -153,7 +154,13 @@ test("close disk photographs retain readable internal image contrast with 200 up
     const contrast = photo => {
       const { x, y } = photo.projected;
       const size = photo.projected.size * m.photoDepthAt(photo.point, camera, 1).scale;
-      return luminance(x + size * .8 * .22, y) - luminance(x - size * .8 * .22, y);
+      const pose = photoSurfaceAt(photo.point, 6, 1, .8);
+      const samples = [-.32, 0, .32].map(v => {
+        const left = projectPhotoSurface(-.22, v, .8, pose);
+        const right = projectPhotoSurface(.22, v, .8, pose);
+        return luminance(x + right.x * size, y + right.y * size) - luminance(x + left.x * size, y + left.y * size);
+      });
+      return samples.reduce((sum, value) => sum + value, 0) / samples.length;
     };
     const contrasts = photos.filter(photo => photo.alpha > .8 && photo.point.radius > .2 && photo.point.depth > 0 && photo.projected.size >= 22).map(contrast);
     const rear = photos.filter(photo => photo.alpha > .8 && photo.point.radius > .2 && photo.point.depth < 0 && m.photoDepthAt(photo.point, camera, 1).opacity > .65).map(contrast);

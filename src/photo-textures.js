@@ -4,7 +4,7 @@ import { orbitAt } from "./universe-camera.js";
 export function planPhotoAtlas(count, maxSize = 4096, maxTile = 256) {
   const columns = Math.min(count, Math.ceil(Math.sqrt(count * 1.25)));
   const rows = Math.ceil(count / columns);
-  for (const tileWidth of [256, 192, 128, 96, 64, 32]) {
+  for (const tileWidth of [256, 192, 160, 128, 96, 64, 32]) {
     if (tileWidth > maxTile) continue;
     const tileHeight = tileWidth * 1.25;
     const width = columns * tileWidth,

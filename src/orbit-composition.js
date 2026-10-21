@@ -38,19 +38,22 @@ export function focusProjection(point, camera, width, height) {
   const grain = (point.seed * 97.13) % 1;
   const diskScale = mix(DISK_PHOTOS.mediumScale, DISK_PHOTOS.scale,
     Math.max(ease((grain - .82) / .18), frontArc(point, camera)));
+  const hero = grain > .96 ? field * frontArc(point, camera) : 0;
   const projected = projectOrbit(
     point,
     camera,
     width,
     height,
     (0.003 + point.seed * 0.0018) * 1.35 * (1 + 0.8 * (camera.showcase || 0)) *
-      mix(1, diskScale, field),
+      mix(1, diskScale, field) * mix(1, DISK_PHOTOS.heroGain, hero),
     portraitScaleAt(camera.zoom),
   );
   if (projected) {
     const limit = mix(photoSizeLimit(width) * portraitScaleAt(camera.zoom),
       width < 700 ? DISK_PHOTOS.phoneLimit : DISK_PHOTOS.desktopLimit, field);
-    projected.size = Math.min(projected.size, limit);
+    const heroLimit = width < 700 ? DISK_PHOTOS.phoneHeroLimit : DISK_PHOTOS.desktopHeroLimit;
+    projected.size = Math.min(projected.size, mix(limit, heroLimit, hero));
+    projected.hero = hero > .5;
   }
   return projected;
 }
@@ -228,8 +231,10 @@ export function createOrbitComposition(orbit) {
       let innerCount = 0,
         outerCount = 0;
       const regionCounts = { upper: 0, lower: 0, front: 0 };
+      let heroCount = 0;
       for (const record of records) {
         if (selected.length >= limit) break;
+        if (record.projected.hero && heroCount >= (width < 700 ? 5 : 10)) continue;
         if (regionCounts[record.region] >= regionLimits[record.region]) continue;
         if (
           innerLimit &&
@@ -252,6 +257,7 @@ export function createOrbitComposition(orbit) {
           overlap(record.rect, other.rect) || (available >= limit && record.id === other.id)))
           continue;
         selected.push(record);
+        if (record.projected.hero) heroCount++;
         regionCounts[record.region]++;
         if (record.innerArc) innerCount++;
         else outerCount++;

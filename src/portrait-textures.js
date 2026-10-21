@@ -1,6 +1,14 @@
 // Keep detail for the few camera-facing photographs, independently of the
 // lower-resolution atlas shared by thousands of distant orbit particles.
 export const PORTRAIT_CAPACITY = 16;
+export function selectPortraitIds(photos, photoIds) {
+  // Arrival opacity must not keep an older small card ahead of a newly
+  // approaching large portrait. Rank by the amount of visible screen detail.
+  const priority = photo => photo.projected.size * Math.min(1, photo.alpha * 2);
+  const ranked = photos.filter(photo => photo.alpha > .05 && photo.projected.size >= 40)
+    .sort((a, b) => priority(b) - priority(a));
+  return [...new Set(ranked.map(photo => photoIds[photo.index]))].slice(0, PORTRAIT_CAPACITY);
+}
 export function sharpenPortrait(image) {
   const canvas = document.createElement("canvas");
   const scale = Math.min(1, 320 / Math.max(image.width, image.height));
