@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { lensedOrbit } from "../src/accretion-lens.js";
 import {
   ASPECT,
   HORIZON,
@@ -61,7 +62,7 @@ test("the same world horizon hides rear orbits and inside points throughout the 
 
 test("the middle shows the hole with a limited, non-overlapping set of real orbit portraits", () => {
   const orbit = createOrbit(),
-    ids = Float32Array.from({ length: orbit.length / 4 }, (_, i) => i % 120);
+    ids = Float32Array.from({ length: orbit.length / 4 }, (_, i) => i % 200);
   for (const [width, height] of [
     [390, 664],
     [1440, 900],
@@ -76,7 +77,7 @@ test("the middle shows the hole with a limited, non-overlapping set of real orbi
     for (const p of [0.26, 0.3, 0.34])
       expect(compositionAt(cameraAt(p, width, height).zoom)).toBe(1);
     let max = 0,
-      nearHorizonFrames = 0;
+      nearHorizonFrames = 0, duplicates = 0, occluded = 0, offOrbit = 0, overlaps = 0;
     for (let frame = 0; frame < 45; frame++) {
       const time = 4 + frame / 30;
       const photos = composition
@@ -86,20 +87,20 @@ test("the middle shows the hole with a limited, non-overlapping set of real orbi
           height,
           time,
           photoIds: ids,
-          ratios: Array(120).fill(0.8),
+          ratios: Array(200).fill(0.8),
           now: 1000 + (frame * 1000) / 30,
           reduced: frame === 0,
         })
         .filter((p) => p.alpha * p.point.opacity > 0.5);
       max = Math.max(max, photos.length);
       if (photos.some((p) => p.point.radius < 0.22)) nearHorizonFrames++;
-      expect(photos.length).toBeLessThanOrEqual(width < 700 ? 22 : 44);
-      expect(new Set(photos.map((p) => ids[p.index])).size).toBe(photos.length);
+      expect(photos.length).toBeLessThanOrEqual(width < 700 ? 90 : 160);
+      duplicates += photos.length - new Set(photos.map((p) => ids[p.index])).size;
       for (let i = 0; i < photos.length; i++) {
         const photo = photos[i],
           actual = orbitAt(orbit, photo.index, time);
-        expect(photo.point).toEqual(actual);
-        expect(occludedByHole(actual, camera)).toBe(false);
+        if (Object.keys(actual).some(key => photo.point[key] !== actual[key])) offOrbit++;
+        if (occludedByHole(lensedOrbit(actual, camera), camera)) occluded++;
         for (let j = i + 1; j < photos.length; j++) {
           const other = photos[j];
           const overlap =
@@ -107,12 +108,16 @@ test("the middle shows the hole with a limited, non-overlapping set of real orbi
               (photo.projected.size + other.projected.size) * 0.4 &&
             Math.abs(photo.projected.y - other.projected.y) <
               (photo.projected.size + other.projected.size) * 0.5;
-          expect(overlap).toBe(false);
+          if (overlap) overlaps++;
         }
       }
     }
     expect(max).toBeGreaterThanOrEqual(width < 700 ? 2 : 4);
     expect(nearHorizonFrames).toBeGreaterThan(10);
+    expect(duplicates).toBe(0);
+    expect(occluded).toBe(0);
+    expect(offOrbit).toBe(0);
+    expect(overlaps).toBe(0);
   }
 });
 
@@ -139,7 +144,7 @@ test("GPU clips a rear photo's corners at the horizon while retaining real foreg
     photo.getContext("2d").fillStyle = "#00ffff";
     photo.getContext("2d").fillRect(0, 0, 100, 100);
     gpu.setPhotos([photo]);
-    const camera = cameraAt(0.3, width, height),
+    const camera = { ...cameraAt(0.3, width, height), photoField: 0 },
       focal = camera.baseWidth * 5;
     const gl = canvas.getContext("webgl"),
       layers = [],

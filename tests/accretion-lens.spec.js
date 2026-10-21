@@ -42,6 +42,33 @@ test("a photo travels continuously from the near disk around the upper rear imag
   expect(plain).toBeGreaterThan(2000);
 });
 
+test("the underside follows one continuous lower optical arc during the middle and restores the original ending", () => {
+  for (const [width, height] of [[390, 844], [1280, 800]]) {
+    const camera = cameraAt(.3, width, height);
+    const source = new Float32Array([.28, Math.PI * 1.5, -.03, .93]);
+    const point = orbitAt(source, 0, 0), lower = lensedOrbit(point, camera);
+    const upper = lensedOrbit(point, { ...camera, photoField: 0 });
+    expect(lower.y).toBeGreaterThan(upper.y + .4);
+    expect(occludedByHole(lower, camera)).toBe(false);
+    const moving = lensedOrbit(orbitAt(source, 0, .6), camera);
+    expect(moving.x).toBeLessThan(lower.x);
+    for (const key of ["seed", "radius", "angle", "depth", "opacity"])
+      expect(lower[key]).toBe(point[key]);
+    let previous, maxStep = 0;
+    for (let frame = 0; frame <= 4096; frame++) {
+      source[1] = frame * Math.PI * 2 / 4096;
+      const image = lensedOrbit(orbitAt(source, 0, 0), camera);
+      if (previous) maxStep = Math.max(maxStep, Math.hypot(image.x - previous.x, image.y - previous.y));
+      previous = image;
+    }
+    expect(maxStep * camera.width).toBeLessThan(6);
+    for (const p of [0, 1]) {
+      const view = cameraAt(p, width, height);
+      expect(lensedOrbit(point, view)).toEqual(lensedOrbit(point, { ...view, photoField: 0 }));
+    }
+  }
+});
+
 test("GPU carries fine moving photographic light around the rear halo and keeps the black center opaque", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");

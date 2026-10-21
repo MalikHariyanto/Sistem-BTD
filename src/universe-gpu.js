@@ -155,7 +155,7 @@ void main(){
     (sqrt(aOrbit.x)-sqrt(r)-cycles*(sqrt(.64)-sqrt(${PLUNGE_RADIUS.toFixed(8)})));
   float x=cos(theta)*r,z=sin(theta)*r;
   float y=.26*x+.19*z+aOrbit.z;
-  vec3 apparent=lensedOrbit(vec3(x,y,z),r,theta,uFlight.xyz);
+  vec3 apparent=lensedOrbit(vec3(x,y,z),r,theta,uFlight.xyz,uPhotoField);
   x=apparent.x;y=apparent.y;
   float fadeIn=clamp((r-.098)/.036,0.0,1.0);
   fadeIn=fadeIn*fadeIn*fadeIn*(fadeIn*(fadeIn*6.0-15.0)+10.0);
@@ -179,12 +179,15 @@ void main(){
     worldSize=heroSize*(1.0+.8*uShowcase);
     if(uLayer<1.5)mask*=step(.90,grain)*(1.0-uComposition);
     else {
-      worldSize*=1.35*uPortraitScale*mix(1.0,${DISK_PHOTOS.scale.toFixed(1)},uPhotoField);
+      float facing=(uFlight.x*r*cos(theta)+uFlight.z*z)/r-r;
+      float front=softstep(.012,.057,facing);
+      float diskScale=mix(${DISK_PHOTOS.mediumScale.toFixed(1)},${DISK_PHOTOS.scale.toFixed(1)},max(softstep(.82,1.0,grain),front));
+      worldSize*=1.35*uPortraitScale*mix(1.0,diskScale,uPhotoField);
       mask*=aFade*uComposition;
     }
   }
   if(uLayer>.5){
-    mask*=(1.0-.38*far)*infall;
+    mask*=(1.0-(.38-.18*middle)*far)*infall;
     worldSize*=.6+.4*infall;
   }
   float sizeLimit=min(190.0,uViewport.x*.36);
@@ -211,7 +214,7 @@ void main(){
   float nr=sqrt(r*r-${INFLOW.toFixed(8)}*.001),nt=theta+omega*.001;
   vec3 ns=vec3(cos(nt)*nr,0.0,sin(nt)*nr);
   ns.y=.26*ns.x+.19*ns.z+aOrbit.z;
-  vec3 next=lensedOrbit(ns,nr,nt,uFlight.xyz);
+  vec3 next=lensedOrbit(ns,nr,nt,uFlight.xyz,uPhotoField);
   vec2 velocity=(next.xy-uFlight.xy)/(uFlight.z-next.z)-(apparent.xy-uFlight.xy)/distance;
   float tangent=atan(velocity.y/${ASPECT.toFixed(8)},velocity.x);
   vPhoto=vec4(seed,size,mix(tangent,(seed-.5)*.18,readable),mask);

@@ -22,6 +22,8 @@ export const diskY = (u) => DISK.intercept + DISK.slope * u;
 
 // Spend time inside the crowded photo stream, keeping the original camera
 // path. Clock dilation eases in/out and never freezes or reverses the dolly.
+export const journeyTimeAt = (p) =>
+  FLIGHT_MS * p + PHOTO_REVEAL_MS * ease((p - 0.24) / 0.12);
 export function journeyProgress(elapsedMs) {
   if (elapsedMs <= 0) return 0;
   if (elapsedMs >= JOURNEY_MS) return 1;
@@ -29,7 +31,7 @@ export function journeyProgress(elapsedMs) {
     high = 1;
   for (let i = 0; i < 24; i++) {
     const p = (low + high) / 2;
-    const elapsed = FLIGHT_MS * p + PHOTO_REVEAL_MS * ease((p - 0.24) / 0.12);
+    const elapsed = journeyTimeAt(p);
     if (elapsed < elapsedMs) low = p;
     else high = p;
   }
@@ -41,16 +43,17 @@ export const photoShowcaseAt = (p) =>
 // light grains and the sparse, readable foreground portraits.
 export const photoFieldAt = (p) =>
   ease((p - 0.14) / 0.12) * (1 - ease((p - 0.4) / 0.18));
-// Option A: retain every orbit as fine light, but admit only photographs large
-// enough to read. The same selected cards persist into the ending composition.
+// Fill all visible arcs with medium photographs, retaining space for the few
+// larger foreground portraits. Unresolved orbits remain fine light.
 export const DISK_PHOTOS = {
   scale: 1.5,
+  mediumScale: .7,
   phoneLimit: 54,
   desktopLimit: 74,
-  phoneCount: 22,
-  desktopCount: 44,
-  phoneMinimum: 20,
-  desktopMinimum: 26,
+  phoneCount: 90,
+  desktopCount: 160,
+  phoneMinimum: 10,
+  desktopMinimum: 12,
 };
 export const orbitRateAt = (p, width = Infinity) =>
   (0.025 + 0.975 * (1 - ease((p - 0.7) / 0.3))) *
@@ -150,6 +153,7 @@ export function cameraAt(progress, width, height, aspect = 1672 / 941, immersion
   const centerY = mix(originalCenterY, height * 0.5, alignment);
   return {
     progress: p,
+    photoField: photoFieldAt(p),
     zoom,
     distance,
     cx,
@@ -295,7 +299,7 @@ export function photoDepthAt(point, camera, clarity = 0) {
   const rear = ease((depth - (camera.distance - 0.035)) / 0.075);
   const limb = mix(1, ease((closest - HORIZON.radius - 0.001) / 0.022), rear);
   return {
-    opacity: (1 - 0.38 * far) * infall * limb,
+    opacity: (1 - (0.38 - 0.18 * clarity) * far) * infall * limb,
     brightness: (1 - 0.4 * far) * (0.68 + 0.32 * infall),
     detail: (1 - (0.3 - 0.16 * clarity) * far) * infall,
     scale: 0.6 + 0.4 * infall,

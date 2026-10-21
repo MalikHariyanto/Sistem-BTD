@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { cameraAt, createOrbit, orbitAt, projectOrbit, photoFieldAt } from "../src/universe-camera.js";
 import { assignOrbitPhotos } from "../src/photo-textures.js";
-import { createOrbitComposition } from "../src/orbit-composition.js";
+import { createOrbitComposition, photoRegion } from "../src/orbit-composition.js";
 
 test("the moving middle stays full of light with clear, spaced photos and stable identities", () => {
   const orbit = createOrbit(), photoIds = assignOrbitPhotos(orbit, 200);
@@ -13,6 +13,7 @@ test("the moving middle stays full of light with clear, spaced photos and stable
     const composition = createOrbitComposition(orbit);
     let previous = new Map(), tracked = 0, total = 0, minVisible = Infinity, maxVisible = 0;
     let overlaps = 0, duplicates = 0, movedFromOrbit = 0, maxAlphaStep = 0, minSize = Infinity, maxSize = 0;
+    const regions = { upper: 0, front: 0, lower: 0 }, seen = new Set();
     // Five seconds of real movement, mixed image ratios, and a moving camera.
     // Include retiring cards, not just the newly selected target population.
     for (let frame = 0; frame < 150; frame++) {
@@ -25,6 +26,7 @@ test("the moving middle stays full of light with clear, spaced photos and stable
       maxVisible = Math.max(maxVisible, visible.length);
       duplicates += visible.length - new Set(visible.map(photo => photoIds[photo.index])).size;
       total += visible.length;
+      for (const photo of visible) { regions[photoRegion(photo.projected, camera)]++; seen.add(photoIds[photo.index]); }
       for (let i = 0; i < visible.length; i++) {
         const photo = visible[i], a = photo.projected, ratio = ratios[photoIds[photo.index]];
         // Use the larger footprint so a departing card is not culled as dust.
@@ -46,11 +48,16 @@ test("the moving middle stays full of light with clear, spaced photos and stable
       }
       previous = new Map(photos.map(photo => [photo.index, photo]));
     }
-    expect(minVisible).toBeGreaterThanOrEqual(width < 700 ? 14 : 28);
-    expect(maxVisible).toBeLessThanOrEqual(width < 700 ? 22 : 44);
-    expect(total / 150).toBeGreaterThan(width < 700 ? 18 : 38);
-    expect(minSize).toBeGreaterThanOrEqual(width < 700 ? 20 : 26);
+    // Even the sparsest transition frame exceeds the previous front-only population.
+    expect(minVisible).toBeGreaterThanOrEqual(width < 700 ? 35 : 50);
+    expect(maxVisible).toBeLessThanOrEqual(width < 700 ? 90 : 160);
+    expect(total / 150).toBeGreaterThan(width < 700 ? 55 : 100);
+    expect(minSize).toBeGreaterThanOrEqual(width < 700 ? 10 : 12);
     expect(maxSize).toBeLessThanOrEqual(width < 700 ? 54 : 74);
+    expect(regions.upper / 150).toBeGreaterThan(width < 700 ? 15 : 30);
+    expect(regions.lower / 150).toBeGreaterThan(width < 700 ? 12 : 25);
+    expect(regions.front / 150).toBeGreaterThan(7);
+    expect(seen.size).toBeGreaterThan(width < 700 ? 100 : 170);
     expect(overlaps).toBe(0);
     expect(duplicates).toBe(0);
     expect(movedFromOrbit).toBe(0);
@@ -84,25 +91,31 @@ test("uploaded image colors stay visible on the clean middle disk, including dar
     const pixels = new Uint8Array(width * height * 4);
     gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
     let cyan = 0, pink = 0;
+    const regions = { upper: 0, front: 0, lower: 0 };
     const cells = new Set();
     for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
       const i = (y * width + x) * 4;
       if (pixels[i + 1] > pixels[i] + 30 && pixels[i + 2] > pixels[i] + 20) {
         cyan++; cells.add(`${x >> 4},${y >> 4}`);
+        const u = (x - camera.x) / camera.width, v = (height - 1 - y - camera.y) / camera.height;
+        const offset = v - (.35 + .26 * u);
+        regions[offset < -.045 ? "upper" : offset > .065 ? "lower" : "front"]++;
       }
       if (pixels[i] > pixels[i + 1] + 45 && pixels[i + 2] > pixels[i + 1] + 5) pink++;
     }
-    return { cyan, pink, cells: cells.size, width, photos: Number(canvas.dataset.diskPhotos),
+    return { cyan, pink, regions, cells: cells.size, width, photos: Number(canvas.dataset.diskPhotos),
       filaments: Number(canvas.dataset.filaments), error: gl.getError() };
   });
   expect(result.error).toBe(0);
   expect(result.filaments).toBe(32768);
-  expect(result.photos).toBeGreaterThan(result.width < 700 ? 14 : 28);
-  expect(result.photos).toBeLessThanOrEqual(result.width < 700 ? 22 : 44);
+  expect(result.photos).toBeGreaterThan(result.width < 700 ? 35 : 60);
+  expect(result.photos).toBeLessThanOrEqual(result.width < 700 ? 90 : 160);
   // Both halves must survive integration into the warm light, even over black.
   expect(result.cyan, JSON.stringify(result)).toBeGreaterThan(result.width < 700 ? 1500 : 8000);
   expect(result.pink).toBeGreaterThan(result.width < 700 ? 1500 : 8000);
   expect(result.cells).toBeGreaterThan(result.width < 700 ? 35 : 100);
+  expect(result.regions.upper, JSON.stringify(result)).toBeGreaterThan(result.width < 700 ? 250 : 800);
+  expect(result.regions.lower).toBeGreaterThan(result.width < 700 ? 300 : 1200);
 });
 
 test("close disk photographs retain readable internal image contrast with 200 uploads", async ({ page, isMobile }) => {
@@ -113,7 +126,7 @@ test("close disk photographs retain readable internal image contrast with 200 up
   const result = await page.evaluate(async () => {
     const { createUniverseGPU } = await import("/src/universe-gpu.js");
     const m = await import("/src/universe-camera.js");
-    const { createOrbitComposition } = await import("/src/orbit-composition.js");
+    const { createOrbitComposition, photoRegion } = await import("/src/orbit-composition.js");
     const { assignOrbitPhotos } = await import("/src/photo-textures.js");
     const width = innerWidth, height = innerHeight;
     const canvas = document.createElement("canvas"); canvas.width = width; canvas.height = height;
@@ -137,18 +150,25 @@ test("close disk photographs retain readable internal image contrast with 200 up
     const orbit = m.createOrbit(), photoIds = assignOrbitPhotos(orbit, 200);
     const photos = createOrbitComposition(orbit).update({ camera, width, height, time: 6, photoIds,
       ratios: Array(200).fill(.8), now: 1000, reduced: true });
-    const contrasts = photos.filter(photo => photo.alpha > .8 && photo.point.radius > .2).map(photo => {
+    const contrast = photo => {
       const { x, y } = photo.projected;
       const size = photo.projected.size * m.photoDepthAt(photo.point, camera, 1).scale;
       return luminance(x + size * .8 * .22, y) - luminance(x - size * .8 * .22, y);
-    });
+    };
+    const contrasts = photos.filter(photo => photo.alpha > .8 && photo.point.radius > .2 && photo.point.depth > 0 && photo.projected.size >= 22).map(contrast);
+    const rear = photos.filter(photo => photo.alpha > .8 && photo.point.radius > .2 && photo.point.depth < 0 && m.photoDepthAt(photo.point, camera, 1).opacity > .65).map(contrast);
     return { contrast: contrasts.reduce((sum, value) => sum + value, 0) / contrasts.length,
-      readable: contrasts.filter(value => value > 65).length, count: contrasts.length, error: gl.getError() };
+      readable: contrasts.filter(value => value > 65).length, count: contrasts.length,
+      rear: rear.reduce((sum, value) => sum + value, 0) / rear.length,
+      rearReadable: rear.filter(value => value > 30).length, rearCount: rear.length, error: gl.getError() };
   });
   expect(result.error).toBe(0);
-  expect(result.count).toBeGreaterThan(isMobile ? 12 : 28);
+  expect(result.count).toBeGreaterThan(isMobile ? 8 : 16);
   expect(result.readable / result.count, JSON.stringify(result)).toBeGreaterThan(.8);
   expect(result.contrast).toBeGreaterThan(85);
+  expect(result.rearCount).toBeGreaterThan(isMobile ? 10 : 20);
+  expect(result.rear, JSON.stringify(result)).toBeGreaterThan(35);
+  expect(result.rearReadable / result.rearCount).toBeGreaterThan(.7);
 });
 
 test("Canvas fallback also shows uploaded photographs across the middle and can continue into the story", async ({ page }) => {
@@ -182,8 +202,8 @@ test("Canvas fallback also shows uploaded photographs across the middle and can 
   });
   expect(image.renderer).toBe("canvas2d");
   expect(image.filaments).toBe(8192);
-  expect(image.photos).toBeGreaterThan(10);
-  expect(image.photos).toBeLessThanOrEqual(await page.evaluate(() => innerWidth < 700 ? 22 : 44));
+  expect(image.photos).toBeGreaterThan(35);
+  expect(image.photos).toBeLessThanOrEqual(await page.evaluate(() => innerWidth < 700 ? 90 : 160));
   expect(image.progress).toBeGreaterThanOrEqual(0.3);
   expect(image.progress).toBeLessThan(0.41);
   expect(image.fraction).toBeGreaterThan(0.006);
