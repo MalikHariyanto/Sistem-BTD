@@ -17,6 +17,7 @@ import {
   createOrbitComposition,
   compositionAt,
 } from "../src/orbit-composition.js";
+import { crystalBounds } from "../src/crystal-pin.js";
 
 test("photos spiral inward, accelerate and vanish before an invisible outer respawn", () => {
   const data = new Float32Array([0.2, 0.4, 0, 0.8]);
@@ -103,11 +104,8 @@ test("the middle shows the hole with a limited, non-overlapping set of real orbi
         if (occludedByHole(lensedOrbit(actual, camera), camera)) occluded++;
         for (let j = i + 1; j < photos.length; j++) {
           const other = photos[j];
-          const overlap =
-            Math.abs(photo.projected.x - other.projected.x) <
-              (photo.projected.size + other.projected.size) * 0.4 &&
-            Math.abs(photo.projected.y - other.projected.y) <
-              (photo.projected.size + other.projected.size) * 0.5;
+          const a=crystalBounds(photo.projected,.8),b=crystalBounds(other.projected,.8);
+          const overlap=a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top;
           if (overlap) overlaps++;
         }
       }
@@ -149,6 +147,13 @@ test("GPU clips a rear photo's corners at the horizon while retaining real foreg
     const gl = canvas.getContext("webgl"),
       layers = [],
       draw = gl.drawArrays.bind(gl);
+    const instancing=gl.getExtension('ANGLE_instanced_arrays');
+    const drawInstances=instancing?.drawArraysInstancedANGLE.bind(instancing);
+    if(instancing)instancing.drawArraysInstancedANGLE=(...args)=>{
+      const program=gl.getParameter(gl.CURRENT_PROGRAM);
+      layers.push(gl.getUniform(program,gl.getUniformLocation(program,'uLayer')));
+      return drawInstances(...args);
+    };
     gl.drawArrays = (mode, first, count) => {
       if (mode === gl.POINTS) {
         const program = gl.getParameter(gl.CURRENT_PROGRAM);
@@ -169,6 +174,7 @@ test("GPU clips a rear photo's corners at the horizon while retaining real foreg
       reduced: true,
     });
     gl.drawArrays = draw;
+    if(instancing)instancing.drawArraysInstancedANGLE=drawInstances;
     const program = gl.getParameter(gl.CURRENT_PROGRAM);
     const set = (name, value) =>
       gl.uniform1f(gl.getUniformLocation(program, name), value);

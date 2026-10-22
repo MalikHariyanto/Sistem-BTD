@@ -2,10 +2,15 @@ import { test, expect } from "@playwright/test";
 import { cameraAt, createOrbit, orbitRateAt, journeyProgress, JOURNEY_MS } from "../src/universe-camera.js";
 import { assignOrbitPhotos } from "../src/photo-textures.js";
 import { createOrbitComposition } from "../src/orbit-composition.js";
+import { crystalBounds } from "../src/crystal-pin.js";
 
 function intersects(a, b, ratios, ids) {
   const aa = ratios[ids[a.index]],
     bb = ratios[ids[b.index]];
+  if (a.projected.crystal > .001 || b.projected.crystal > .001) {
+    const ar=crystalBounds(a.projected,aa),br=crystalBounds(b.projected,bb);
+    return ar.left<br.right&&ar.right>br.left&&ar.top<br.bottom&&ar.bottom>br.top;
+  }
   return (
     Math.abs(a.projected.x - b.projected.x) <
       (a.projected.size * Math.min(aa, 1) +

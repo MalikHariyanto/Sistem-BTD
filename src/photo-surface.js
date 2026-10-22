@@ -5,7 +5,7 @@ export function photoSurfaceAt(point, time, field, ratio = 1) {
   const { seed, angle } = point;
   const yaw = field * (.38 * Math.sin(angle * .7 + seed * 13) + .08 * Math.sin(time * .28 + seed * 9));
   const pitch = field * (.23 * Math.cos(angle * .45 + seed * 17) + .055 * Math.sin(time * .23 + seed * 11));
-  const roll = (seed - .5) * .18 + field * (.105 + .035 * Math.sin(angle + seed * 7 + time * .14));
+  const roll = (seed - .5) * .18 * (1 - field) + field * .035 * Math.sin(angle + seed * 7 + time * .14);
   const perspective = field * .14;
   const cy = Math.cos(yaw), sy = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
   const normal = [sy * cp, -sp, cy * cp];
@@ -39,7 +39,7 @@ export const photoPoseGLSL = `
 vec4 photoPose(float seed,float theta,float time,float field){
   float yaw=field*(.38*sin(theta*.7+seed*13.0)+.08*sin(time*.28+seed*9.0));
   float pitch=field*(.23*cos(theta*.45+seed*17.0)+.055*sin(time*.23+seed*11.0));
-  float roll=(seed-.5)*.18+field*(.105+.035*sin(theta+seed*7.0+time*.14));
+  float roll=(seed-.5)*.18*(1.0-field)+field*.035*sin(theta+seed*7.0+time*.14);
   return vec4(yaw,pitch,roll,field*.14);
 }
 float photoFit(vec4 pose,float ratio){

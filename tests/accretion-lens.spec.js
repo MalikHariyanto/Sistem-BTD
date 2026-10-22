@@ -89,6 +89,15 @@ test("GPU carries fine moving photographic light around the rear halo and keeps 
     const gl = canvas.getContext("webgl"), camera = cameraAt(0.3, width, height);
     const captures = [], orbit = createOrbit();
     const draw = gl.drawArrays.bind(gl);
+    // The near crystal population uses instanced quads. Isolate it as well as
+    // the old point path, so legitimate front crossings do not count as leaks.
+    const instancing=gl.getExtension('ANGLE_instanced_arrays');
+    const drawInstances=instancing?.drawArraysInstancedANGLE.bind(instancing);
+    if(instancing)instancing.drawArraysInstancedANGLE=(...args)=>{
+      const program=gl.getParameter(gl.CURRENT_PROGRAM);
+      if(gl.getUniform(program,gl.getUniformLocation(program,'uLayer'))===2)return;
+      return drawInstances(...args);
+    };
     let physicalTime = 0;
     // Isolate rear material so legitimate foreground crossings cannot be
     // mistaken for a failure of the black hole's depth mask.

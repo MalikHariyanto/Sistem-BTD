@@ -28,6 +28,7 @@ import { createDiskStream } from "./disk-stream.js";
 import { createSpaceBackdrop } from "./space-background.js";
 import { sharpenPortrait, PORTRAIT_CAPACITY } from "./portrait-textures.js";
 import { photoSurfaceAt } from "./photo-surface.js";
+import { paintCrystalPin } from "./crystal-pin.js";
 
 const PLATE_URL = `${import.meta.env.BASE_URL}art/gargantua.webp`;
 
@@ -144,6 +145,18 @@ export function createUniverse(canvas) {
       const tangent = orbitTangent(sourcePoint, camera);
       const surface = focused && field > 0 ? photoSurfaceAt(sourcePoint, flowSeconds, field,
         images[point.photoId] ? images[point.photoId].width / images[point.photoId].height : .8) : null;
+      const photoAlpha = opacity * atmosphere.opacity * localLight * point.opacity *
+        (0.38 + readable * 0.6) * ease((depth - 0.028) / 0.047);
+      if (surface && point.crystal > .001) {
+        ctx.globalAlpha = photoAlpha;
+        const source = images[point.photoId], ratio = source ? source.width / source.height : .8;
+        const image = source && nearClarity > .4 ? portraitDetail(source) : source;
+        // The renderer has already translated to the orbital anchor. Project
+        // the jewel's facets and image above it; the tip stays on that anchor.
+        paintCrystalPin(ctx, image, { ...point, size }, ratio, surface, point.crystal, light);
+        ctx.restore();
+        return;
+      }
       if (surface) {
         ctx.rotate(surface.roll);
         ctx.scale(surface.fit, surface.fit);
@@ -152,13 +165,7 @@ export function createUniverse(canvas) {
         ctx.transform(Math.cos(surface.yaw), 0,
           Math.sin(surface.yaw) * Math.sin(surface.pitch), Math.cos(surface.pitch), 0, 0);
       } else ctx.rotate(tangent * (1 - readable) + (seed - 0.5) * 0.18 * readable);
-      ctx.globalAlpha =
-        opacity *
-        atmosphere.opacity *
-        localLight *
-        point.opacity *
-        (0.38 + readable * 0.6) *
-        ease((depth - 0.028) / 0.047);
+      ctx.globalAlpha = photoAlpha;
       const integration = Math.max(field * 0.12, coupled * 0.65) * (1 - 0.55 * middle) * (1 - 0.45 * nearClarity) * (1 - 0.35 * diskClarity);
       if (!isPhoto) ctx.globalAlpha *= 1 - .25 * field;
       const source = images[point.photoId];
@@ -259,6 +266,7 @@ export function createUniverse(canvas) {
       );
     canvas.dataset.diskPhotos = String(field > .5 ? focused.filter(p => p.alpha * p.point.opacity > .5).length : 0);
     canvas.dataset.filaments = String(orbit.length / 4);
+    canvas.dataset.crystalPins = String(focused.filter(p => p.projected.crystal > .75 && p.alpha * p.point.opacity > .45).length);
     canvas.dataset.focusPhotos = String(
       focused.filter((p) => p.alpha * p.point.opacity > 0.5).length,
     );

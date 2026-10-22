@@ -17,6 +17,7 @@ import { createPortraitAtlas, selectPortraitIds } from "./portrait-textures.js";
 import { DISK_STREAM } from "./disk-stream.js";
 import { spaceGLSL } from "./space-background.js";
 import { photoPoseGLSL } from "./photo-surface.js";
+import { crystalPinGLSL, CRYSTAL_FOOTPRINT, CRYSTAL_TIP } from "./crystal-pin.js";
 
 // A photographic halo plus 32,768 persistent orbiting photo sprites. No engine dependency.
 const vertex = `
@@ -120,6 +121,8 @@ precision highp float;
 attribute vec4 aOrbit; // radius, initial phase, thickness, stable identity
 attribute vec2 aPhoto; // stable image id and original width/height
 attribute float aFade;
+attribute vec2 aCorner;
+uniform float uBillboard;
 uniform float uLayer;
 uniform float uComposition;
 uniform float uShowcase;
@@ -140,12 +143,15 @@ varying float vDepth;
 varying vec2 vAtmosphere; // far-side veil, inward material dissolution
 varying float vMiddle;
 varying vec4 vTilt;
+varying vec3 vPin;
+varying vec2 vQuad;
 float softstep(float a,float b,float x){
   float t=clamp((x-a)/(b-a),0.0,1.0);
   return t*t*t*(t*(t*6.0-15.0)+10.0);
 }
 ${lensGLSL}
 ${photoPoseGLSL}
+${crystalPinGLSL}
 void main(){
   vPhotoId=aPhoto.x;
   vAspect=aPhoto.y;
@@ -177,7 +183,7 @@ void main(){
   vMiddle=middle;
   float dustSize=.00018+seed*.00038;
   float heroSize=.003+seed*.0018;
-  float hero=0.0;
+  float hero=0.0,pin=0.0;
   float worldSize=dustSize;
   if(uLayer>.5){
     worldSize=heroSize*(1.0+.8*uShowcase);
@@ -185,8 +191,9 @@ void main(){
     else {
       float facing=(uFlight.x*r*cos(theta)+uFlight.z*z)/r-r;
       float front=softstep(.012,.057,facing);
+      pin=uPhotoField*front;
       hero=step(.96,grain)*uPhotoField*front;
-      float diskScale=mix(${DISK_PHOTOS.mediumScale.toFixed(1)},${DISK_PHOTOS.scale.toFixed(1)},max(softstep(.82,1.0,grain),front));
+      float diskScale=mix(${DISK_PHOTOS.mediumScale.toFixed(3)},${DISK_PHOTOS.scale.toFixed(3)},softstep(.66,1.0,grain)*(.45+.55*front));
       worldSize*=1.35*uPortraitScale*mix(1.0,diskScale,uPhotoField)*mix(1.0,${DISK_PHOTOS.heroGain},hero);
       mask*=aFade*uComposition;
     }
@@ -200,14 +207,26 @@ void main(){
     uViewport.x<700.0?${DISK_PHOTOS.phoneLimit.toFixed(1)}:${DISK_PHOTOS.desktopLimit.toFixed(1)},uPhotoField);
   if(uLayer>1.5)sizeLimit=mix(sizeLimit,uViewport.x<700.0?${DISK_PHOTOS.phoneHeroLimit.toFixed(1)}:${DISK_PHOTOS.desktopHeroLimit.toFixed(1)},hero);
   float size=min(sizeLimit,worldSize*scale);
+  vTilt=vec4(0.0,0.0,0.0,1.0);
+  // Keep the bright origin on the exact physical orbit. Only the crystal
+  // body rises above it, with perspective and orientation from its plane.
+  vPin=vec3(pixel,pin);
+  vec4 pose=vec4(0.0);
+  if(uLayer>1.5){
+    pose=photoPose(seed,theta,uTime,uPhotoField);
+    vTilt=vec4(pose.xy,pose.w,uPhotoField>0.0?photoFit(pose,vAspect):1.0);
+    vec2 tip=photoProject(vec2(0.0,${CRYSTAL_TIP}),vec2(min(vAspect,1.0),min(1.0/vAspect,1.0)),vTilt,pose.z);
+    pixel-=tip*size*pin;
+  }
   mask*=smoothstep(.028,.075,distance);
   if(distance<=.028||pixel.x < -size||pixel.x>uViewport.x+size||pixel.y < -size||pixel.y>uViewport.y+size)mask=0.0;
   // Keep partially visible cards alive when their centers leave the viewport.
   // WebGL point clipping otherwise makes a whole photo pop off at the edge.
-  float footprint=max(1.2/uDpr,size*1.3);
-  vec2 bounded=clamp(pixel,vec2(.001),uViewport-vec2(.001));
+  float footprint=max(1.2/uDpr,size*mix(1.3,${CRYSTAL_FOOTPRINT},pin));
+  vQuad=aCorner+vec2(.5);
+  vec2 bounded=uBillboard>.5?pixel:clamp(pixel,vec2(.001),uViewport-vec2(.001));
   vOffset=(bounded-pixel)/footprint;
-  vec2 clip=bounded/uViewport*2.0-1.0;
+  vec2 clip=(bounded+aCorner*footprint*uBillboard)/uViewport*2.0-1.0;
   gl_Position=mask>.001?vec4(clip.x,-clip.y,clamp(distance/6.0*2.0-1.0,-.999,.999),1.0):vec4(2.0,2.0,2.0,1.0);
   gl_PointSize=mask>.001?min(uPointLimit,footprint*uDpr):1.0;
   // Tiny tilted cards merge into light filaments. The same cards become legible
@@ -224,11 +243,8 @@ void main(){
   vec2 velocity=(next.xy-uFlight.xy)/(uFlight.z-next.z)-(apparent.xy-uFlight.xy)/distance;
   float tangent=atan(velocity.y/${ASPECT.toFixed(8)},velocity.x);
   vPhoto=vec4(seed,size,mix(tangent,(seed-.5)*.18,readable),mask);
-  vTilt=vec4(0.0,0.0,0.0,1.0);
   if(uLayer>1.5){
-    vec4 pose=photoPose(seed,theta,uTime,uPhotoField);
-    vPhoto.z=mix(vPhoto.z,pose.z,uPhotoField);
-    vTilt=vec4(pose.xy,pose.w,uPhotoField>0.0?photoFit(vec4(pose.xy,vPhoto.z,pose.w),vAspect):1.0);
+    vPhoto.z=pose.z;
   }
   vHeat=(1.0-smoothstep(.14,.64,r))*.36+seed*.20;
 }
@@ -257,6 +273,7 @@ uniform float uPhotoField;
 uniform float uDpr;
 uniform float uCover;
 uniform vec2 uViewport;
+uniform float uBillboard;
 varying vec4 vPhoto;
 varying float vHeat;
 varying vec2 vOffset;
@@ -264,10 +281,13 @@ varying float vDepth;
 varying vec2 vAtmosphere; // far-side veil, inward material dissolution
 varying float vMiddle;
 varying vec4 vTilt;
+varying vec3 vPin;
+varying vec2 vQuad;
 float softstep(float a,float b,float x){
   float t=clamp((x-a)/(b-a),0.0,1.0);
   return t*t*t*(t*(t*6.0-15.0)+10.0);
 }
+${crystalPinGLSL}
 void main(){
   if(vPhoto.w<.001)discard;
   // Per-fragment depth also clips a photo whose center is outside the shadow
@@ -292,10 +312,12 @@ void main(){
   float size=vPhoto.y, readable=smoothstep(2.0,mix(28.0,12.0,uShowcase),size);
   if(uLayer<.5)readable*=1.0-uPhotoField;
   if(uLayer>.5)readable*=(1.0-(.3-.16*vMiddle)*vAtmosphere.x)*vAtmosphere.y;
-  vec2 p=(gl_PointCoord-vec2(.5)+vOffset)*1.3;
+  float pin=vPin.z;
+  vec2 coordinates=uBillboard>.5?vQuad:gl_PointCoord;
+  vec2 p=(coordinates-vec2(.5)+vOffset)*mix(1.3,${CRYSTAL_FOOTPRINT},pin);
   float c=cos(vPhoto.z),s=sin(vPhoto.z);
   p=mat2(c,-s,s,c)*p;
-  vec2 extent=vec2(min(vAspect,1.0),min(1.0/vAspect,1.0)*mix(.28,1.0,smoothstep(1.5,12.0,size)));
+  vec2 extent=vec2(min(vAspect,1.0),min(1.0/vAspect,1.0)*mix(mix(.28,1.0,smoothstep(1.5,12.0,size)),1.0,pin));
   if(uLayer>1.5&&uPhotoField>.001){
     // Inverse ray/plane projection resolves a tilted photograph inside the
     // same orbit footprint. Perspective correct sampling keeps the image
@@ -313,7 +335,9 @@ void main(){
   float surface=uLayer>1.5?uPhotoField:0.0;
   float bevel=surface*min(.025,.85/max(12.0,size));
   float aa=.65/max(12.0,size*uDpr);
-  if(edge>.5+bevel)discard;
+  if(pin>.001){
+    if(crystalHull(p)>.06&&length(pixel-vPin.xy)>max(5.0,size*.14))discard;
+  }else if(edge>.5+bevel)discard;
   vec2 local=clamp(p+vec2(.5),0.0,1.0);
   bool detailed=vPhotoId<0.0;
   float id=detailed?-vPhotoId-1.0:clamp(floor(vPhotoId+.5),0.0,uAtlas.z-1.0);
@@ -375,9 +399,23 @@ void main(){
     float satin=pow(max(0.0,1.0-abs(p.x*.65+p.y*.35+vTilt.x*.55-vTilt.y*.7)),24.0);
     color+=vec3(1.0,.85,.65)*satin*.012*surface;
     vec3 paper=mix(vec3(.075,.048,.027),vec3(.80,.60,.35),facing*(.45+.35*light));
-    float face=smoothstep(.5-aa,.5,edge);
+    float face=smoothstep(.5-aa,.5,edge)*(1.0-pin);
     color=mix(color,paper,face);
-    opacity*=1.0-smoothstep(.5+bevel-aa,.5+bevel,edge);
+    opacity*=mix(1.0-smoothstep(.5+bevel-aa,.5+bevel,edge),1.0,pin);
+  }
+  if(pin>.001){
+    vec3 normal=vec3(sin(vTilt.x)*cos(vTilt.y),-sin(vTilt.y),cos(vTilt.x)*cos(vTilt.y));
+    vec2 direction=normalize((vec2(.5,.445)-uv)*vec2(1.0,${(1 / ASPECT).toFixed(8)})+vec2(.0001));
+    direction=mat2(c,-s,s,c)*direction;
+    vec3 refraction=texture2D(uWide,clamp(uv+normalize(p+vec2(.001))*size*.035/uCamera.zw,0.0,1.0)).rgb;
+    vec4 crystal=crystalMaterial(p,pixel-vPin.xy,normal,mix(diskLight,refraction,.7),size,uDpr,light,direction);
+    float window=1.0-smoothstep(-aa,aa,crystalWindow(p));
+    float flatWindow=1.0-smoothstep(.5-aa,.5+bevel+aa,edge);
+    float photoAlpha=opacity*mix(flatWindow,window,pin);
+    float glassAlpha=crystal.a*pin*vPhoto.w*limb;
+    float combined=photoAlpha+glassAlpha*(1.0-photoAlpha);
+    color=(color*photoAlpha+crystal.rgb*glassAlpha*(1.0-photoAlpha))/max(.0001,combined);
+    opacity=combined;
   }
   if(opacity<.025)discard;
   vec2 screen=gl_FragCoord.xy/(uViewport*uDpr);
@@ -468,6 +506,8 @@ export function createUniverseGPU(canvas) {
     orbitBuffer,
     photoBuffer,
     focusBuffer,
+    cornerBuffer,
+    instancing,
     last;
   const sources = { wide: null, detail: null, photos: null };
   const orbit = createOrbit();
@@ -537,6 +577,7 @@ export function createUniverseGPU(canvas) {
       );
   }
   function initialize() {
+    instancing = gl.getExtension("ANGLE_instanced_arrays");
     background = program(
       vertex,
       fragment,
@@ -558,6 +599,7 @@ export function createUniverseGPU(canvas) {
       [
         "uViewport",
         "uLayer",
+        "uBillboard",
         "uPhotoField",
         "uComposition",
         "uShowcase",
@@ -594,6 +636,10 @@ export function createUniverseGPU(canvas) {
       "aPhoto",
     );
     particles.fadeAttribute = gl.getAttribLocation(particles.program, "aFade");
+    particles.cornerAttribute = gl.getAttribLocation(particles.program, "aCorner");
+    cornerBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, cornerBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-.5,-.5,.5,-.5,-.5,.5,.5,.5]), gl.STATIC_DRAW);
     focusBuffer = gl.createBuffer();
     photoBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, photoBuffer);
@@ -649,6 +695,8 @@ export function createUniverseGPU(canvas) {
     gl.disableVertexAttribArray(background.attribute);
 
     gl.useProgram(particles.program);
+    gl.disableVertexAttribArray(particles.cornerAttribute);
+    gl.vertexAttrib2f(particles.cornerAttribute, 0, 0);
     gl.bindBuffer(gl.ARRAY_BUFFER, orbitBuffer);
     gl.enableVertexAttribArray(particles.attribute);
     gl.vertexAttribPointer(particles.attribute, 4, gl.FLOAT, false, 0, 0);
@@ -656,6 +704,7 @@ export function createUniverseGPU(canvas) {
     gl.enableVertexAttribArray(particles.photoAttribute);
     gl.vertexAttribPointer(particles.photoAttribute, 2, gl.FLOAT, false, 0, 0);
     u = particles.uniforms;
+    gl.uniform1f(u.uBillboard, 0);
     gl.uniform1i(u.uWide, 0);
     gl.uniform1f(u.uPlateReady, sources.wide ? 1 : 0);
     gl.uniform4f(u.uCamera, camera.x, camera.y, camera.width, camera.height);
@@ -744,9 +793,25 @@ export function createUniverseGPU(canvas) {
     gl.uniform1f(u.uLayer, 2);
     // Keep the focal portraits clear of the ambient photographic dust.
     gl.clear(gl.DEPTH_BUFFER_BIT);
-    gl.drawArrays(gl.POINTS, 0, focused.length);
+    if (instancing && focused.length) {
+      // Four real vertices per marker avoid driver point-size limits and let
+      // large, tilted crystals leave the viewport without square clipping.
+      gl.uniform1f(u.uBillboard, 1);
+      gl.bindBuffer(gl.ARRAY_BUFFER, cornerBuffer);
+      gl.enableVertexAttribArray(particles.cornerAttribute);
+      gl.vertexAttribPointer(particles.cornerAttribute, 2, gl.FLOAT, false, 0, 0);
+      const attributes=[particles.attribute,particles.photoAttribute,particles.fadeAttribute];
+      for(const attribute of attributes)instancing.vertexAttribDivisorANGLE(attribute,1);
+      instancing.drawArraysInstancedANGLE(gl.TRIANGLE_STRIP,0,4,focused.length);
+      for(const attribute of attributes)instancing.vertexAttribDivisorANGLE(attribute,0);
+      gl.disableVertexAttribArray(particles.cornerAttribute);
+      gl.vertexAttrib2f(particles.cornerAttribute,0,0);
+      gl.uniform1f(u.uBillboard,0);
+    } else gl.drawArrays(gl.POINTS, 0, focused.length);
+    canvas.dataset.portraitGeometry=instancing?"instanced-quads":"point-sprites";
     canvas.dataset.diskPhotos = String(field > .5 ? focused.filter(p => p.alpha * p.point.opacity > .5).length : 0);
     canvas.dataset.filaments = String(PARTICLE_COUNT);
+    canvas.dataset.crystalPins = String(focused.filter(p => p.projected.crystal > .75 && p.alpha * p.point.opacity > .45).length);
     canvas.dataset.focusPhotos = String(
       focused.filter((p) => p.alpha * p.point.opacity > 0.5).length,
     );

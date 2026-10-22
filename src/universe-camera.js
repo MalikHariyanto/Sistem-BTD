@@ -46,13 +46,13 @@ export const photoFieldAt = (p) =>
 // Fill all visible arcs with medium photographs, retaining space for the few
 // larger foreground portraits. Unresolved orbits remain fine light.
 export const DISK_PHOTOS = {
-  scale: 1.5,
-  mediumScale: .7,
-  phoneLimit: 54,
-  desktopLimit: 74,
-  phoneHeroLimit: 78,
-  desktopHeroLimit: 108,
-  heroGain: 1.45,
+  scale: 2.0,
+  mediumScale: .65,
+  phoneLimit: 64,
+  desktopLimit: 92,
+  phoneHeroLimit: 94,
+  desktopHeroLimit: 138,
+  heroGain: 1.35,
   phoneCount: 90,
   desktopCount: 160,
   phoneMinimum: 10,

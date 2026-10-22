@@ -15,6 +15,7 @@ import {
   orbitRateAt,
   diskY,
 } from "./universe-camera.js";
+import { crystalBounds, crystalStrength, crystalVeil } from "./crystal-pin.js";
 
 // The intimate ending favors the near arc. During the middle, the SAME source
 // population also remains readable along the optically bent rear arcs.
@@ -37,7 +38,7 @@ export function focusProjection(point, camera, width, height) {
   const field = photoFieldAt(camera.progress ?? 0);
   const grain = (point.seed * 97.13) % 1;
   const diskScale = mix(DISK_PHOTOS.mediumScale, DISK_PHOTOS.scale,
-    Math.max(ease((grain - .82) / .18), frontArc(point, camera)));
+    ease((grain - .66) / .34) * (.45 + .55 * frontArc(point, camera)));
   const hero = grain > .96 ? field * frontArc(point, camera) : 0;
   const projected = projectOrbit(
     point,
@@ -54,19 +55,13 @@ export function focusProjection(point, camera, width, height) {
     const heroLimit = width < 700 ? DISK_PHOTOS.phoneHeroLimit : DISK_PHOTOS.desktopHeroLimit;
     projected.size = Math.min(projected.size, mix(limit, heroLimit, hero));
     projected.hero = hero > .5;
+    projected.crystal = crystalStrength(point, camera);
   }
   return projected;
 }
 
 function bounds(point, ratio, gap) {
-  const w = point.size * Math.min(ratio, 1) * 0.56 + gap;
-  const h = point.size * Math.min(1 / ratio, 1) * 0.56 + gap;
-  return {
-    left: point.x - w,
-    right: point.x + w,
-    top: point.y - h,
-    bottom: point.y + h,
-  };
+  return crystalBounds(point, ratio, gap);
 }
 const overlap = (a, b) =>
   a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
@@ -123,8 +118,8 @@ export function createOrbitComposition(orbit) {
       const limit = Math.round(mix(width < 700 ? (mobileEnding ? 10 : 8) : 16,
         width < 700 ? DISK_PHOTOS.phoneCount : DISK_PHOTOS.desktopCount, field));
       const regionLimits = {
-        upper: Math.round(limit * .34 * field),
-        lower: Math.round(limit * .26 * field),
+        upper: Math.round(limit * .20 * field),
+        lower: Math.round(limit * .18 * field),
       };
       regionLimits.front = limit - regionLimits.upper - regionLimits.lower;
       const records = [];
@@ -162,14 +157,15 @@ export function createOrbitComposition(orbit) {
         if (quiet < (existing ? 0.01 : 0.5)) continue;
         const id = photoIds[index],
           ratio = ratios[id] || 0.8;
-        const halfWidth = projected.size * Math.min(ratio, 1) * 0.52;
-        const halfHeight = projected.size * Math.min(1 / ratio, 1) * 0.52;
+        const halfWidth = projected.size * Math.min(ratio, 1) * .52;
+        const halfHeight = projected.size * Math.min(1 / ratio, 1) * .52;
+        const frame = projected.crystal > .001 ? bounds(projected, ratio, 0) : {
+          left: projected.x-halfWidth, right: projected.x+halfWidth,
+          top: projected.y-halfHeight, bottom: projected.y+halfHeight,
+        };
         if (
           !existing &&
-          (projected.x - halfWidth < 0 ||
-            projected.x + halfWidth > width ||
-            projected.y - halfHeight < 65 ||
-            projected.y + halfHeight > height - 24)
+          (frame.left < 0 || frame.right > width || frame.top < 65 || frame.bottom > height - 24)
         )
           continue;
         const future =
@@ -194,7 +190,7 @@ export function createOrbitComposition(orbit) {
           projected,
           target: front * quiet,
           id,
-          region: field > 0 ? photoRegion(projected, camera) : "front",
+          region: projected.crystal > .5 ? "front" : field > 0 ? photoRegion(projected, camera) : "front",
           innerArc: (camera.showcase || 0) > 0.5 && point.radius < 0.24 &&
             (field === 0 || point.depth > 0),
           rect: bounds(projected, ratio, gap),
@@ -203,6 +199,7 @@ export function createOrbitComposition(orbit) {
           priority:
             (active.has(index) ? 1000 : 0) +
             (active.get(index)?.alpha || 0) * 1000 +
+            projected.crystal * 300 +
             100 *
               (camera.showcase || 0) *
               (1 - ease(Math.abs(point.radius - 0.14) / 0.06)) +
@@ -238,9 +235,11 @@ export function createOrbitComposition(orbit) {
       let innerCount = 0,
         outerCount = 0;
       const regionCounts = { upper: 0, lower: 0, front: 0 };
-      let heroCount = 0;
+      let heroCount = 0, largePinCount = 0;
       for (const record of records) {
         if (selected.length >= limit) break;
+        const largePin = record.projected.crystal > .75 && record.projected.size > (width < 700 ? 36 : 76);
+        if (largePin && largePinCount >= (width < 700 ? 2 : 7)) continue;
         if (record.projected.hero && heroCount >= (width < 700 ? 5 : 10)) continue;
         if (regionCounts[record.region] >= regionLimits[record.region]) continue;
         if (
@@ -264,6 +263,7 @@ export function createOrbitComposition(orbit) {
         if (!active.has(record.index) && held.some(other => overlap(record.rect, other.rect)))
           continue;
         selected.push(record);
+        if (largePin) largePinCount++;
         if (record.projected.hero) heroCount++;
         regionCounts[record.region]++;
         if (record.innerArc) innerCount++;
@@ -297,7 +297,7 @@ export function createOrbitComposition(orbit) {
             index,
             point,
             projected,
-            alpha: state.alpha * photoArcVisibility(point, camera),
+            alpha: state.alpha * photoArcVisibility(point, camera) * crystalVeil(projected, camera),
           });
       }
       return result;

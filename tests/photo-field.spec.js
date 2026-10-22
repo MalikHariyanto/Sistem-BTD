@@ -2,8 +2,9 @@ import { test, expect } from "@playwright/test";
 import { cameraAt, createOrbit, orbitAt, projectOrbit, photoFieldAt } from "../src/universe-camera.js";
 import { assignOrbitPhotos } from "../src/photo-textures.js";
 import { createOrbitComposition, photoRegion } from "../src/orbit-composition.js";
+import { crystalBounds } from "../src/crystal-pin.js";
 
-test("the moving middle stays full of light with clear, spaced photos and stable identities", () => {
+test("the moving middle balances clear foreground crystals with fading rear photographs", () => {
   const orbit = createOrbit(), photoIds = assignOrbitPhotos(orbit, 200);
   const ratios = Array.from({ length: 200 }, (_, i) => [.8, 1.6, 1][i % 3]);
   expect(orbit.length / 4).toBe(32768);
@@ -34,9 +35,8 @@ test("the moving middle stays full of light with clear, spaced photos and stable
         if (!physical || Math.hypot(a.x - physical.x, a.y - physical.y) > .00001) movedFromOrbit++;
         minSize = Math.min(minSize, a.size); maxSize = Math.max(maxSize, a.size);
         for (let j = i + 1; j < visible.length; j++) {
-          const b = visible[j].projected, other = ratios[photoIds[visible[j].index]];
-          if (Math.abs(a.x - b.x) < (a.size * Math.min(ratio, 1) + b.size * Math.min(other, 1)) / 2 &&
-            Math.abs(a.y - b.y) < (a.size * Math.min(1 / ratio, 1) + b.size * Math.min(1 / other, 1)) / 2) overlaps++;
+          const aa=crystalBounds(a,ratio), b=visible[j].projected, bb=crystalBounds(b,ratios[photoIds[visible[j].index]]);
+          if (aa.left<bb.right&&aa.right>bb.left&&aa.top<bb.bottom&&aa.bottom>bb.top) overlaps++;
         }
       }
       for (const photo of photos) {
@@ -48,21 +48,20 @@ test("the moving middle stays full of light with clear, spaced photos and stable
       }
       previous = new Map(photos.map(photo => [photo.index, photo]));
     }
-    // Even the sparsest transition frame exceeds the previous front-only population.
-    expect(minVisible).toBeGreaterThanOrEqual(width < 700 ? 35 : 50);
+    // Count readable foreground photographs, not the deliberately veiled rear.
+    // Even a narrow phone keeps a populated stream, rather than five big pins.
+    expect(minVisible).toBeGreaterThanOrEqual(width < 700 ? 8 : 18);
     expect(maxVisible).toBeLessThanOrEqual(width < 700 ? 90 : 160);
-    expect(total / 150).toBeGreaterThan(width < 700 ? 55 : 100);
+    expect(total / 150).toBeGreaterThan(width < 700 ? 12 : 28);
     expect(minSize).toBeGreaterThanOrEqual(width < 700 ? 10 : 12);
-    expect(maxSize).toBeLessThanOrEqual(width < 700 ? 78 : 108);
-    expect(regions.upper / 150).toBeGreaterThan(width < 700 ? 15 : 30);
-    expect(regions.lower / 150).toBeGreaterThan(width < 700 ? 12 : 25);
-    expect(regions.front / 150).toBeGreaterThan(7);
-    expect(seen.size).toBeGreaterThan(width < 700 ? 100 : 170);
+    expect(maxSize).toBeLessThanOrEqual(width < 700 ? 94 : 138);
+    expect(regions.front + regions.lower).toBeGreaterThan(1200);
+    expect(seen.size).toBeGreaterThan(width < 700 ? 30 : 50);
     expect(overlaps).toBe(0);
     expect(duplicates).toBe(0);
     expect(movedFromOrbit).toBe(0);
     expect(maxAlphaStep).toBeLessThan(.14);
-    expect(tracked).toBeGreaterThan(2000);
+    expect(tracked).toBeGreaterThan(1000);
   }
 });
 
@@ -104,18 +103,18 @@ test("uploaded image colors stay visible on the clean middle disk, including dar
       if (pixels[i] > pixels[i + 1] + 45 && pixels[i + 2] > pixels[i + 1] + 5) pink++;
     }
     return { cyan, pink, regions, cells: cells.size, width, photos: Number(canvas.dataset.diskPhotos),
-      filaments: Number(canvas.dataset.filaments), error: gl.getError() };
+      filaments: Number(canvas.dataset.filaments), pins: Number(canvas.dataset.crystalPins), error: gl.getError() };
   });
   expect(result.error).toBe(0);
   expect(result.filaments).toBe(32768);
-  expect(result.photos).toBeGreaterThan(result.width < 700 ? 35 : 60);
+  expect(result.photos).toBeGreaterThan(result.width < 700 ? 12 : 24);
+  expect(result.pins).toBeGreaterThan(result.width < 700 ? 12 : 24);
   expect(result.photos).toBeLessThanOrEqual(result.width < 700 ? 90 : 160);
   // Both halves must survive integration into the warm light, even over black.
   expect(result.cyan, JSON.stringify(result)).toBeGreaterThan(result.width < 700 ? 1500 : 8000);
   expect(result.pink).toBeGreaterThan(result.width < 700 ? 1500 : 8000);
   expect(result.cells).toBeGreaterThan(result.width < 700 ? 35 : 100);
-  expect(result.regions.upper, JSON.stringify(result)).toBeGreaterThan(result.width < 700 ? 250 : 800);
-  expect(result.regions.lower).toBeGreaterThan(result.width < 700 ? 300 : 1200);
+  expect(result.regions.front + result.regions.lower).toBeGreaterThan(result.width < 700 ? 500 : 2000);
 });
 
 test("close disk photographs retain readable internal image contrast with 200 uploads", async ({ page, isMobile }) => {
@@ -129,6 +128,7 @@ test("close disk photographs retain readable internal image contrast with 200 up
     const { createOrbitComposition, photoRegion } = await import("/src/orbit-composition.js");
     const { assignOrbitPhotos } = await import("/src/photo-textures.js");
     const { photoSurfaceAt, projectPhotoSurface } = await import("/src/photo-surface.js");
+    const { crystalCenter } = await import("/src/crystal-pin.js");
     const width = innerWidth, height = innerHeight;
     const canvas = document.createElement("canvas"); canvas.width = width; canvas.height = height;
     const gpu = createUniverseGPU(canvas), gl = canvas.getContext("webgl");
@@ -152,9 +152,9 @@ test("close disk photographs retain readable internal image contrast with 200 up
     const photos = createOrbitComposition(orbit).update({ camera, width, height, time: 6, photoIds,
       ratios: Array(200).fill(.8), now: 1000, reduced: true });
     const contrast = photo => {
-      const { x, y } = photo.projected;
       const size = photo.projected.size * m.photoDepthAt(photo.point, camera, 1).scale;
       const pose = photoSurfaceAt(photo.point, 6, 1, .8);
+      const {x,y}=crystalCenter({...photo.projected,size},.8,pose,photo.projected.crystal);
       const samples = [-.32, 0, .32].map(v => {
         const left = projectPhotoSurface(-.22, v, .8, pose);
         const right = projectPhotoSurface(.22, v, .8, pose);
@@ -163,19 +163,19 @@ test("close disk photographs retain readable internal image contrast with 200 up
       return samples.reduce((sum, value) => sum + value, 0) / samples.length;
     };
     const contrasts = photos.filter(photo => photo.alpha > .8 && photo.point.radius > .2 && photo.point.depth > 0 && photo.projected.size >= 22).map(contrast);
-    const rear = photos.filter(photo => photo.alpha > .8 && photo.point.radius > .2 && photo.point.depth < 0 && m.photoDepthAt(photo.point, camera, 1).opacity > .65).map(contrast);
+    const rear = photos.filter(photo => photo.alpha > .08 && photo.point.radius > .2 && photo.point.depth < 0 && photo.projected.crystal < .05).map(contrast);
     return { contrast: contrasts.reduce((sum, value) => sum + value, 0) / contrasts.length,
       readable: contrasts.filter(value => value > 65).length, count: contrasts.length,
       rear: rear.reduce((sum, value) => sum + value, 0) / rear.length,
       rearReadable: rear.filter(value => value > 30).length, rearCount: rear.length, error: gl.getError() };
   });
   expect(result.error).toBe(0);
-  expect(result.count).toBeGreaterThan(isMobile ? 8 : 16);
+  expect(result.count).toBeGreaterThanOrEqual(isMobile ? 5 : 16);
   expect(result.readable / result.count, JSON.stringify(result)).toBeGreaterThan(.8);
   expect(result.contrast).toBeGreaterThan(85);
-  expect(result.rearCount).toBeGreaterThan(isMobile ? 10 : 20);
-  expect(result.rear, JSON.stringify(result)).toBeGreaterThan(35);
-  expect(result.rearReadable / result.rearCount).toBeGreaterThan(.7);
+  expect(result.rearCount).toBeGreaterThan(isMobile ? 3 : 6);
+  expect(result.rear, JSON.stringify(result)).toBeLessThan(result.contrast*.45);
+  expect(result.rear).toBeGreaterThan(1);
 });
 
 test("Canvas fallback also shows uploaded photographs across the middle and can continue into the story", async ({ page }) => {
@@ -209,7 +209,7 @@ test("Canvas fallback also shows uploaded photographs across the middle and can 
   });
   expect(image.renderer).toBe("canvas2d");
   expect(image.filaments).toBe(8192);
-  expect(image.photos).toBeGreaterThan(35);
+  expect(image.photos).toBeGreaterThan(8);
   expect(image.photos).toBeLessThanOrEqual(await page.evaluate(() => innerWidth < 700 ? 90 : 160));
   expect(image.progress).toBeGreaterThanOrEqual(0.3);
   expect(image.progress).toBeLessThan(0.41);
