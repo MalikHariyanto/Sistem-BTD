@@ -17,8 +17,10 @@ test("near-photo cache preserves photo identity, stays bounded and only uploads 
     });
     atlas.update([0], images.slice(0, 1), 128);
     atlas.clear();
-    let uploads = 0, mismatches = 0;
+    let uploads = 0, mismatches = 0, checks = 0;
     const upload = gl.texSubImage2D.bind(gl);
+    const getError = gl.getError.bind(gl);
+    gl.getError = () => { checks++; return getError(); };
     gl.texSubImage2D = (...args) => { uploads++; upload(...args); };
     function verify(ids) {
       const slots = atlas.update(ids, images, 128), plan = atlas.plan;
@@ -35,9 +37,9 @@ test("near-photo cache preserves photo identity, stays bounded and only uploads 
       return slots.size;
     }
     const ids = Array.from({ length: 16 }, (_, i) => i);
-    const initial = verify(ids), initialUploads = uploads;
+    const initial = verify(ids), initialUploads = uploads, initialChecks = checks;
     for (let i = 0; i < 20; i++) verify(ids);
-    const stableUploads = uploads - initialUploads;
+    const stableUploads = uploads - initialUploads, stableChecks = checks - initialChecks;
     const replacements = verify([...ids.slice(1), 199]);
     const replacementUploads = uploads - initialUploads;
     const bounded = verify(Array.from({ length: 200 }, (_, i) => i));
@@ -53,12 +55,25 @@ test("near-photo cache preserves photo identity, stays bounded and only uploads 
     const retries = allocations - failedAttempts;
     gl.texImage2D = allocate; gl.getError = originalError;
     atlas.clear();
-    const recovered = verify(ids), error = gl.getError();
-    return { initial, initialUploads, stableUploads, replacements, replacementUploads, bounded, mismatches, plan, fallback, retries, recovered, error };
+    const recovered = verify(ids);
+    // A partially failed upload batch must not expose any unvalidated new
+    // identity, or invalidate the fourteen untouched cached photographs.
+    let pendingError = false;
+    const realError = gl.getError.bind(gl), realUpload = gl.texSubImage2D.bind(gl);
+    gl.texSubImage2D = (...args) => { realUpload(...args); pendingError = true; };
+    gl.getError = () => pendingError ? (pendingError = false, gl.OUT_OF_MEMORY) : realError();
+    const changed = [...ids.slice(0,14),198,199];
+    const failedBatch = atlas.update(changed,images,128);
+    const retained = failedBatch.size, exposedFailure = failedBatch.has(198)||failedBatch.has(199);
+    gl.texSubImage2D=realUpload; gl.getError=realError;
+    const retriedBatch=verify(changed), error = gl.getError();
+    return { initial, initialUploads, initialChecks, stableChecks, stableUploads, replacements, replacementUploads, bounded, mismatches, plan, fallback, retries, recovered, retained, exposedFailure, retriedBatch, error };
   });
   expect(result.initial).toBe(16);
   expect(result.initialUploads).toBe(16);
   expect(result.stableUploads).toBe(0);
+  expect(result.initialChecks).toBe(2); // one allocation, one changed batch
+  expect(result.stableChecks).toBe(0);
   expect(result.replacements).toBe(16);
   expect(result.replacementUploads).toBe(1);
   expect(result.bounded).toBe(16);
@@ -67,6 +82,9 @@ test("near-photo cache preserves photo identity, stays bounded and only uploads 
   expect(result.fallback).toBe(0);
   expect(result.retries).toBe(0);
   expect(result.recovered).toBe(16);
+  expect(result.retained).toBe(14);
+  expect(result.exposedFailure).toBe(false);
+  expect(result.retriedBatch).toBe(16);
   expect(result.error).toBe(0);
 });
 

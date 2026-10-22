@@ -93,6 +93,8 @@ export function createPortraitAtlas(gl, maxSize) {
       }
       bind();
       gl.activeTexture(gl.TEXTURE3);
+      const uploaded = [];
+      let attempted = false;
       for (const id of wanted) {
         if (cached.has(id)) continue;
         const slot = slots.findIndex((old, index) => index < plan.capacity && !wanted.has(old));
@@ -112,13 +114,23 @@ export function createPortraitAtlas(gl, maxSize) {
           cached.delete(slots[slot]);
           slots[slot] = null;
           gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+          attempted = true;
           gl.texSubImage2D(gl.TEXTURE_2D, 0, (slot % plan.columns) * w, Math.floor(slot / plan.columns) * h, gl.RGBA, gl.UNSIGNED_BYTE, tile);
-          if (gl.getError() !== gl.NO_ERROR || gl.isContextLost()) continue;
+          // Reserve the slot while the rest of this upload batch is prepared.
+          // Commit identities only after validating the batch as a whole.
           slots[slot] = id;
-          cached.set(id, slot);
+          uploaded.push({ id, slot });
         } catch {
           // The main photo atlas remains valid if an optional detail upload fails.
         }
+      }
+      // getError can synchronize with the GPU. One check per changed batch,
+      // rather than one per photo, retains failure handling without repeatedly
+      // stalling the frame. Untouched cached slots remain valid after failure.
+      const valid = !attempted || (gl.getError() === gl.NO_ERROR && !gl.isContextLost());
+      for (const { id, slot } of uploaded) {
+        if (valid) cached.set(id, slot);
+        else slots[slot] = null;
       }
       gl.activeTexture(gl.TEXTURE2);
       return new Map([...cached].filter(([id]) => wanted.has(id)));

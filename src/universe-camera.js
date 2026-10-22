@@ -217,18 +217,14 @@ export function projectWorld(point, camera, width, height, worldSize = 0, sizeBo
 // Ray/sphere depth, evaluated in the same world coordinates as the photo disk.
 // Photos in front can cross the silhouette; photos behind are hidden by it.
 export function occludedByHole(point, camera) {
-  const eye = [camera.cx, camera.cy / ASPECT, camera.distance];
-  const ray = [
-    point.x - eye[0],
-    point.y / ASPECT - eye[1],
-    point.depth - eye[2],
-  ];
-  const distance = Math.hypot(...ray),
-    dir = ray.map((v) => v / distance);
-  const origin = [eye[0] - HORIZON.x, eye[1] - HORIZON.y, eye[2] - HORIZON.z];
-  const dot = (a, b) => a.reduce((s, v, i) => s + v * b[i], 0);
-  const b = dot(origin, dir),
-    d = b * b - dot(origin, origin) + HORIZON.radius ** 2;
+  // Same ray/sphere test, without four temporary arrays and three callbacks
+  // for every projected particle. This is also used by the Canvas fallback.
+  const ex = camera.cx, ey = camera.cy / ASPECT, ez = camera.distance;
+  const rx = point.x - ex, ry = point.y / ASPECT - ey, rz = point.depth - ez;
+  const distance = Math.hypot(rx, ry, rz);
+  const ox = ex - HORIZON.x, oy = ey - HORIZON.y, oz = ez - HORIZON.z;
+  const b = ox * (rx / distance) + oy * (ry / distance) + oz * (rz / distance),
+    d = b * b - (ox * ox + oy * oy + oz * oz) + HORIZON.radius ** 2;
   if (d <= 0) return false;
   const hit = -b - Math.sqrt(d);
   return hit > 0 && hit < distance;

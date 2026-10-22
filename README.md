@@ -40,6 +40,8 @@ Ornamen mawar dusty rose, mawar ivory, dan baby’s breath memakai satu ilustras
 
 ## Pengujian
 
+Benchmark CPU perjalanan Gargantua: `npm run benchmark:orbits`. [Catatan optimasi dan kesetaraan tampilan](docs/render-performance.md) memuat hasil perbandingan dengan versi sebelumnya.
+
 ```sh
 npx playwright install chromium
 npm test

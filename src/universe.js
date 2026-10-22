@@ -30,6 +30,7 @@ import { sharpenPortrait, PORTRAIT_CAPACITY } from "./portrait-textures.js";
 import { photoSurfaceAt } from "./photo-surface.js";
 import { paintCrystalPin } from "./crystal-pin.js";
 import { crystalSurface } from "./accretion-lens.js";
+import { advanceFrameClock } from "./frame-clock.js";
 
 const PLATE_URL = `${import.meta.env.BASE_URL}art/gargantua.webp`;
 
@@ -545,9 +546,9 @@ export function createUniverse(canvas) {
     frame = 0;
     if (!visible || document.hidden || !shouldAnimate()) return;
     const interval = 1000 / (gpu ? 30 : 24);
-    if (now - last >= interval) {
-      // Carry fractional frame time instead of dropping to 20 fps on 60 Hz.
-      last = now - ((now - last) % interval);
+    const scheduled = advanceFrameClock(now, last, interval);
+    if (scheduled !== null) {
+      last = scheduled;
       const dt = lastSimulationFrame
         ? Math.min((now - lastSimulationFrame) / 1000, 0.1)
         : 0;

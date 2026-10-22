@@ -35,26 +35,41 @@ export function photoRegion(projected, camera) {
   const offset = v - diskY(u);
   return offset < -.045 ? "upper" : offset > .065 ? "lower" : "front";
 }
-export function focusProjection(point, camera, width, height) {
+function projectionFrame(camera, width, minimum = 0) {
   const field = photoFieldAt(camera.progress ?? 0);
+  const scale = portraitScaleAt(camera.zoom), photoLimit = photoSizeLimit(width);
+  return { field, scale, photoLimit, minimum,
+    limit: mix(photoLimit * scale, width < 700 ? DISK_PHOTOS.phoneLimit : DISK_PHOTOS.desktopLimit, field),
+    heroLimit: width < 700 ? DISK_PHOTOS.phoneHeroLimit : DISK_PHOTOS.desktopHeroLimit };
+}
+
+export function focusProjection(point, camera, width, height, frame = projectionFrame(camera, width)) {
+  const { field } = frame;
   const grain = (point.seed * 97.13) % 1;
+  const front = frontArc(point, camera);
   const diskScale = mix(DISK_PHOTOS.mediumScale, DISK_PHOTOS.scale,
-    ease((grain - .66) / .34) * (.45 + .55 * frontArc(point, camera)));
-  const hero = grain > .96 ? field * frontArc(point, camera) : 0;
+    ease((grain - .66) / .34) * (.45 + .55 * front));
+  const hero = grain > .96 ? field * front : 0;
+  const worldSize = (0.003 + point.seed * 0.0018) * 1.35 * (1 + 0.8 * (camera.showcase || 0)) *
+    mix(1, diskScale, field) * mix(1, DISK_PHOTOS.heroGain, hero);
+  // Both optical mappings preserve depth. Reject exactly those photographs
+  // that cannot meet the existing size threshold, before lensing/occlusion.
+  // Future collision predictions use minimum=0 and keep their full footprint.
+  if (frame.minimum) {
+    const depth = camera.distance - point.depth;
+    if (depth <= .028 || Math.min(frame.photoLimit, worldSize * ((camera.baseWidth * 5) / depth)) * frame.scale < frame.minimum)
+      return null;
+  }
   const projected = projectOrbit(
     crystalSurface(point, camera, field),
     camera,
     width,
     height,
-    (0.003 + point.seed * 0.0018) * 1.35 * (1 + 0.8 * (camera.showcase || 0)) *
-      mix(1, diskScale, field) * mix(1, DISK_PHOTOS.heroGain, hero),
-    portraitScaleAt(camera.zoom),
+    worldSize,
+    frame.scale,
   );
   if (projected) {
-    const limit = mix(photoSizeLimit(width) * portraitScaleAt(camera.zoom),
-      width < 700 ? DISK_PHOTOS.phoneLimit : DISK_PHOTOS.desktopLimit, field);
-    const heroLimit = width < 700 ? DISK_PHOTOS.phoneHeroLimit : DISK_PHOTOS.desktopHeroLimit;
-    projected.size = Math.min(projected.size, mix(limit, heroLimit, hero));
+    projected.size = Math.min(projected.size, mix(frame.limit, frame.heroLimit, hero));
     projected.hero = hero > .5;
     projected.crystal = crystalStrength(point, camera);
     projected.contact = crystalContact(projected, camera);
@@ -124,14 +139,18 @@ export function createOrbitComposition(orbit) {
       };
       regionLimits.front = limit - regionLimits.upper - regionLimits.lower;
       const records = [];
+      const minimum = mix(mix(
+        width < 700 ? (mobileEnding ? 28 : 34) : 55,
+        width < 700 ? 18 : 24,
+        camera.showcase || 0,
+      ), width < 700 ? DISK_PHOTOS.phoneMinimum : DISK_PHOTOS.desktopMinimum, field);
+      const currentFrame = projectionFrame(camera, width, minimum);
+      const futureFrame = projectionFrame(futureCamera, width);
+      const middleFrame = projectionFrame(middleCamera, width);
+      const unrestrictedFrame = { ...currentFrame, minimum: 0 };
       for (const index of candidates) {
         const point = orbitAt(orbit, index, time);
-        const projected = focusProjection(point, camera, width, height);
-        const minimum = mix(mix(
-          width < 700 ? (mobileEnding ? 28 : 34) : 55,
-          width < 700 ? 18 : 24,
-          camera.showcase || 0,
-        ), width < 700 ? DISK_PHOTOS.phoneMinimum : DISK_PHOTOS.desktopMinimum, field);
+        const projected = focusProjection(point, camera, width, height, currentFrame);
         if (!projected || projected.size < minimum) continue;
         const existing = active.has(index);
         if (projected.contact < (existing ? .001 : .65)) continue;
@@ -170,16 +189,6 @@ export function createOrbitComposition(orbit) {
           (frame.left < 0 || frame.right > width || frame.top < 65 || frame.bottom > height - 24)
         )
           continue;
-        const future =
-          focusProjection(
-            orbitAt(orbit, index, futureTime),
-            futureCamera,
-            width,
-            height,
-          ) || projected;
-        const middle = field > 0
-          ? focusProjection(orbitAt(orbit, index, middleTime), middleCamera, width, height) || projected
-          : projected;
         // Tall phones have room for more medium portraits around the greeting.
         // Existing portraits keep priority and their original size.
         const preferred = width * .25;
@@ -196,8 +205,7 @@ export function createOrbitComposition(orbit) {
           innerArc: (camera.showcase || 0) > 0.5 && point.radius < 0.24 &&
             (field === 0 || point.depth > 0),
           rect: bounds(projected, ratio, gap),
-          future: bounds(future, ratio, gap),
-          middle: bounds(middle, ratio, gap),
+          ratio,
           priority:
             (active.has(index) ? 1000 : 0) +
             (active.get(index)?.alpha || 0) * 1000 +
@@ -218,7 +226,7 @@ export function createOrbitComposition(orbit) {
       const held = [];
       if (field > 0) for (const [index, state] of active) {
         if (state.alpha <= .12) continue;
-        const projected = focusProjection(orbitAt(orbit, index, time), camera, width, height);
+        const projected = focusProjection(orbitAt(orbit, index, time), camera, width, height, unrestrictedFrame);
         if (projected) held.push({ index, id: photoIds[index], rect: bounds(projected, ratios[photoIds[index]] || .8, gap) });
       }
       const available = ratios.length || 6;
@@ -253,17 +261,19 @@ export function createOrbitComposition(orbit) {
           continue;
         if ((usage.get(record.id) || 0) >= perPhoto) continue;
         if (perPhoto === 1 && !active.has(record.index) && occupiedPhotos.has(record.id)) continue;
-        if (
-          selected.some(
-            (other) =>
-              overlap(record.rect, other.rect) ||
-              (field > 0 && overlap(record.middle, other.middle)) ||
-              overlap(record.future, other.future),
-          )
-        )
-          continue;
+        if (selected.some(other => overlap(record.rect, other.rect))) continue;
         if (!active.has(record.index) && held.some(other => overlap(record.rect, other.rect)))
           continue;
+        // Predict only candidates that still have a free slot NOW. The same
+        // three collision samples are retained, but rejected/hidden sources
+        // no longer calculate two unused future orbits every frame.
+        const future = focusProjection(orbitAt(orbit, record.index, futureTime), futureCamera, width, height, futureFrame) || record.projected;
+        const middle = field > 0
+          ? focusProjection(orbitAt(orbit, record.index, middleTime), middleCamera, width, height, middleFrame) || record.projected
+          : record.projected;
+        record.future = bounds(future, record.ratio, gap);
+        record.middle = bounds(middle, record.ratio, gap);
+        if (selected.some(other => (field > 0 && overlap(record.middle, other.middle)) || overlap(record.future, other.future))) continue;
         selected.push(record);
         if (largePin) largePinCount++;
         if (record.projected.hero) heroCount++;
@@ -291,7 +301,7 @@ export function createOrbitComposition(orbit) {
         }
         const point = record?.point || orbitAt(orbit, index, time);
         const projected =
-          record?.projected || focusProjection(point, camera, width, height);
+          record?.projected || focusProjection(point, camera, width, height, unrestrictedFrame);
         if (field > 0 && state.alpha * point.opacity > .5)
           exposure.set(photoIds[index], (exposure.get(photoIds[index]) || 0) + dt);
         if (projected)

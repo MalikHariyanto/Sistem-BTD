@@ -673,6 +673,16 @@ export function createUniverseGPU(canvas) {
     if (gl.isContextLost()) return;
     const { camera, width, height, time, detail, cover, showcase = 0 } = args;
     const dpr = canvas.width / width;
+    // Prepare the shared composition and changed photo tiles BEFORE issuing
+    // this frame's draw commands. Checking an upload after drawing the plasma
+    // can otherwise force the CPU to wait for that expensive GPU work.
+    const focused = composition.update({
+      camera, width, height, time, photoIds, ratios,
+      now: performance.now(), reduced: args.reduced,
+    });
+    const detailIds = selectPortraitIds(focused, photoIds);
+    const detailSlots = portraitAtlas.update(detailIds, portraitImages, sources.photos ? Number(canvas.dataset.atlasTile) : 256);
+    const detailPlan = portraitAtlas.plan;
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.clearDepth(1);
     gl.clear(gl.DEPTH_BUFFER_BIT);
@@ -753,19 +763,6 @@ export function createUniverseGPU(canvas) {
     gl.uniform1f(u.uLayer, 1);
     if (compositionAt(camera.zoom) < 1)
       gl.drawArrays(gl.POINTS, 0, PARTICLE_COUNT);
-    const focused = composition.update({
-      camera,
-      width,
-      height,
-      time,
-      photoIds,
-      ratios,
-      now: performance.now(),
-      reduced: args.reduced,
-    });
-    const detailIds = selectPortraitIds(focused, photoIds);
-    const detailSlots = portraitAtlas.update(detailIds, portraitImages, sources.photos ? Number(canvas.dataset.atlasTile) : 256);
-    const detailPlan = portraitAtlas.plan;
     if (detailPlan) {
       gl.uniform2f(u.uPortraitGrid, detailPlan.columns, detailPlan.rows);
       gl.uniform2f(u.uPortraitInset, (detailPlan.gutter + .5) / detailPlan.tileWidth, (detailPlan.gutter + .5) / detailPlan.tileHeight);
