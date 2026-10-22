@@ -6,9 +6,22 @@ import { projectPhotoSurface } from "./photo-surface.js";
 // intact and a distant marker is genuinely smaller than a near one.
 export const CRYSTAL_TIP = .80;
 export const CRYSTAL_FOOTPRINT = 2.6;
+export const CRYSTAL_CONTACT = { top: -.012, topFull: .006, bottomFull: .075, bottom: .13 };
 export function crystalStrength(point, camera) {
   const facing = (camera.cx * point.x + camera.distance * point.depth) / point.radius - point.radius;
   return photoFieldAt(camera.progress ?? 0) * ease((facing - .012) / .045);
+}
+
+// The annulus has a broad population of physical orbits, but only its lit
+// upper surface should resolve into standing markers. Keep the actual source
+// phase/depth on that surface; fade a marker when it leaves the luminous band.
+export function crystalContact(projected, camera) {
+  const u = (projected.x - camera.x) / camera.width;
+  const v = (projected.y - camera.y) / camera.height;
+  const d = v - diskY(u), c = CRYSTAL_CONTACT;
+  const band = ease((d-c.top)/(c.topFull-c.top)) *
+    (1-ease((d-c.bottomFull)/(c.bottom-c.bottomFull)));
+  return mix(1, band, projected.crystal || 0);
 }
 
 export function crystalVeil(projected, camera) {
@@ -39,6 +52,25 @@ export function crystalBounds(projected, ratio, gap = 0) {
     top: projected.y - h * mix(.56, 1.52, pin) - gap,
     bottom: projected.y + h * mix(.56, .16, pin) + gap };
 }
+
+// Reserve the wide photo body and the tapering foot independently. A single
+// rectangle wastes the empty space beside a tall pin's transparent stem and
+// makes a populated, thin disk look sparse. Outside the crystal passage this
+// reduces to the original photo rectangle, preserving the intimate ending.
+export function crystalFootprint(projected, ratio, gap = 0) {
+  const pin = projected.crystal || 0;
+  const w = projected.size * Math.min(ratio, 1), h = projected.size * Math.min(1 / ratio, 1);
+  if (pin < .001) return [crystalBounds(projected, ratio, gap)];
+  return [[.86,-1.52,-.20],[.40,-.20,-.10],[.20,-.10,.16]].map(([half,top,bottom]) => ({
+    left: projected.x-w*mix(.56,half,pin)-gap,
+    right: projected.x+w*mix(.56,half,pin)+gap,
+    top: projected.y+h*mix(-.56,top,pin)-gap,
+    bottom: projected.y+h*mix(.56,bottom,pin)+gap,
+  }));
+}
+
+export const crystalFootprintsOverlap = (a,b) => a.some(x => b.some(y =>
+  x.left < y.right && x.right > y.left && x.top < y.bottom && x.bottom > y.top));
 
 export const CRYSTAL_OUTER = [[-.43,-.57],[.43,-.57],[.57,-.43],[.57,.393],[.32,.571],[0,CRYSTAL_TIP],[-.32,.571],[-.57,.393],[-.57,-.43]];
 const INNER = [[-.42,-.5],[.42,-.5],[.5,-.42],[.5,.42],[.42,.5],[0,.5],[-.42,.5],[-.5,.42],[-.5,-.42]];

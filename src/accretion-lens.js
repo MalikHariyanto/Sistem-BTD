@@ -6,6 +6,30 @@ const smooth = (a, b, x) => {
   return t * t * t * (t * (t * 6 - 15) + 10);
 };
 
+// A marker stands on the visible upper skin of the foreground material. The
+// source keeps its angle, inward radius and depth; only its height above the
+// disk changes. The broad dust population still fills the entire annulus.
+export const DISK_SURFACE = { tilt: .065, height: .008, thickness: .65 };
+export function crystalSurface(point, camera, field = camera.photoField || 0) {
+  const facing = (camera.cx * point.x + camera.distance * point.depth) / point.radius - point.radius;
+  const weight = field * smooth(.012, .057, facing);
+  if (!weight) return point;
+  const thickness = point.y - .26 * point.x - .19 * point.depth;
+  const skin = .26 * point.x + DISK_SURFACE.tilt * point.depth +
+    DISK_SURFACE.height + thickness * DISK_SURFACE.thickness;
+  return { ...point, y: point.y + (skin - point.y) * weight };
+}
+
+export const crystalSurfaceGLSL = `
+vec3 crystalSurface(vec3 source,float r,vec3 eye,float field){
+  float facing=(eye.x*source.x+eye.z*source.z)/r-r;
+  float weight=field*softstep(.012,.057,facing);
+  float thickness=source.y-.26*source.x-.19*source.z;
+  float skin=.26*source.x+${DISK_SURFACE.tilt.toFixed(8)}*source.z+${DISK_SURFACE.height.toFixed(8)}+thickness*${DISK_SURFACE.thickness.toFixed(8)};
+  return vec3(source.x,mix(source.y,skin,weight),source.z);
+}
+`;
+
 export function lensedOrbit(point, camera) {
   if (!Number.isFinite(point.angle)) return point;
   const thickness = point.y - 0.26 * point.x - 0.19 * point.depth;

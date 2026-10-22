@@ -29,6 +29,7 @@ import { createSpaceBackdrop } from "./space-background.js";
 import { sharpenPortrait, PORTRAIT_CAPACITY } from "./portrait-textures.js";
 import { photoSurfaceAt } from "./photo-surface.js";
 import { paintCrystalPin } from "./crystal-pin.js";
+import { crystalSurface } from "./accretion-lens.js";
 
 const PLATE_URL = `${import.meta.env.BASE_URL}art/gargantua.webp`;
 
@@ -127,7 +128,7 @@ export function createUniverse(canvas) {
       const { x, y, seed, depth } = point;
       const sourcePoint = point.source || point;
       const middle = focused ? field : 0;
-      const atmosphere = isPhoto ? photoDepthAt(sourcePoint, camera, middle) : { opacity: 1, brightness: 1, detail: 1, scale: 1 };
+      const atmosphere = isPhoto ? photoDepthAt(focused ? crystalSurface(sourcePoint, camera, field) : sourcePoint, camera, middle) : { opacity: 1, brightness: 1, detail: 1, scale: 1 };
       const size = point.size * atmosphere.scale;
       const diskClarity = focused ? field * ease((size - 12) / 18) *
         (1 - ease((depth / camera.distance - 0.98) / 0.36)) *

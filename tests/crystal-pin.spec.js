@@ -1,7 +1,10 @@
 import { test, expect } from "@playwright/test";
-import { createOrbit, orbitAt, cameraAt } from "../src/universe-camera.js";
+import { createOrbit, orbitAt, cameraAt, diskY } from "../src/universe-camera.js";
+import { crystalSurface } from "../src/accretion-lens.js";
+import { createOrbitComposition } from "../src/orbit-composition.js";
+import { assignOrbitPhotos } from "../src/photo-textures.js";
 import { photoSurfaceAt, projectPhotoSurface } from "../src/photo-surface.js";
-import { CRYSTAL_OUTER, CRYSTAL_TIP, crystalCenter, crystalBounds, crystalVeil } from "../src/crystal-pin.js";
+import { CRYSTAL_OUTER, CRYSTAL_TIP, crystalCenter, crystalBounds, crystalFootprint, crystalVeil, crystalContact } from "../src/crystal-pin.js";
 
 test("projected crystal facets fit their reserved space and their tips stay on the original orbit", () => {
   const orbit = createOrbit(160);
@@ -12,15 +15,56 @@ test("projected crystal facets fit their reserved space and their tips stay on t
     const center = crystalCenter(origin, ratio, surface, 1), box = crystalBounds(origin, ratio);
     const tip = projectPhotoSurface(0, CRYSTAL_TIP, ratio, surface);
     if (Math.hypot(center.x + tip.x * 80 - origin.x, center.y + tip.y * 80 - origin.y) > .00001) displacedTips++;
-    for (const [u,v] of CRYSTAL_OUTER) {
+    // Check the whole taper as well as the corners: compound composition
+    // footprints must contain every facet, including extreme image ratios.
+    const footprint=crystalFootprint(origin,ratio);
+    const outline=CRYSTAL_OUTER.flatMap((a,i)=>{
+      const b=CRYSTAL_OUTER[(i+1)%CRYSTAL_OUTER.length];
+      return Array.from({length:21},(_,j)=>[a[0]+(b[0]-a[0])*j/20,a[1]+(b[1]-a[1])*j/20]);
+    });
+    for (const [u,v] of outline) {
       const p = projectPhotoSurface(u,v,ratio,surface), x = center.x+p.x*80, y = center.y+p.y*80;
       if (x < box.left || x > box.right || y < box.top || y > box.bottom) escaped++;
+      if (!footprint.some(b=>x>=b.left&&x<=b.right&&y>=b.top&&y<=b.bottom)) escaped++;
     }
     if (Math.abs(surface.yaw) > .1 && Math.abs(surface.pitch) > .08) perspective++;
   }
   expect(displacedTips).toBe(0);
   expect(escaped).toBe(0);
   expect(perspective).toBeGreaterThan(200);
+});
+
+test("crystal feet ride the luminous disk surface without changing phase, depth or ending", () => {
+  const orbit=createOrbit(), photoIds=assignOrbitPhotos(orbit,200);
+  for(const [width,height] of [[390,844],[1440,900]]) {
+    const camera=cameraAt(.3,width,height), composition=createOrbitComposition(orbit);
+    let contacts=0, lifted=0, changedIdentity=0, detached=0, changedEnding=0;
+    for(let frame=0;frame<90;frame++) {
+      const time=6+frame/30*.85;
+      const photos=composition.update({camera,width,height,time,photoIds,ratios:Array(200).fill(.8),now:1000+frame/30*1000,reduced:frame===0});
+      for(const photo of photos.filter(p=>p.alpha>.5&&p.projected.crystal>.98)) {
+        const source=photo.point,surface=crystalSurface(source,camera);
+        for(const key of ['x','depth','radius','angle','seed','opacity']) if(surface[key]!==source[key])changedIdentity++;
+        if(surface.y<source.y-.01)lifted++;
+        const u=(photo.projected.x-camera.x)/camera.width;
+        const d=(photo.projected.y-camera.y)/camera.height-diskY(u);
+        if(d<=-.015||d>=.12)detached++;
+        contacts++;
+        if(crystalSurface(source,cameraAt(1,width,height))!==source)changedEnding++;
+      }
+    }
+    expect(changedIdentity).toBe(0);
+    expect(detached).toBe(0);
+    expect(changedEnding).toBe(0);
+    expect(contacts).toBeGreaterThan(700);
+    expect(lifted).toBeGreaterThan(500);
+    const at=d=>({x:camera.x+camera.width*.5,y:camera.y+camera.height*(diskY(.5)+d),crystal:1});
+    expect(crystalContact(at(.04),camera)).toBe(1);
+    expect(crystalContact(at(.16),camera)).toBe(0);
+    expect(crystalContact({...at(.16),crystal:0},camera)).toBe(1);
+    const rear=orbitAt(new Float32Array([.28,Math.PI*1.5,0,.93]),0,0);
+    expect(crystalSurface(rear,camera)).toBe(rear);
+  }
 });
 
 test("rear photographs dissolve with optical height while the front and ending remain clear", () => {
@@ -86,7 +130,9 @@ test("GPU crystal markers retain photo detail and render lit facets and their or
   expect(result.error).toBe(0);
   expect(result.geometry).toBe('instanced-quads');
   expect(result.pins).toBeGreaterThan(isMobile ? 12 : 24);
-  expect(result.metrics.length).toBeGreaterThanOrEqual(isMobile ? 3 : 8);
+  // Two large pin bodies are the phone composition cap; smaller pins
+  // still contribute to the separate whole-field population check above.
+  expect(result.metrics.length).toBeGreaterThanOrEqual(isMobile ? 2 : 8);
   const mean=key=>result.metrics.reduce((sum,p)=>sum+p[key],0)/result.metrics.length;
   expect(mean('contrast'),JSON.stringify(result)).toBeGreaterThan(75);
   expect(mean('rim'),JSON.stringify(result)).toBeGreaterThan(65);

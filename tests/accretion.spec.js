@@ -17,7 +17,7 @@ import {
   createOrbitComposition,
   compositionAt,
 } from "../src/orbit-composition.js";
-import { crystalBounds } from "../src/crystal-pin.js";
+import { crystalFootprint, crystalFootprintsOverlap } from "../src/crystal-pin.js";
 
 test("photos spiral inward, accelerate and vanish before an invisible outer respawn", () => {
   const data = new Float32Array([0.2, 0.4, 0, 0.8]);
@@ -104,8 +104,7 @@ test("the middle shows the hole with a limited, non-overlapping set of real orbi
         if (occludedByHole(lensedOrbit(actual, camera), camera)) occluded++;
         for (let j = i + 1; j < photos.length; j++) {
           const other = photos[j];
-          const a=crystalBounds(photo.projected,.8),b=crystalBounds(other.projected,.8);
-          const overlap=a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top;
+          const overlap=crystalFootprintsOverlap(crystalFootprint(photo.projected,.8),crystalFootprint(other.projected,.8));
           if (overlap) overlaps++;
         }
       }

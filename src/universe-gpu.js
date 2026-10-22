@@ -12,7 +12,7 @@ import {
 } from "./universe-camera.js";
 import { createOrbitComposition, compositionAt } from "./orbit-composition.js";
 import { assignOrbitPhotos, planPhotoAtlas } from "./photo-textures.js";
-import { lensGLSL } from "./accretion-lens.js";
+import { lensGLSL, crystalSurfaceGLSL } from "./accretion-lens.js";
 import { createPortraitAtlas, selectPortraitIds } from "./portrait-textures.js";
 import { DISK_STREAM } from "./disk-stream.js";
 import { spaceGLSL } from "./space-background.js";
@@ -150,6 +150,7 @@ float softstep(float a,float b,float x){
   return t*t*t*(t*(t*6.0-15.0)+10.0);
 }
 ${lensGLSL}
+${crystalSurfaceGLSL}
 ${photoPoseGLSL}
 ${crystalPinGLSL}
 void main(){
@@ -164,7 +165,9 @@ void main(){
     (sqrt(aOrbit.x)-sqrt(r)-cycles*(sqrt(.64)-sqrt(${PLUNGE_RADIUS.toFixed(8)})));
   float x=cos(theta)*r,z=sin(theta)*r;
   float y=.26*x+.19*z+aOrbit.z;
-  vec3 apparent=lensedOrbit(vec3(x,y,z),r,theta,uFlight.xyz,uPhotoField);
+  vec3 source=vec3(x,y,z);
+  if(uLayer>1.5)source=crystalSurface(source,r,uFlight.xyz,uPhotoField);
+  vec3 apparent=lensedOrbit(source,r,theta,uFlight.xyz,uPhotoField);
   x=apparent.x;y=apparent.y;
   float fadeIn=clamp((r-.098)/.036,0.0,1.0);
   fadeIn=fadeIn*fadeIn*fadeIn*(fadeIn*(fadeIn*6.0-15.0)+10.0);
@@ -239,6 +242,7 @@ void main(){
   float nr=sqrt(r*r-${INFLOW.toFixed(8)}*.001),nt=theta+omega*.001;
   vec3 ns=vec3(cos(nt)*nr,0.0,sin(nt)*nr);
   ns.y=.26*ns.x+.19*ns.z+aOrbit.z;
+  if(uLayer>1.5)ns=crystalSurface(ns,nr,uFlight.xyz,uPhotoField);
   vec3 next=lensedOrbit(ns,nr,nt,uFlight.xyz,uPhotoField);
   vec2 velocity=(next.xy-uFlight.xy)/(uFlight.z-next.z)-(apparent.xy-uFlight.xy)/distance;
   float tangent=atan(velocity.y/${ASPECT.toFixed(8)},velocity.x);
