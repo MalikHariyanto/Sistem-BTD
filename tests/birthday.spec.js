@@ -1,7 +1,8 @@
+import { chooseChapter, openEditor } from "./story-helpers.js";
 import { test, expect } from "@playwright/test";
 
 async function chapter(page, label) {
-  await page.getByRole("button", { name: `Ke ${label}`, exact: true }).click();
+  await chooseChapter(page, label);
   await expect(page.locator(".scene.is-active")).toHaveAttribute(
     "aria-labelledby",
     {
@@ -117,7 +118,7 @@ test("chapters dissolve without content modals; poems and sourced wishes can be 
     .click();
   await expect(page.locator("#garden-wish-2")).toContainText("Emily Dickinson");
   await expect(page.locator(".garden-note:not([hidden])")).toHaveCount(3);
-  await expect(page.locator("dialog")).toHaveCount(1); // Editor only, never part of the gift.
+  await expect(page.locator(".scene dialog")).toHaveCount(0); // Reading content opens in place; only utilities use dialogs.
   await expect(page.locator("dialog[open]")).toHaveCount(0);
   await expect(page.locator("[data-scene]:not([hidden])")).toHaveCount(1);
   await expect(page.locator('[data-scene="2"]')).toHaveAttribute("inert", "");
@@ -137,7 +138,8 @@ test("letter opens in place and follows the scroll; the background song accompan
   );
   await page.locator('[data-letter-stanza="1"]').evaluate(element => {
     const scene = element.closest('.scene');
-    scene.scrollTop += element.getBoundingClientRect().top - scene.getBoundingClientRect().top - 240;
+    const inset = innerWidth <= 700 ? scene.querySelector('.letter-gallery').getBoundingClientRect().height + 24 : 50;
+    scene.scrollTop += element.getBoundingClientRect().top - scene.getBoundingClientRect().top - inset;
   });
   await expect(page.locator('#letter-reading')).toHaveAttribute('data-letter-active', '1');
   await expect(page.locator(".letter-verse").nth(1)).toContainText(
@@ -222,7 +224,7 @@ test("209 photo slots and bulk uploads persist, with old photo keys preserved", 
 }) => {
   test.setTimeout(45000); // Multiple uploads, reloads, and scene transitions on software GPU.
   await page.goto("/");
-  await page.locator("#open-editor").click();
+  await openEditor(page);
   await expect(page.locator("[data-upload]")).toHaveCount(209);
   await page.getByRole("textbox", { name: "Nama panggilan" }).fill("Sayang");
   await page.locator('input[name="birthday"]').fill("2099-02-14T00:00");
@@ -265,7 +267,7 @@ test("209 photo slots and bulk uploads persist, with old photo keys preserved", 
   await chapter(page, "Surat untukmu");
   await page.locator("#open-letter").click();
   await expect(page.locator('[data-photo="hero"] img')).toBeVisible();
-  await page.locator("#open-editor").click();
+  await openEditor(page);
   await page.locator("#reset-local").click();
   await expect(page.locator("#editor-status")).toContainText(
     "Semua isian lokal dihapus",
@@ -299,8 +301,8 @@ test("reduced motion, keyboard focus and responsive scenes", async ({
         .evaluate((e) => e.scrollWidth <= e.clientWidth),
     ).toBe(true);
   }
-  await page.locator("#open-editor").click();
+  await openEditor(page);
   await page.keyboard.press("Escape");
   await expect(page.locator("#editor-dialog")).not.toBeVisible();
-  await expect(page.locator("#open-editor")).toBeFocused();
+  await expect(page.locator("#chapter-index")).toBeFocused();
 });

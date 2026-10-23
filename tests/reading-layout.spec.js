@@ -1,3 +1,4 @@
+import { chooseChapter } from "./story-helpers.js";
 import { test, expect } from "@playwright/test";
 
 async function enter(page) {
@@ -14,9 +15,7 @@ test("scrolling poems and prayers keeps both control rows clear, and prayers rem
   page,
 }) => {
   await enter(page);
-  await page
-    .getByRole("button", { name: "Ke Bait untukmu", exact: true })
-    .click();
+  await chooseChapter(page, 'Bait untukmu');
   const checkRows = async () => {
     const chapter = await page.locator(".scene.is-active").getAttribute("data-scene");
     await expect(page.locator(`#story-nav [data-chapter="${chapter}"]`)).toHaveAttribute("aria-current", "step");
@@ -62,7 +61,7 @@ test("scrolling poems and prayers keeps both control rows clear, and prayers rem
     .locator('[data-scene="2"]')
     .evaluate((scene) => (scene.scrollTop = scene.scrollHeight / 2));
   await checkRows();
-  await page.getByRole("button", { name: "Ke Bunga & doa", exact: true }).click();
+  await chooseChapter(page, 'Bunga & doa');
   for (const label of ["Bahagia", "Bertumbuh", "Dicintai"])
     await page
       .getByRole("button", { name: `Mekarkan doa: ${label}`, exact: true })
@@ -99,7 +98,7 @@ test("scrolling poems and prayers keeps both control rows clear, and prayers rem
 
 test("botanical flowers have distinct, loaded artwork and decorative flowers leave photo slots clear", async ({ page }) => {
   await enter(page);
-  await page.getByRole("button", { name: "Ke Bunga & doa", exact: true }).click();
+  await chooseChapter(page, 'Bunga & doa');
   const artwork = page.locator(".garden-flower-art");
   await expect(artwork).toHaveCount(3);
   await expect.poll(() => artwork.evaluateAll(images => images.every(image => image.complete && image.naturalWidth > 0))).toBe(true);

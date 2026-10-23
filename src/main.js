@@ -4,7 +4,9 @@ import "./wish-garden.css";
 import "./reading-layout.css";
 import "./letter-scroll.css";
 import "./story-polish.css";
+import "./keepsakes.css";
 import { flowerSrc } from "./florals.js";
+import { keepsakeContent, setKeepsake, liftKeepsake } from "./keepsakes.js";
 import { createWishGarden } from "./wish-garden.js";
 import { content, ORBIT_PHOTO_COUNT } from "./content.js";
 import { quotes } from "./quotes.js";
@@ -74,18 +76,18 @@ const photoLabel = (key) =>
   })[key] || `Semesta ${key.replace("orbit", "")}`;
 // Scene IDs stay stable for existing photo slots; reading order is explicit.
 const chapters = [
-  { scene: 0, name: "Semestamu", next: "Ini cerita untukmu" },
-  { scene: 1, name: "Hari lahirmu", next: "Ada bunga untukmu" },
-  { scene: 3, name: "Bunga & doa", next: "Ada bait untukmu" },
-  { scene: 2, name: "Bait untukmu", next: "Buat satu harapan" },
-  { scene: 6, name: "Tiup lilin", next: "Surat untukmu" },
-  { scene: 4, name: "Surat untukmu", next: "" },
+  { scene: 0, name: "Semestamu" },
+  { scene: 1, name: "Hari lahirmu", keepsake: "flowers" },
+  { scene: 3, name: "Bunga & doa", keepsake: "note" },
+  { scene: 2, name: "Bait untukmu", keepsake: "candle" },
+  { scene: 6, name: "Tiup lilin", keepsake: "envelope" },
+  { scene: 4, name: "Surat untukmu" },
 ];
 const readingChapters = chapters.slice(1);
 const adjacentScene = (scene, direction) => chapters[chapters.findIndex(chapter => chapter.scene === scene) + direction]?.scene;
 
 $("#app").innerHTML = `
-<header class="story-header"><a href="#semesta" id="home-link" aria-label="Kembali ke awal">a little universe <i>for you.</i></a><span class="story-dedication" aria-hidden="true">a birthday, held close.</span></header>
+<header class="story-header"><a href="#semesta" id="home-link" aria-label="Kembali ke awal">a little universe <i>for you.</i></a><span class="story-dedication" aria-hidden="true">a birthday, held close.</span><button id="chapter-index" class="chapter-index" aria-label="Buka daftar bab" aria-haspopup="dialog" aria-controls="chapter-dialog" aria-expanded="false" hidden><span>Halaman</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h16M9 15h11"/></svg></button></header>
 <main id="main" tabindex="-1"><div class="stage" id="stage">
   <section class="scene universe-scene is-active" id="semesta" aria-labelledby="cover-title" data-scene="0" data-phase="idle">
     <canvas id="universe" aria-hidden="true"></canvas>
@@ -110,14 +112,15 @@ $("#app").innerHTML = `
   <section class="scene wish-scene" data-scene="6" aria-labelledby="wish-title" hidden inert><div class="wish-halo"></div><div class="celebration-particles" aria-hidden="true">${Array.from({ length: 32 }, (_, i) => `<span style="--i:${i};--x:${(i * 37) % 100}%;--delay:${(i % 8) * 0.08}s"></span>`).join("")}</div><div class="scene-inner wish-layout">
     <div class="wish-copy"><p class="eyebrow" id="wish-step">SEBELUM KUTITIPKAN KATA-KATA TERAKHIR.</p><h2 id="wish-title" tabindex="-1">Hari ini,<br><em>milikmu.</em></h2><p id="wish-instruction">Semua cahaya ini untukmu.<br>Sudah siap membuat satu harapan?</p><div class="wish-steps" aria-label="Langkah perayaan"><span class="current" data-wish-step="0">01 <i>Buat harapan</i></span><span data-wish-step="1">02 <i>Tiup lilin</i></span><span data-wish-step="2">03 <i>Rayakan</i></span></div><button class="primary light" id="ready-wish">Aku siap buat harapan ${arrow}</button><button class="primary light blow-button" id="blow-candle" hidden>Tiup lilinnya <span aria-hidden="true">♡</span></button><p class="wish-hint" id="wish-hint">Ambil waktu sebanyak yang kamu butuhkan.</p></div>
     <div class="cake-composition" id="cake" aria-hidden="true"><div class="candle-glow"></div><div class="cake-candle"><div class="flame"></div><span class="smoke"></span><div class="wick"></div><div class="candle-body"></div></div><div class="cake-top"></div><div class="cake-body"><span class="cake-ribbon">for you, always.</span></div><div class="cake-bottom"></div><div class="cake-plate"></div><div class="cake-stand"></div><div class="cake-foot"></div><div class="cake-spark spark-one">✧</div><div class="cake-spark spark-two">✧</div></div>
-    <div class="wish-result" id="wish-result" hidden><p class="eyebrow">SEMOGA SEMESTA MENGAMINKAN</p><h2 id="birthday-title" tabindex="-1">Happy birthday,<br><em data-recipient></em>.</h2><p>Semoga hidup memelukmu selembut doa-doa baik hari ini.<br>Aku bahagia kamu ada.</p><span class="handwritten">always, and a little longer.</span><div><button class="primary light" id="continue-letter">Masih ada surat untukmu ${arrow}</button><button class="text-button" id="relight">Buat harapan lagi ♡</button></div></div>
+    <div class="wish-result" id="wish-result" hidden><p class="eyebrow">SEMOGA SEMESTA MENGAMINKAN</p><h2 id="birthday-title" tabindex="-1">Happy birthday,<br><em data-recipient></em>.</h2><p>Semoga hidup memelukmu selembut doa-doa baik hari ini.<br>Aku bahagia kamu ada.</p><span class="handwritten">always, and a little longer.</span><div><button class="keepsake-button celebration-keepsake" id="continue-letter" data-keepsake="envelope" aria-label="Masih ada surat untukmu">${keepsakeContent("envelope")}</button><button class="text-button" id="relight">Buat harapan lagi ♡</button></div></div>
   </div></section>
   <section class="scene letter-scene" data-scene="4" aria-labelledby="letter-heading" hidden inert><div class="scene-inner letter-layout">
     <div class="letter-intro" id="letter-intro"><p class="eyebrow">TERAKHIR, DARI SELURUH HATIKU</p><h2 id="letter-heading" tabindex="-1">Tidak semua rasa<br>muat dalam puisi.<br><em>Jadi, ini suratku.</em></h2><button id="open-letter" class="envelope" aria-label="Buka surat untukmu"><span class="envelope-back"></span><span class="envelope-paper">dear, you.</span><span class="envelope-front"></span><span class="envelope-flap"></span><span class="wax-seal">a.</span>${flowers("flower-envelope")}</button><button id="open-letter-text" class="text-button">Ketuk untuk membuka surat ${arrow}</button></div>
     <article id="letter-reading" class="letter-scroll" aria-label="Surat untukmu" hidden></article>
   </div></section>
 </div></main>
-<nav class="story-nav" id="story-nav" aria-label="Halaman cerita" hidden><button id="previous-scene" class="nav-back" aria-label="Bagian sebelumnya">← <span>Sebelumnya</span></button><div class="chapter-progress"><span id="chapter-name"></span><span id="chapter-count" aria-hidden="true"></span><div class="progress-lines">${readingChapters.map(chapter => `<button data-chapter="${chapter.scene}" aria-label="Ke ${chapter.name}"><span></span></button>`).join("")}</div></div><button id="next-scene" class="nav-next"></button></nav>
+<nav class="story-nav" id="story-nav" aria-label="Halaman cerita" hidden><button id="previous-scene" class="nav-back" aria-label="Bagian sebelumnya">← <span>Sebelumnya</span></button><div class="chapter-progress"><span id="chapter-name"></span><span id="chapter-count" aria-hidden="true"></span></div><button id="next-scene" class="nav-next keepsake-button"></button>
+<dialog id="chapter-dialog" class="chapter-dialog" aria-labelledby="chapter-dialog-title"><button id="close-chapters" class="chapter-close" aria-label="Tutup daftar bab"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M6 18 18 6"/></svg></button><h2 id="chapter-dialog-title">Halaman-halaman kecil.</h2><p>Buka yang ingin kamu baca kembali.</p><ol>${readingChapters.map((chapter,i) => `<li><button data-chapter="${chapter.scene}" aria-label="Ke ${chapter.name}"><span>0${i+1}</span>${chapter.name}</button></li>`).join("")}</ol><button id="edit-from-chapters" class="chapter-edit">Isi kenangan →</button></dialog></nav>
 <button class="edit-trigger" id="open-editor">Isi kenangan →</button><p class="sr-only" id="scene-announcement" role="status"></p><p class="sr-only" id="track-status" role="status"></p>
 <dialog id="editor-dialog" aria-labelledby="editor-title"><button class="editor-close" id="close-editor">Tutup ×</button><div class="editor-heading"><div><p class="eyebrow">DI BALIK CERITA INI</p><h2 id="editor-title">Isi <em>kenangan.</em></h2></div>${flowers("flower-editor")}</div><p>${photoKeys.length} tempat untuk foto milikmu. Unggahan di sini hanya tersimpan di browser ini. Untuk dibagikan, isi <code>src/content.js</code> dan simpan file di <code>public/photos/</code>.</p><form id="editor-form"><label>Nama panggilan<input name="recipient" maxlength="60" placeholder="Kamu"></label><label>Tanggal ulang tahun <small>(opsional, waktu perangkat)</small><input name="birthday" type="datetime-local"></label><button class="primary" type="submit">Simpan nama & tanggal →</button><div class="bulk-upload"><label>Isi banyak foto sekaligus<small>Foto akan mengisi tempat kosong di semesta, sampai ${ORBIT_PHOTO_COUNT} foto.</small><input id="bulk-photos" type="file" accept="image/jpeg,image/png,image/webp" multiple></label><p id="photo-count"></p></div><details><summary>Atur masing-masing foto</summary><div class="editor-photo-grid">${photoKeys.map((k) => `<label>${photoLabel(k)}<input type="file" accept="image/jpeg,image/png,image/webp" data-upload="${k}"><button class="remove-photo" type="button" data-remove="${k}">Hapus foto lokal</button></label>`).join("")}</div></details><label>Musik latar cerita <small>(maks. 15 MB, hanya untuk mengisi hadiah)</small><input type="file" id="audio-upload" accept="audio/mpeg,audio/mp4,audio/ogg,audio/wav"></label><p id="editor-status" role="status"></p><button class="text-button" type="button" id="reset-local">Hapus semua isian lokal</button></form></dialog>`;
 
@@ -133,23 +136,27 @@ const wishGarden = createWishGarden($("#wish-garden"), quotes, {
   motion,
   escapeHtml: esc,
 });
-async function goTo(index) {
+async function goTo(index, keepsakeButton) {
   if (changing || !chapters.some(chapter => chapter.scene === index) || index === active)
     return;
   changing = true;
+  if ($("#chapter-dialog").open) $("#chapter-dialog").close();
   const chrome = [$(".story-header"), $("#story-nav"), $("#open-editor")];
   const surface = $("#app"), oldSurface = getComputedStyle(surface).backgroundColor;
-  document.body.classList.add("chapter-changing");
-  chrome.forEach(element => { element.inert = true; });
-  updateNav(index);
-  $("#stage").setAttribute("aria-busy", "true");
   const before = $(`[data-scene="${active}"]`),
     after = $(`[data-scene="${index}"]`);
+  before.inert = true;
+  document.body.classList.add("chapter-changing");
+  chrome.forEach(element => { element.inert = true; });
+  $("#stage").setAttribute("aria-busy", "true");
+  const releaseKeepsake = keepsakeButton
+    ? await liftKeepsake(keepsakeButton, motion.matches)
+    : () => {};
+  updateNav(index);
   if (active === 0) {
     introRun++;
     universe.settle();
   }
-  before.inert = true;
   effects.reset(after);
   before.style.zIndex = "1";
   after.style.zIndex = "2";
@@ -184,6 +191,7 @@ async function goTo(index) {
     ),
   ]);
   before.hidden = true;
+  releaseKeepsake();
   before.classList.remove("is-active");
   effects.reset(before);
   before.style.removeProperty("z-index");
@@ -208,12 +216,15 @@ async function goTo(index) {
 function updateNav(index = active) {
   document.body.dataset.chapter = String(index);
   $("#story-nav").hidden = index === 0;
+  $("#chapter-index").hidden = index === 0;
+  $("#open-editor").hidden = index !== 0;
+  $("#story-nav").classList.toggle("is-celebrating", index === 6 && !$("#wish-result").hidden);
   const position = chapters.findIndex(chapter => chapter.scene === index);
   const chapter = chapters[position];
   $("#chapter-name").textContent = chapter.name;
   $("#chapter-count").textContent = `${String(position).padStart(2, "0")} / ${String(readingChapters.length).padStart(2, "0")}`;
-  $("#next-scene").innerHTML = esc(chapter.next) + arrow;
-  $("#next-scene").hidden = position === chapters.length - 1;
+  if (chapter.keepsake) setKeepsake($("#next-scene"), chapter.keepsake);
+  $("#next-scene").hidden = index === 0 || position === chapters.length - 1;
   $$("#story-nav [data-chapter]").forEach(b => {
     const scene = Number(b.dataset.chapter);
     if (scene === index) b.setAttribute("aria-current", "step");
@@ -224,11 +235,33 @@ function updateNav(index = active) {
   document.body.classList.toggle("dark-scene", dark);
 }
 $("#previous-scene").onclick = () => goTo(adjacentScene(active, -1));
-$("#next-scene").onclick = () => goTo(adjacentScene(active, 1));
-$("#continue-letter").onclick = () => goTo(4);
+$("#next-scene").onclick = e => goTo(adjacentScene(active, 1), e.currentTarget);
+$("#continue-letter").onclick = e => goTo(4, e.currentTarget);
+$("#chapter-index").onclick = () => {
+  if (changing) return;
+  $("#chapter-dialog").showModal();
+  $("#chapter-index").setAttribute("aria-expanded", "true");
+};
+$("#close-chapters").onclick = () => $("#chapter-dialog").close();
+$("#chapter-dialog").addEventListener("close", () => {
+  $("#chapter-index").setAttribute("aria-expanded", "false");
+});
+$("#chapter-dialog").addEventListener("click", e => {
+  if (e.target !== e.currentTarget) return;
+  const box = e.currentTarget.getBoundingClientRect();
+  if (e.clientX < box.left || e.clientX > box.right || e.clientY < box.top || e.clientY > box.bottom)
+    e.currentTarget.close();
+});
 $$("#story-nav [data-chapter]").forEach(
   (b) =>
     (b.onclick = () => {
+      $("#chapter-dialog").close();
+      if (Number(b.dataset.chapter) === active) {
+        const title = [...$(`[data-scene="${active}"]`).querySelectorAll('[tabindex="-1"]')]
+          .find(element => element.getClientRects().length);
+        title?.focus({ preventScroll: true });
+        return;
+      }
       if (Number(b.dataset.chapter) === 0) replay();
       else goTo(Number(b.dataset.chapter));
     }),
@@ -241,6 +274,7 @@ $("#home-link").onclick = (e) => {
 window.addEventListener("keydown", (e) => {
   if (
     $("#editor-dialog").open ||
+    $("#chapter-dialog").open ||
     e.altKey ||
     e.ctrlKey ||
     e.metaKey ||
@@ -494,6 +528,8 @@ $("#blow-candle").onclick = async () => {
   $(".wish-copy").hidden = true;
   $("#cake").hidden = true;
   $("#wish-result").hidden = false;
+  $(".wish-scene").scrollTop = 0;
+  $("#story-nav").classList.toggle("is-celebrating", active === 6);
   await animate(
     $("#wish-result"),
     [
@@ -514,6 +550,7 @@ function resetWish(focus = true) {
   $(".wish-scene").dataset.wish = "waiting";
   $(".wish-scene").classList.remove("celebrating");
   $("#wish-result").hidden = true;
+  $("#story-nav").classList.remove("is-celebrating");
   $(".wish-copy").hidden = false;
   $("#cake").hidden = false;
   $("#cake").classList.remove("blown", "awaiting-wish");
@@ -716,11 +753,18 @@ function updateCountdown() {
 }
 const status = (message) => ($("#editor-status").textContent = message);
 window.addEventListener("photosrendererror", (event) => status(event.detail));
+$("#edit-from-chapters").onclick = () => {
+  $("#chapter-dialog").close();
+  $("#open-editor").click();
+};
 $("#open-editor").onclick = () => {
   $("#editor-dialog").showModal();
   universe.setPaused(true);
 };
-$("#editor-dialog").addEventListener("close", () => universe.setPaused(false));
+$("#editor-dialog").addEventListener("close", () => {
+  universe.setPaused(false);
+  (active === 0 ? $("#open-editor") : $("#chapter-index")).focus({ preventScroll: true });
+});
 $("#close-editor").onclick = () => $("#editor-dialog").close();
 const storageReady = openMemories()
   .then(async (s) => {

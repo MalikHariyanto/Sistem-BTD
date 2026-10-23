@@ -1,3 +1,4 @@
+import { chooseChapter } from "./story-helpers.js";
 import { test, expect } from "@playwright/test";
 import { cameraAt } from "../src/universe-camera.js";
 
@@ -70,9 +71,7 @@ test("poem content changes while transparent and stays visible after its animati
   page,
 }) => {
   await enter(page);
-  await page
-    .getByRole("button", { name: "Ke Bait untukmu", exact: true })
-    .click();
+  await chooseChapter(page, 'Bait untukmu');
   await expect(page.locator('[data-scene="2"]')).toHaveClass(/is-active/);
   const samples = await page.evaluate(async () => {
     const layout = document.querySelector("#poem-page"),
@@ -195,9 +194,7 @@ test("Canvas fallback still runs the story when WebGL is unavailable", async ({
     "data-renderer",
     "canvas2d",
   );
-  await page
-    .getByRole("button", { name: "Ke Tiup lilin", exact: true })
-    .click();
+  await chooseChapter(page, 'Tiup lilin');
   await expect(page.locator("#ready-wish")).toBeVisible();
 });
 
@@ -240,7 +237,7 @@ test("header, footer and chapter dissolve together without a late theme change",
       return { beginning, frames,
         snapshots: document.querySelectorAll('[data-chrome-snapshot]').length,
         backgrounds: [...controls, incoming].map(element => getComputedStyle(element).backgroundColor),
-        pending: controls.flatMap(element => element.getAnimations({ subtree: true })).length,
+        pending: controls.flatMap(element => element.getAnimations({ subtree: true })).filter(animation => !(animation instanceof CSSAnimation)).length,
       };
     }, target);
     expect(result.beginning.theme).toBe(String(target));

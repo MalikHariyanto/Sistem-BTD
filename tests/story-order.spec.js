@@ -1,3 +1,4 @@
+import { chooseChapter } from "./story-helpers.js";
 import { test, expect } from "@playwright/test";
 
 async function enter(page) {
@@ -31,7 +32,7 @@ test("the five chapters lead from birthday to flowers, poems, candle and a final
 
 test("a blown candle invites the final letter, with replay only at its signature", async ({page}) => {
   await enter(page);
-  await page.locator('[data-chapter="6"]').click();
+  await chooseChapter(page, 6);
   await page.locator("#ready-wish").click();
   await page.locator("#blow-candle").click();
   await expect(page.locator("#continue-letter")).toBeVisible();
@@ -51,7 +52,7 @@ test("a blown candle invites the final letter, with replay only at its signature
 
 test("poem bookmarks select a poem directly without replacing flowers or secondary artwork", async ({page}) => {
   await enter(page);
-  await page.locator('[data-chapter="2"]').click();
+  await chooseChapter(page, 2);
   await page.locator('[data-poem="2"]').click();
   await expect(page.locator("#poem-title")).toHaveText("Pada Hari Lahirmu");
   await expect(page.locator('[data-poem="2"]')).toHaveAttribute("aria-current","page");

@@ -1,3 +1,4 @@
+import { chooseChapter } from "./story-helpers.js";
 import { test, expect } from "@playwright/test";
 import { actualPlayback, observeMedia } from "./audio-helpers.js";
 
@@ -49,7 +50,7 @@ test.describe("when the browser requires a gesture for audible playback", () => 
     expect(start.latency).toBeLessThan(750);
     await page.locator("#enter-story").click();
     const before = await page.locator("#story-audio").evaluate(audio => audio.currentTime);
-    await page.locator('[data-chapter="4"]').click();
+    await chooseChapter(page, 4);
     await page.locator("#open-letter").click();
     expect(await page.locator("#story-audio").evaluate(audio => audio.paused)).toBe(false);
     expect(await page.locator("#story-audio").evaluate(audio => audio.currentTime)).toBeGreaterThan(before);

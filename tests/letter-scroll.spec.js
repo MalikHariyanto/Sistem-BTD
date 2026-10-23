@@ -1,3 +1,4 @@
+import { chooseChapter, openEditor } from "./story-helpers.js";
 import { test, expect } from '@playwright/test';
 
 async function openLetter(page) {
@@ -6,7 +7,7 @@ async function openLetter(page) {
   await page.locator('#begin').click();
   await page.locator('#skip-intro').click();
   await page.locator('#enter-story').click();
-  await page.locator('[data-chapter="4"]').click();
+  await chooseChapter(page, 4);
   await page.locator('#open-letter').click();
   await expect(page.locator('#letter-title')).toBeFocused();
 }
@@ -45,8 +46,8 @@ test('a complete letter scrolls in both directions, with the matching photo held
     if (geometry.width > 700) expect(geometry.right).toBe(true);
   }
   await scrollToBait(page, 2);
-  await page.locator('[data-chapter="2"]').click();
-  await page.locator('[data-chapter="4"]').click();
+  await chooseChapter(page, 2);
+  await chooseChapter(page, 4);
   await expect(page.locator('#letter-reading')).toHaveAttribute('data-letter-active', '2');
   await expect(page.locator('#letter-title')).toBeFocused();
 });
@@ -114,7 +115,7 @@ test('long letters stay readable in short windows; keyboard navigation reaches t
 
 test('existing uploaded photographs populate all four letter scenes and are ready before scrolling', async ({ page }) => {
   await openLetter(page);
-  await page.locator('#open-editor').click();
+  await openEditor(page);
   const colors = ['#9b604d', '#6b8174', '#b89856', '#78668c'];
   const keys = ['hero', 'moment0', 'moment1', 'moment3'];
   for (let i = 0; i < keys.length; i++) {

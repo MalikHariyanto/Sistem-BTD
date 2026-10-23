@@ -84,25 +84,6 @@
 .wish-copy > .eyebrow { max-width: 100%; }
 .wish-result > div { flex-wrap: wrap; }
 .wish-result #continue-letter { min-width: 275px; }
-.story-nav .chapter-progress {
-  inset: auto;
-  transform: none;
-  width: auto;
-  display: grid;
-  grid-template-columns: auto auto;
-  align-items: baseline;
-  justify-content: center;
-  gap: 0 14px;
-}
-#chapter-name { font-size: 10px; letter-spacing: .6px; }
-#chapter-count { font-size: 9px; letter-spacing: 1.5px; color: #8a7157; }
-.dark-scene #chapter-count { color: #c1a786; }
-.story-nav .progress-lines { grid-column: 1/-1; gap: 3px; margin-top: 0; }
-.story-nav .progress-lines > button { width: 34px; height: 32px; }
-.story-nav .progress-lines > button > span { width: 25px; }
-.story-nav > .nav-back,
-.story-nav > .nav-next { font-size: 11px; gap: 12px; }
-.story-nav .nav-next[hidden] { display: none !important; }
 
 @media (min-width: 701px) {
   .dedication-copy .handwritten { margin-top: clamp(14px, 3cqh, 24px); }
@@ -124,30 +105,6 @@
   .letter-endnote { font-size: 21px; }
   .letter-end-actions { flex-direction: column; align-items: flex-start; }
   .letter-signoff .letter-end-actions .text-button { font-size: 12px; }
-  .story-nav {
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: 44px 44px;
-    gap: 0 12px;
-    padding: 0 24px 16px;
-  }
-  .story-nav .chapter-progress {
-    grid-row: 1;
-    grid-column: 1/-1;
-    position: static;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 8px;
-    text-align: left;
-  }
-  #chapter-name { font-size: 10px; letter-spacing: 0; }
-  #chapter-count { display: none; }
-  .story-nav .progress-lines { gap: 0; }
-  .story-nav .progress-lines > button { width: 36px; height: 44px; }
-  .story-nav .progress-lines > button > span { width: 24px; }
-  .story-nav > .nav-back,
-  .story-nav > .nav-next { grid-row: 2; font-size: 11px; }
-  .story-nav > .nav-next { grid-column: 2; }
   .wish-result > div { gap: 8px 22px; }
   .wish-result #continue-letter { min-width: 0; width: 100%; justify-content: space-between; }
 }
