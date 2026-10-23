@@ -24,6 +24,6 @@ Atlas unggahan dan cache detail 320 px tetap dipakai. Jalur WebGL menggambar fot
 
 ## Alur dan pemeriksaan
 
-Kristal berbaur masuk/keluar bersama bagian tengah. Pembuka, pusat kamera, durasi perjalanan, arah orbit, playlist, dan isi cerita tetap dipakai. Ending kembali ke komposisi foto intim sebelumnya dan tetap mencegah duplikasi selama fade. Reduced motion tetap melewati perjalanan dan menghentikan orbit.
+Kristal berbaur masuk/keluar bersama bagian tengah. Pembuka, pusat kamera, durasi perjalanan, arah orbit, dan musik latar tetap dipakai. Ending kembali ke komposisi foto intim sebelumnya dan tetap mencegah duplikasi selama fade. Reduced motion tetap melewati perjalanan dan menghentikan orbit.
 
 `tests/crystal-pin.spec.js` memeriksa ujung pada permukaan cakram selama berotasi, ruang untuk seluruh sisi facet dan rasio ekstrem, peredupan tinggi, serta pixel foto/facet/titik cahaya di GPU. Tes komposisi memeriksa jumlah foto jelas, ruang antarbingkai, identitas tetap, dan transisi ke ending. Tes atlas/cache, kedalaman horizon, fallback Canvas, dan ketajaman foto melengkapi pemeriksaan tersebut.

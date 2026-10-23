@@ -17,9 +17,6 @@ body[data-chapter="2"] #app {
 body[data-chapter="4"] #app {
   --scene-surface: #e4d5bd;
 }
-body[data-chapter="5"] #app {
-  --scene-surface: #eae4d7;
-}
 body[data-chapter="3"] #app {
   --scene-surface: #664834;
 }
@@ -326,11 +323,6 @@ body[data-chapter="0"] .story-header {
     margin: 28px auto 16px;
   }
 
-  .record-composition { height: clamp(250px, 62cqh, 350px); }
-  .vinyl { width: min(300px, 53cqh); height: auto; aspect-ratio: 1; }
-  .music-copy h2 { font-size: clamp(38px, 8cqh, 76px); margin-bottom: 18px; }
-  .track-list { margin-top: 18px; }
-  .track { min-height: 52px; padding-block: 10px; }
 
   .wish-copy h2 { font-size: clamp(56px, 14cqh, 118px); margin-block: 18px; }
   .wish-steps { margin-block: 20px; }
@@ -350,7 +342,6 @@ body[data-chapter="0"] .story-header {
   }
   .poem-paper { padding-block: 4px; }
   .garden-layout { padding-block: 4px; }
-  .music-copy .track { padding-block: 7px; }
 }
 @media (max-width: 360px) {
   .garden-picks button { gap: 3px; padding-inline: 3px; font-size: 9px; }

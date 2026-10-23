@@ -82,6 +82,6 @@ export const content = {
     "Selamat ulang tahun, manusia kesayanganku. Di hari ketika dunia pertama kali mengenalmu, aku ingin mengucapkan terima kasih. Untuk hadirmu, untuk tawamu, untuk semua hal kecil yang mungkin tak kamu sadari telah membuat hidupku lebih hangat.",
     "Aku tidak bisa menjanjikan hari-hari yang selalu mudah. Tapi aku ingin ada: mendengarkan cerita yang sama untuk kesekian kalinya, merayakan langkah kecilmu, dan mengingatkan betapa berharganya kamu ketika kamu sendiri lupa.",
     "Di usia yang baru ini, semoga kamu tumbuh tanpa kehilangan lembutmu. Semoga mimpi-mimpimu punya ruang, dan hatimu punya tempat pulang. Jangan terburu-buru; bahkan bintang pun membutuhkan waktu untuk sampai pada cahayanya.",
-    "Hari ini milikmu. Pejamkan mata, buat satu harapan. Aku akan menyimpan doaku di antara harapan-harapanmu. Selamat bertambah cerita. Aku bahagia bisa menjadi bagian kecil di dalamnya.",
+    "Semoga harapan yang tadi kamu simpan menemukan jalannya. Aku akan menyelipkan doaku di antara harapan-harapanmu. Selamat bertambah cerita. Untuk hari ini, untuk hari-hari biasa setelahnya: aku bahagia bisa menjadi bagian kecil di dalam hidupmu.",
   ],
 };

@@ -1,0 +1,159 @@
+/* One quiet visual language for the five chapters. Decoration is static;
+   transitions use opacity/transform and the cinematic renderer is untouched. */
+:root {
+  --album-cream: #fbf6ed;
+  --album-edge: #b79b7652;
+  --album-shadow: 0 16px 36px #4a352418, 0 2px 5px #4a35240b;
+}
+.story-dedication {
+  font: italic 15px/1.4 var(--serif);
+  color: #8a7056;
+  letter-spacing: .15px;
+}
+.dark-scene .story-dedication { color: #cbb494; }
+.intro-running .story-dedication { visibility: hidden; }
+#main .scene:not(.universe-scene) h2 { letter-spacing: -.035em; }
+.dedication-copy > p:not(.eyebrow):not(:nth-of-type(2)) {
+  font-size: clamp(13px, 1.05vw, 15px);
+  line-height: 1.85;
+  max-width: 40ch;
+}
+.memory,
+.poem-visual > #poem-photo,
+.poem-small-photo,
+.garden-photos > .photo-slot,
+.letter-frame {
+  border-color: var(--album-cream);
+  box-shadow: var(--album-shadow);
+}
+.photo-slot {
+  background: radial-gradient(ellipse at 15% 12%, #efe3ce80, transparent 65%),
+    linear-gradient(145deg, #d6c5aa, #b39b7c 70%, #a18a70);
+}
+.photo-slot::before { border-color: #fff5df55; }
+.photo-slot .aperture { text-shadow: 0 2px 14px #fff8e34d; }
+.photo-slot img { image-rendering: auto; }
+.letter-frame .photo-slot img { filter: none; }
+.poem-paper .eyebrow { border-color: var(--album-edge); }
+.poem-paper .page-controls { border-color: var(--album-edge); }
+.poem-visual > .handwritten { bottom: -3%; }
+.poem-pagination { display: grid; justify-items: center; gap: 0; }
+#poem-position { font-size: 10px; letter-spacing: 2px; color: #7b634b; }
+.poem-bookmarks { display: flex; }
+.poem-bookmarks button {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+.poem-bookmarks button span {
+  width: 20px;
+  height: 1px;
+  background: #ac947355;
+}
+.poem-bookmarks [aria-current] span { height: 2px; background: #816344; }
+.poem-paper .round { border-color: #b296705e; transition: background .2s, border-color .2s; }
+.poem-paper .round:hover { background: #fff9ee66; border-color: #8a6948; }
+.garden-experience { position: relative; }
+.garden-flowers { background: transparent; }
+.garden-flower-art { filter: saturate(.94); }
+.garden-bloom strong { font-size: clamp(23px, 4.8cqh, 34px); }
+.garden-note { border-color: #e1c8a940; }
+.garden-source summary { text-underline-offset: 5px; }
+.garden-picks { box-shadow: 0 7px 14px #664834; }
+.letter-intro { position: relative; isolation: isolate; }
+.letter-intro::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background: radial-gradient(ellipse, #fff9e23d, transparent 65%);
+  pointer-events: none;
+}
+.envelope-back { box-shadow: 0 17px 35px #76512e20, 0 1px 2px #76512e21; }
+.envelope-paper { border: 1px solid #fff7e180; }
+.wax-seal { box-shadow: 1px 4px 8px #5b3b2140, inset 0 0 0 3px #c5986640, inset 1px 1px 2px #edcc9f30; }
+.flower-envelope { width: 34%; right: 0; bottom: 0; transform: rotate(12deg); }
+.letter-signoff { border-top: 1px solid var(--album-edge); margin-top: 16px; }
+.letter-endnote { font: italic 23px/1.55 var(--serif); color: #806347; margin-top: 28px; }
+.letter-end-actions { display: flex; flex-wrap: wrap; gap: 4px 26px; }
+.letter-signoff .letter-end-actions .text-button { min-height: 48px; margin-top: 8px; }
+.wish-copy > .eyebrow { max-width: 100%; }
+.wish-result > div { flex-wrap: wrap; }
+.wish-result #continue-letter { min-width: 275px; }
+.story-nav .chapter-progress {
+  inset: auto;
+  transform: none;
+  width: auto;
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0 14px;
+}
+#chapter-name { font-size: 10px; letter-spacing: .6px; }
+#chapter-count { font-size: 9px; letter-spacing: 1.5px; color: #8a7157; }
+.dark-scene #chapter-count { color: #c1a786; }
+.story-nav .progress-lines { grid-column: 1/-1; gap: 3px; margin-top: 0; }
+.story-nav .progress-lines > button { width: 34px; height: 32px; }
+.story-nav .progress-lines > button > span { width: 25px; }
+.story-nav > .nav-back,
+.story-nav > .nav-next { font-size: 11px; gap: 12px; }
+.story-nav .nav-next[hidden] { display: none !important; }
+
+@media (min-width: 701px) {
+  .dedication-copy .handwritten { margin-top: clamp(14px, 3cqh, 24px); }
+  .poem-paper .page-controls { padding-top: 9px; }
+  .poem-paper h2 { margin-bottom: 8px; }
+}
+@media (max-width: 700px) {
+  .story-dedication { display: none; }
+  .dedication-copy > p:not(.eyebrow):not(:nth-of-type(2)) { font-size: 13px; }
+  .dedication-copy .handwritten { line-height: 1.45; }
+  .poem-layout { gap: 27px; }
+  .poem-visual > .handwritten { bottom: -18px; font-size: 14px; white-space: nowrap; }
+  .poem-paper .eyebrow { font-size: 8px; line-height: 1.65; }
+  .poem-subtitle { font-size: 10px !important; line-height: 1.6; }
+  .poem-bookmarks button { width: 36px; min-height: 36px; }
+  .garden-bloom strong { font-size: 24px; }
+  .garden-bloom small { font-size: 10px; }
+  .garden-intro > p:not(.eyebrow) { font-size: 13px; }
+  .letter-endnote { font-size: 21px; }
+  .letter-end-actions { flex-direction: column; align-items: flex-start; }
+  .letter-signoff .letter-end-actions .text-button { font-size: 12px; }
+  .story-nav {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 44px 44px;
+    gap: 0 12px;
+    padding: 0 24px 16px;
+  }
+  .story-nav .chapter-progress {
+    grid-row: 1;
+    grid-column: 1/-1;
+    position: static;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    text-align: left;
+  }
+  #chapter-name { font-size: 10px; letter-spacing: 0; }
+  #chapter-count { display: none; }
+  .story-nav .progress-lines { gap: 0; }
+  .story-nav .progress-lines > button { width: 36px; height: 44px; }
+  .story-nav .progress-lines > button > span { width: 24px; }
+  .story-nav > .nav-back,
+  .story-nav > .nav-next { grid-row: 2; font-size: 11px; }
+  .story-nav > .nav-next { grid-column: 2; }
+  .wish-result > div { gap: 8px 22px; }
+  .wish-result #continue-letter { min-width: 0; width: 100%; justify-content: space-between; }
+}
+@media (min-width: 701px) and (max-height: 680px) {
+  .dedication-copy > p:not(.eyebrow):not(:nth-of-type(2)) { font-size: 12px; line-height: 1.7; }
+  .poem-paper h2 { margin-bottom: 4px; }
+  .poem-subtitle { margin-bottom: 10px; }
+  .poem-paper .eyebrow { margin-bottom: 12px; }
+}

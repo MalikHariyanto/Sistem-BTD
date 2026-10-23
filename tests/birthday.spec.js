@@ -7,10 +7,9 @@ async function chapter(page, label) {
     {
       "Hari lahirmu": "dedication-title",
       "Bait untukmu": "poem-title",
-      "Tiga doa": "quote-heading",
-      Suratku: "letter-heading",
-      "Nada kita": "music-title",
-      "Satu harapan": "wish-title",
+      "Bunga & doa": "quote-heading",
+      "Surat untukmu": "letter-heading",
+      "Tiup lilin": "wish-title",
     }[label],
   );
 }
@@ -88,12 +87,14 @@ test("chapters dissolve without content modals; poems and sourced wishes can be 
     5,
   );
   await page.locator("#next-scene").click();
+  await expect(page.locator('[data-scene="3"]')).toHaveClass(/is-active/);
+  await page.locator("#next-scene").click();
   await expect(page.locator('[data-scene="2"]')).toHaveClass(/is-active/);
   await page.getByRole("button", { name: "Puisi selanjutnya" }).click();
   await expect(page.locator("#poem-title")).toHaveText("Hal-hal Kecil");
   await page.getByRole("button", { name: "Puisi sebelumnya" }).click();
   await expect(page.locator("#poem-title")).toHaveText("Gravitasi");
-  await chapter(page, "Tiga doa");
+  await chapter(page, "Bunga & doa");
   await page
     .getByRole("button", { name: "Mekarkan doa: Bahagia", exact: true })
     .click();
@@ -126,7 +127,7 @@ test("letter opens in place and follows the scroll; the background song accompan
   page,
 }) => {
   await enter(page);
-  await chapter(page, "Suratku");
+  await chapter(page, "Surat untukmu");
   await page
     .getByRole("button", { name: "Buka surat untukmu", exact: true })
     .click();
@@ -142,8 +143,7 @@ test("letter opens in place and follows the scroll; the background song accompan
   await expect(page.locator(".letter-verse").nth(1)).toContainText(
     "Aku tidak bisa menjanjikan",
   );
-  await chapter(page, "Nada kita");
-  await expect(page.locator(".music-credit")).toContainText("Country");
+  await expect(page.locator(".music-scene, [data-chapter=\"5\"]")).toHaveCount(0);
   await expect(page.locator("#sound-toggle, #ambient-toggle, [data-track]")).toHaveCount(0);
   expect(await page.locator("#story-audio").evaluate(audio => audio.paused)).toBe(false);
 
@@ -153,7 +153,7 @@ test("birthday finale has explicit wish steps and a large working blow button", 
   page,
 }) => {
   await enter(page);
-  await chapter(page, "Satu harapan");
+  await chapter(page, "Tiup lilin");
   await expect(page.locator("#cake")).toBeVisible();
   await expect(page.locator("#blow-candle")).toBeHidden();
   await page.getByRole("button", { name: "Aku siap buat harapan" }).click();
@@ -199,7 +199,7 @@ test("replay cancels an unfinished celebration and resets the story", async ({
   await chapter(page, "Bait untukmu");
   await page.locator("#next-poem").click();
   await expect(page.locator("#poem-title")).toHaveText("Hal-hal Kecil");
-  await chapter(page, "Satu harapan");
+  await chapter(page, "Tiup lilin");
   await page.locator("#ready-wish").click();
   await page.locator("#blow-candle").click();
   await page.locator("#home-link").click();
@@ -210,7 +210,7 @@ test("replay cancels an unfinished celebration and resets the story", async ({
   await page.locator("#enter-story").click();
   await chapter(page, "Bait untukmu");
   await expect(page.locator("#poem-title")).toHaveText("Gravitasi");
-  await chapter(page, "Satu harapan");
+  await chapter(page, "Tiup lilin");
   await expect(page.locator("#ready-wish")).toBeVisible();
   await expect(page.locator("#cake")).toBeVisible();
   await expect(page.locator("#cake")).not.toHaveClass(/blown/);
@@ -262,7 +262,7 @@ test("209 photo slots and bulk uploads persist, with old photo keys preserved", 
     "Sayang",
   );
   await expect(page.locator('[data-photo="orbit01"]')).toHaveClass(/has-photo/);
-  await chapter(page, "Suratku");
+  await chapter(page, "Surat untukmu");
   await page.locator("#open-letter").click();
   await expect(page.locator('[data-photo="hero"] img')).toBeVisible();
   await page.locator("#open-editor").click();
@@ -283,10 +283,9 @@ test("reduced motion, keyboard focus and responsive scenes", async ({
   await enter(page);
   for (const name of [
     "Bait untukmu",
-    "Tiga doa",
-    "Suratku",
-    "Nada kita",
-    "Satu harapan",
+    "Bunga & doa",
+    "Surat untukmu",
+    "Tiup lilin",
   ]) {
     await chapter(page, name);
     expect(

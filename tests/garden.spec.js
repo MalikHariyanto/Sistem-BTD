@@ -6,7 +6,7 @@ async function enterGarden(page) {
   await page.locator("#skip-intro").click();
   await page.locator("#enter-story").click();
   await expect(page.locator('[data-scene="1"]')).toHaveClass(/is-active/);
-  await page.getByRole("button", { name: "Ke Tiga doa", exact: true }).click();
+  await page.getByRole("button", { name: "Ke Bunga & doa", exact: true }).click();
   await expect(page.locator('[data-scene="3"]')).toHaveClass(/is-active/);
 }
 
@@ -43,7 +43,7 @@ test("garden wishes bloom in any order and accumulate without replacing the earl
   await expect(page.locator('[data-scene="2"]')).toHaveClass(/is-active/);
   await page.getByRole("button", { name: "Puisi selanjutnya" }).click();
   await expect(page.locator("#poem-title")).toHaveText("Hal-hal Kecil");
-  await page.getByRole("button", { name: "Ke Tiga doa", exact: true }).click();
+  await page.getByRole("button", { name: "Ke Bunga & doa", exact: true }).click();
   await expect(page.locator('[data-scene="3"]')).toHaveClass(/is-active/);
   await expect(page.locator(".garden-note:not([hidden])")).toHaveCount(3);
   await page.locator("#home-link").click();
@@ -52,7 +52,7 @@ test("garden wishes bloom in any order and accumulate without replacing the earl
   await page.locator("#skip-intro").click();
   await page.locator("#enter-story").click();
   await expect(page.locator('[data-scene="1"]')).toHaveClass(/is-active/);
-  await page.getByRole("button", { name: "Ke Tiga doa", exact: true }).click();
+  await page.getByRole("button", { name: "Ke Bunga & doa", exact: true }).click();
   await expect(page.locator(".garden-note:not([hidden])")).toHaveCount(0);
   await expect(page.locator('.garden-bloom[aria-expanded="true"]')).toHaveCount(
     0,

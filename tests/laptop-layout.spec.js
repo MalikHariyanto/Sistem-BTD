@@ -42,18 +42,18 @@ for (const [width, height] of [[1280, 580], [1280, 620], [1366, 768], [1920, 930
     }
 
     const chapters = [
-      ['#dedication-title', '.memory-0'],
-      ['#poem-title', '#poem-text', '#next-poem'],
-      ['#quote-heading', '.garden-flowers'],
-      ['#letter-heading', '#open-letter', '#open-letter-text'],
-      ['#music-title', '.music-credit'],
-      ['#wish-title', '#ready-wish'],
+      [1, ['#dedication-title', '.memory-0']],
+      [3, ['#quote-heading', '.garden-flowers']],
+      [2, ['#poem-title', '#poem-text', '#next-poem']],
+      [6, ['#wish-title', '#ready-wish']],
+      [4, ['#letter-heading', '#open-letter', '#open-letter-text']],
     ];
-    for (let i = 1; i <= 6; i++) {
-      if (i > 1) await page.locator(`[data-chapter="${i}"]`).click();
-      await expect(page.locator('.scene.is-active')).toHaveAttribute('data-scene', String(i));
-      await fits(chapters[i - 1]);
+    for (const [scene, selectors] of chapters) {
+      if (scene !== 1) await page.locator(`[data-chapter="${scene}"]`).click();
+      await expect(page.locator('.scene.is-active')).toHaveAttribute('data-scene', String(scene));
+      await fits(selectors);
     }
+    await page.locator('[data-chapter="6"]').click();
     await page.locator('#ready-wish').click();
     await fits(['#blow-candle']);
     await page.locator('[data-chapter="4"]').click();

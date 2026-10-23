@@ -701,111 +701,6 @@ button {
 .opened .envelope-paper {
   transform: translateY(-85px);
 }
-.music-scene {
-  background: #eae4d7;
-}
-.music-layout {
-  grid-template-columns: 1fr 1fr;
-  gap: 12%;
-}
-.record-composition {
-  position: relative;
-  height: 350px;
-  margin-right: 10px;
-}
-.record-sleeve {
-  position: absolute;
-  inset: 15px 70px 35px 0;
-  transform: rotate(-7deg);
-  border: 10px solid #d8c8ae;
-  z-index: 2;
-  box-shadow: 0 8px 25px #35281d20;
-}
-.record-sleeve .photo-slot {
-  height: 100%;
-}
-.record-composition > .handwritten {
-  position: absolute;
-  bottom: -35px;
-  left: 5%;
-  font-size: 24px;
-  z-index: 3;
-  transform: rotate(-5deg);
-  color: #8b6b4a;
-}
-.vinyl {
-  width: 300px;
-  height: 300px;
-  border-radius: 50%;
-  position: absolute;
-  right: -35px;
-  top: 20px;
-  display: grid;
-  place-items: center;
-  background: repeating-radial-gradient(circle, #24221e 0 2px, #34312a 3px 4px);
-  animation: spin 18s linear infinite;
-  animation-play-state: paused;
-  box-shadow: 0 10px 30px #35281d20;
-}
-.vinyl.playing {
-  animation-play-state: running;
-}
-.vinyl > div {
-  display: grid;
-  place-items: center;
-  width: 95px;
-  height: 95px;
-  background: #9d7851;
-  border-radius: 50%;
-  font: italic 52px var(--serif);
-  color: #e5d1b0;
-}
-.music-copy > p:not(.eyebrow) {
-  font-size: 12px;
-  color: var(--muted);
-}
-.music-copy h2 {
-  font-size: clamp(48px, 5vw, 76px);
-}
-.track-list {
-  margin: 30px 0 15px;
-}
-.track {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  width: 100%;
-  text-align: left;
-  background: none;
-  border: 0;
-  border-bottom: 1px solid #beac913b;
-  padding: 15px 0;
-  min-height: 70px;
-}
-.track-state {
-  font-size: 18px;
-  width: 20px;
-  color: #84633f;
-}
-.track strong {
-  font-size: 12px;
-  font-weight: 400;
-}
-.track small {
-  display: block;
-  font-size: 9px;
-  line-height: 1.5;
-  color: #82705a;
-  margin-top: 4px;
-}
-.track.playing strong {
-  color: #9b6c36;
-}
-#track-status {
-  font-size: 10px !important;
-  line-height: 1.6;
-  min-height: 32px;
-}
 .wish-scene {
   color: #f0e1c5;
   background: #15110e;
@@ -1441,10 +1336,7 @@ summary {
     padding: 0;
   }
   .dedication-layout,
-  .poem-layout,
-  .music-layout {
-    gap: 7%;
-  }
+  .poem-layout { gap: 7%; }
   .dedication-copy h2 {
     font-size: 51px;
   }
@@ -1453,21 +1345,6 @@ summary {
   }
   .dedication-copy .handwritten {
     font-size: 22px;
-  }
-  .record-composition {
-    height: 300px;
-  }
-  .vinyl {
-    width: 250px;
-    height: 250px;
-    right: -20px;
-    top: 27px;
-  }
-  .record-sleeve {
-    right: 40px;
-  }
-  .music-copy h2 {
-    font-size: 56px;
   }
   .wish-copy h2 {
     font-size: 75px;
@@ -1721,78 +1598,6 @@ summary {
   .letter-intro .text-button {
     font-size: 10px;
   }
-  .music-layout {
-    grid-template-columns: 1fr;
-    gap: 44px;
-    min-height: 560px;
-    max-width: 360px;
-  }
-  .record-composition {
-    height: 190px;
-    width: 240px;
-    justify-self: center;
-    margin-right: 10px;
-  }
-  .record-sleeve {
-    inset: 0 45px 5px 0;
-    border-width: 6px;
-  }
-  .vinyl {
-    width: 174px;
-    height: 174px;
-    right: -15px;
-    top: 4px;
-  }
-  .vinyl > div {
-    width: 60px;
-    height: 60px;
-    font-size: 38px;
-  }
-  .record-composition > .handwritten {
-    font-size: 19px;
-    bottom: -25px;
-    left: 0;
-  }
-  .record-sleeve .photo-label {
-    font-size: 6px;
-  }
-  .music-copy > .eyebrow {
-    font-size: 7px;
-    margin-bottom: 13px;
-  }
-  .music-copy h2 {
-    font-size: 46px;
-    line-height: 0.98;
-    margin-bottom: 15px;
-  }
-  .music-copy > p:not(.eyebrow) {
-    font-size: 10px;
-  }
-  .track-list {
-    margin-top: 17px;
-  }
-  .track {
-    padding: 10px 0;
-    min-height: 58px;
-    gap: 15px;
-  }
-  .track strong {
-    font-size: 11px;
-  }
-  .track small {
-    font-size: 8px;
-    margin-top: 3px;
-  }
-  .track-state {
-    font-size: 16px;
-  }
-  #track-status {
-    font-size: 9px !important;
-    min-height: 28px;
-  }
-  .music-copy .text-button {
-    font-size: 10px;
-  }
   .wish-layout {
     display: flex;
     flex-direction: column-reverse;
@@ -2008,9 +1813,6 @@ summary {
 }
 /* Keep the photograph field above the cover copy and the celebration steps below the cake. */
 @media (max-width: 600px) {
-  .music-layout {
-    gap: 25px;
-  }
   .cake-composition {
     height: 450px;
     transform: scale(0.55);
@@ -2136,10 +1938,7 @@ body.intro-running .story-header > button {
   }
   .dedication-layout,
   .poem-layout,
-  .letter-layout,
-  .music-layout {
-    min-height: 100%;
-  }
+  .letter-layout { min-height: 100%; }
   .memory-constellation {
     height: 165px;
     width: 210px;
@@ -2216,97 +2015,14 @@ body.intro-running .story-header > button {
     height: 160px;
     margin: 35px auto 20px;
   }
-  .music-layout {
-    gap: 28px;
-  }
-  .record-composition {
-    width: 170px;
-    height: 125px;
-  }
-  .record-sleeve {
-    right: 35px;
-    bottom: 0;
-  }
-  .vinyl {
-    width: 125px;
-    height: 125px;
-    right: -10px;
-    top: 0;
-  }
-  .vinyl > div {
-    height: 44px;
-    width: 44px;
-    font-size: 27px;
-  }
-  .record-composition > .handwritten {
-    font-size: 15px;
-    bottom: -22px;
-  }
-  .music-copy > .eyebrow {
-    font-size: 6px;
-    margin-bottom: 10px;
-  }
-  .music-copy h2 {
-    font-size: 38px;
-    margin-bottom: 12px;
-  }
-  .music-copy > p:not(.eyebrow):not(#track-status) {
-    display: none;
-  }
-  .track-list {
-    margin: 10px 0;
-  }
-  .track {
-    min-height: 48px;
-    padding: 8px 0;
-  }
-  .track strong {
-    font-size: 10px;
-  }
-  .track small {
-    font-size: 7px;
-  }
-  #track-status {
-    font-size: 8px !important;
-    line-height: 1.5;
-    min-height: 24px;
-  }
-  .music-copy .text-button {
-    font-size: 9px;
-    padding: 6px 0;
-  }
 }
 @media (max-width: 600px) and (max-height: 740px) {
   .memory-constellation {
     height: 158px;
-  }
-  .music-layout {
-    gap: 20px;
-  }
-  .record-composition {
-    height: 110px;
-  }
-  .vinyl {
-    height: 110px;
-    width: 110px;
-  }
-  .track strong {
-    font-size: 11px;
   }
 }
 @media (max-width: 600px) {
   .story-nav > .nav-next {
     font-size: 10px;
   }
-}
-
-/* A quiet song dedication, with no player switches or playlist choices. */
-.music-credit { margin-top: 26px; padding-top: 18px; border-top: 1px solid #beac9155; }
-.music-credit .eyebrow { font-size: 8px; }
-.music-credit p { font: 24px/1.5 var(--serif); margin: 10px 0 14px; }
-.music-credit p span { color: #82705a; }
-@media (max-width: 600px) {
-  .music-layout { gap: 48px; }
-  .music-credit { margin-top: 18px; padding-top: 14px; }
-  .music-credit p { font-size: 20px; }
 }

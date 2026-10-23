@@ -15,7 +15,7 @@ test("Next never exposes the outgoing chapter again, even with repeated clicks",
   page,
 }) => {
   await enter(page);
-  for (const target of [2, 3, 4]) {
+  for (const target of [3, 2, 6, 4]) {
     const samples = await page.evaluate(async (target) => {
       const previous = document.querySelector(".scene.is-active"),
         incoming = document.querySelector(`[data-scene="${target}"]`);
@@ -75,7 +75,7 @@ test("poem content changes while transparent and stays visible after its animati
     .click();
   await expect(page.locator('[data-scene="2"]')).toHaveClass(/is-active/);
   const samples = await page.evaluate(async () => {
-    const layout = document.querySelector(".poem-layout"),
+    const layout = document.querySelector("#poem-page"),
       title = document.querySelector("#poem-title"),
       frames = [];
     let end = false;
@@ -196,7 +196,7 @@ test("Canvas fallback still runs the story when WebGL is unavailable", async ({
     "canvas2d",
   );
   await page
-    .getByRole("button", { name: "Ke Satu harapan", exact: true })
+    .getByRole("button", { name: "Ke Tiup lilin", exact: true })
     .click();
   await expect(page.locator("#ready-wish")).toBeVisible();
 });
@@ -206,7 +206,7 @@ test("header, footer and chapter dissolve together without a late theme change",
   await page.locator("#begin").click();
   await page.locator("#skip-intro").click();
   // Check the full-screen opening as well as every reading chapter and return.
-  for (const target of [1, 2, 3, 4, 5, 6, 5, 4, 3, 2, 1]) {
+  for (const target of [1, 3, 2, 6, 4, 6, 2, 3, 1]) {
     const result = await page.evaluate(async target => {
       const incoming = document.querySelector(`[data-scene="${target}"]`);
       const button = document.body.dataset.chapter === "0"

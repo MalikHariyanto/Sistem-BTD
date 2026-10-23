@@ -14,7 +14,7 @@ export function createScrollLetter(root, { content, photo, flowers, escapeHtml: 
         <p class="letter-verse">${esc(text)}</p>
         ${i === 0 ? '<span class="letter-scroll-hint">Masih ada yang ingin kukatakan <span aria-hidden="true">↓</span></span>' : ''}
       </section>`).join('')}
-      <div class="letter-signoff"><span aria-hidden="true">♡</span><p class="handwritten">Dengan seluruh rasa,</p><p class="letter-sender">${esc(content.sender)}</p><button id="close-letter" class="text-button">Lipat kembali suratnya ↗</button></div>
+      <div class="letter-signoff"><span aria-hidden="true">♡</span><p class="handwritten">Dengan seluruh rasa,</p><p class="letter-sender">${esc(content.sender)}</p><p class="letter-endnote">Ceritanya sampai di sini.<br>Sayangku untukmu, semoga tak pernah selesai.</p><div class="letter-end-actions"><button id="close-letter" class="text-button">Lipat kembali suratnya ↗</button><button id="replay" class="text-button">Baca cerita ini lagi ↺</button></div></div>
     </div>
     <aside class="letter-gallery" aria-label="Foto yang menemani surat">
       <div class="letter-gallery-note"><span class="eyebrow">SEBUAH SURAT, SEPENUH HATI</span><span class="letter-photo-count" aria-hidden="true">01 / ${String(count).padStart(2, '0')}</span></div>

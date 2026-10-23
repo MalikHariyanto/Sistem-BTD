@@ -53,8 +53,7 @@ test.describe("when the browser requires a gesture for audible playback", () => 
     await page.locator("#open-letter").click();
     expect(await page.locator("#story-audio").evaluate(audio => audio.paused)).toBe(false);
     expect(await page.locator("#story-audio").evaluate(audio => audio.currentTime)).toBeGreaterThan(before);
-    await page.locator('[data-chapter="5"]').click();
-    await expect(page.locator(".music-credit")).toContainText("Country");
+    await expect(page.locator(".music-scene, .music-credit, [data-chapter=\"5\"]")).toHaveCount(0);
     await expect(page.locator("#sound-toggle, #ambient-toggle, [data-track], audio[controls]")).toHaveCount(0);
     await expect(page.locator("audio")).toHaveCount(1);
     // A moving playhead is insufficient: the original file had eight seconds
