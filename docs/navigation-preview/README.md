@@ -1,5 +1,7 @@
 # Tiga pilihan navigasi untuk cerita ulang tahun
 
+**Preview terbaru: [tiga ide baru D, E, dan F beserta video transisinya](../navigation-atelier/README.md).** Halaman A/B/C di bawah disimpan sebagai arsip putaran pertama.
+
 **Rekomendasiku: A — Penanda cerita.** Tombol lanjut menjadi tindakan yang paling jelas, dengan nama tujuan seperti **“Lanjut ke puisi”**. Penerima bisa mengikuti kejutan dari awal sampai akhir tanpa perlu memahami ikon atau menebak fungsi garis kecil.
 
 Ini preview terpisah di branch `preview/navigation-options`. Navigasi website utama belum diganti. Foto pribadi dan musik tidak disertakan; contoh isi hanya untuk mencoba perpindahan bab.
