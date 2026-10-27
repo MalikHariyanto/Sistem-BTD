@@ -1,0 +1,471 @@
+{
+  "schema_version": 1,
+  "snapshot_head": "4f607acad2f818d944423e171d9946bb928860e0",
+  "note": "Repository evidence, not reconstructed assistant responses. Authored dates are git dates, not chat timestamps. Includes locally available preview branches.",
+  "commits": [
+    {
+      "sha": "51a5109c4dba5b3b60099a269e0aecc03ddf9e43",
+      "authored_at": "2026-10-16T19:11:45Z",
+      "subject": "Build Ambis Copenhagen romantic birthday experience",
+      "body": "",
+      "on_implementation_ancestry": true,
+      "url": "https://github.com/MalikHariyanto/Sistem-BTD/commit/51a5109c4dba5b3b60099a269e0aecc03ddf9e43"
+    },
+    {
+      "sha": "bbbf5f2c9fe4d6efd8bad17c8d423364ffb84c32",
+      "authored_at": "2026-10-16T19:12:58Z",
+      "subject": "Polish responsive typography and format birthday app sources",
+      "body": "",
+      "on_implementation_ancestry": true,
+      "url": "https://github.com/MalikHariyanto/Sistem-BTD/commit/bbbf5f2c9fe4d6efd8bad17c8d423364ffb84c32"
+    },
+    {
+      "sha": "d6623c454953b2e556246b395c0c8db73c0073bb",
+      "authored_at": "2026-10-16T19:56:54Z",
+      "subject": "Rebuild birthday gift as cinematic scenes with detailed photo universe and wish finale",
+      "body": "",
+      "on_implementation_ancestry": true,
+      "url": "https://github.com/MalikHariyanto/Sistem-BTD/commit/d6623c454953b2e556246b395c0c8db73c0073bb"
+    },
+    {
+      "sha": "5065a79588236e07dbc4ada0db5d7b4f2c69d6ba",
+      "authored_at": "2026-10-16T20:19:54Z",
+      "subject": "Use cinematic Gargantua plates and reveal photos within accretion disk",
+      "body": "",
+      "on_implementation_ancestry": true,
+      "url": "https://github.com/MalikHariyanto/Sistem-BTD/commit/5065a79588236e07dbc4ada0db5d7b4f2c69d6ba"
+    },
+    {
+      "sha": "39f9698558b18004293482a1f1812899558331d8",
+      "authored_at": "2026-10-16T20:57:27Z",
+      "subject": "Render Gargantua as a live photo orbit and prevent scene transition flashes",
+      "body": "",
+      "on_implementation_ancestry": true,
+      "url": "https://github.com/MalikHariyanto/Sistem-BTD/commit/39f9698558b18004293482a1f1812899558331d8"
+    },
+    {
+      "sha": "2ec99061f7e813907797418c319622cfd83328b4",
+      "authored_at": "2026-10-17T00:16:08Z",
+      "subject": "Add romantic rose ornaments to memories, poems and letters",
+      "body": "",
+      "on_implementation_ancestry": true,
+      "url": "https://github.com/MalikHariyanto/Sistem-BTD/commit/2ec99061f7e813907797418c319622cfd83328b4"
+    },
+    {
+      "sha": "269fad05916410a1e1f81a93690f4a16ecb76a46",
+      "authored_at": "2026-10-17T01:40:38Z",
+      "subject": "Replace wish carousel with an interactive blooming garden",
+      "body": "",
+      "on_implementation_ancestry": true,
+      "url": "https://github.com/MalikHariyanto/Sistem-BTD/commit/269fad05916410a1e1f81a93690f4a16ecb76a46"
+    },
+    {
+      "sha": "b2ce0dd5b7bf656bd46abf1e4f217918286f3d67",
+      "authored_at": "2026-10-17T02:22:05Z",
+      "subject": "Expand photo library to 129 slots and reduce neighboring orbit repeats",
+      "body": "",
+      "on_implementation_ancestry": true,
+      "url": "https://github.com/MalikHariyanto/Sistem-BTD/commit/b2ce0dd5b7bf656bd46abf1e4f217918286f3d67"
+    },
+    {
+      "sha": "ccbd09f8061c9ff83aeb0ebd56fe7a153567856f",
+      "authored_at": "2026-10-17T02:39:29Z",
+      "subject": "Widen Gargantua close-up and preserve depth and native photo framing",
+      "body": "",
+      "on_implementation_ancestry": true,
+      "url": "https://github.com/MalikHariyanto/Sistem-BTD/commit/ccbd09f8061c9ff83aeb0ebd56fe7a153567856f"
+    },
+    {
+      "sha": "ee89f15d86905fee0d89630a9fa57a2256e05dcf",
+      "authored_at": "2026-10-17T02:46:10Z",
+      "subject": "Restore original Gargantua approach and bring the ending closer",
+      "body": "",
+      "on_implementation_ancestry": true,
+      "url": "https://github.com/MalikHariyanto/Sistem-BTD/commit/ee89f15d86905fee0d89630a9fa57a2256e05dcf"
+    },
+    {
+      "sha": "3824b01f4cf36f67c4d9c17227173601a1590fe1",
+      "authored_at": "2026-10-17T03:05:15Z",
+      "subject": "Compose a calmer orbital finale and fade portraits on the far arc",
+      "body": "",
+      "on_implementation_ancestry": true,
+      "url": "https://github.com/MalikHariyanto/Sistem-BTD/commit/3824b01f4cf36f67c4d9c17227173601a1590fe1"
+    },
+    {
+      "sha": "a00520c5d89cf11de447a2d7aa922e940a563da9",
+      "authored_at": "2026-10-17T03:18:20Z",
+      "subject": "Give the dense photo stream a slower, clearer middle reveal",
+      "body": "",
+      "on_implementation_ancestry": true,
+      "url": "https://github.com/MalikHariyanto/Sistem-BTD/commit/a00520c5d89cf11de447a2d7aa922e940a563da9"
+    },
+    {
+      "sha": "321a9e5f28b1c5d63db9c05004ec9dbbbc2ea416",
+      "authored_at": "2026-10-17T03:33:23Z",
+      "subject": "Orbit Gargantua during the reveal and add distinct botanical flowers",
+      "body": "",
+      "on_implementation_ancestry": true,
+      "url": "https://github.com/MalikHariyanto/Sistem-BTD/commit/321a9e5f28b1c5d63db9c05004ec9dbbbc2ea416"
+    },
+    {
+      "sha": "c0c7e76ea0565d1159358228351fafab487c04fa",
+      "authored_at": "2026-10-17T03:55:28Z",
+      "subject": "Move the camera through Gargantua with inward photo flow and horizon occlusion",
+      "body": "",
+      "on_implementation_ancestry": true,
+      "url": "https://github.com/MalikHariyanto/Sistem-BTD/commit/c0c7e76ea0565d1159358228351fafab487c04fa"
+    },
+    {
+      "sha": "5df1461244d9fd26167b1c4e7701c3f355689454",
+      "authored_at": "2026-10-17T06:13:59Z",
+      "subject": "Build one instanced Gargantua with opposing camera motion",
+      "body": "Replace photographic backdrops and the legacy renderer with one black sphere, a 5000-photo accretion disk, optical bending and bloom. Preserve original photo framing and colors, separate reading content from the header and navigation, and start preloaded music directly from the opening gesture. Add desktop and mobile render, playback, storage and layout regressions.",
+      "on_implementation_ancestry": true,
+      "url": "https://github.com/MalikHariyanto/Sistem-BTD/commit/5df1461244d9fd26167b1c4e7701c3f355689454"
+    },
+    {
+      "sha": "3c16adf0b35ddc8714e7a480a8371abdf52e6040",
+      "authored_at": "2026-10-17T06:33:38Z",
+      "subject": "Restore Gargantua artwork and limit counter-orbit to the middle",
+      "body": "Restore the earlier HD lens, dense photo orbits and original opening and ending camera poses. Apply the new opposing camera motion only within a smooth middle window, with a per-journey camera clock. Keep the reading-layout and immediate opening-audio fixes. Remove the replacement React renderer and its dependencies, and verify the preserved poses against recorded original-camera fixtures.",
+      "on_implementation_ancestry": true,
+      "url": "https://github.com/MalikHariyanto/Sistem-BTD/commit/3c16adf0b35ddc8714e7a480a8371abdf52e6040"
+    },
+    {
+      "sha": "00cd13d36818abd2ace8e39eacaf0c09851e8682",
+      "authored_at": "2026-10-17T06:42:33Z",
+      "subject": "Restore repository to a00520c",
+      "body": "Restore the complete tracked tree to a00520c5d89cf11de447a2d7aa922e940a563da9 as requested, preserving repository history.",
+      "on_implementation_ancestry": true,
+      "url": "https://github.com/MalikHariyanto/Sistem-BTD/commit/00cd13d36818abd2ace8e39eacaf0c09851e8682"
+    },
+    {
+      "sha": "da445cb4dffdf868ce1e9285c15a96dd23f05c67",
+      "authored_at": "2026-10-17T07:04:51Z",
+      "subject": "Make photo orbits spiral inward and disappear at the horizon",
+      "body": "Preserve the selected Gargantua artwork and camera path. Replace fixed-radius photo loops with continuous inward spirals, accelerating angular motion and invisible respawns. Use per-fragment sphere depth to hide rear photos and their corners, remove duplicate screen-space photo arcs, and admit spaced portraits earlier while the hole is visible. Include inner orbits in the middle so the plunge is visible, and retain a dense photographic dust field. Add desktop/mobile orbit, overlap and GPU pixel regressions.",
+      "on_implementation_ancestry": true,
+      "url": "https://github.com/MalikHariyanto/Sistem-BTD/commit/da445cb4dffdf868ce1e9285c15a96dd23f05c67"
+    },
+    {
+      "sha": "9e7feb9fd7b4a6407b68eadabe8ab42219418dac",
+      "authored_at": "2026-10-17T10:32:41Z",
+      "subject": "Improve prayer readability, chapter headers and botanical flowers",
+      "body": "",
+      "on_implementation_ancestry": true,
+      "url": "https://github.com/MalikHariyanto/Sistem-BTD/commit/9e7feb9fd7b4a6407b68eadabe8ab42219418dac"
+    },
+    {
+      "sha": "f6b1e14fbcc884331c81973a8d7b55b7a3072b56",
+      "authored_at": "2026-10-17T10:43:46Z",
+      "subject": "Reveal a dense photographic accretion disk during the middle flight",
+      "body": "",
+      "on_implementation_ancestry": true,
+      "url": "https://github.com/MalikHariyanto/Sistem-BTD/commit/f6b1e14fbcc884331c81973a8d7b55b7a3072b56"
+    },
+    {
+      "sha": "0ed12c5a8a11e29f9c5bd749ddd9a046013dfd58",
+      "authored_at": "2026-10-17T11:03:47Z",
+      "subject": "Blend disk photos, synchronize chapter transitions and streamline wishes",
+      "body": "",
+      "on_implementation_ancestry": true,
+      "url": "https://github.com/MalikHariyanto/Sistem-BTD/commit/0ed12c5a8a11e29f9c5bd749ddd9a046013dfd58"
+    },
+    {
+      "sha": "7bdf2499f01c0ea3c0f0b7c00baf291b199180cc",
+      "authored_at": "2026-10-17T14:44:39Z",
+      "subject": "Soften distant photo capture and center the mobile Gargantua flight",
+      "body": "",
+      "on_implementation_ancestry": true,
+      "url": "https://github.com/MalikHariyanto/Sistem-BTD/commit/7bdf2499f01c0ea3c0f0b7c00baf291b199180cc"
+    },
+    {
+      "sha": "eeb74c9e607509b1b92747b2f79e4a39d55414cc",
+      "authored_at": "2026-10-17T15:09:52Z",
+      "subject": "Unify photo orbits with Gargantua lensing and disk illumination",
+      "body": "",
+      "on_implementation_ancestry": true,
+      "url": "https://github.com/MalikHariyanto/Sistem-BTD/commit/eeb74c9e607509b1b92747b2f79e4a39d55414cc"
+    },
+    {
+      "sha": "da8c7aa695583c3951c53619e449637c9503d597",
+      "authored_at": "2026-10-17T15:22:01Z",
+      "subject": "Calm the shared accretion flow and enlarge ending portraits",
+      "body": "",
+      "on_implementation_ancestry": true,
+      "url": "https://github.com/MalikHariyanto/Sistem-BTD/commit/da8c7aa695583c3951c53619e449637c9503d597"
+    },
+    {
+      "sha": "514e41104b2cb6092d2412961726986f977ed9e8",
+      "authored_at": "2026-10-17T15:41:41Z",
+      "subject": "Rotate lower accretion light and HD detail with the photo stream",
+      "body": "",
+      "on_implementation_ancestry": true,
+      "url": "https://github.com/MalikHariyanto/Sistem-BTD/commit/514e41104b2cb6092d2412961726986f977ed9e8"
+    },
+    {
+      "sha": "df2d92decf75aa1da246810838b6c2a09be0a49f",
+      "authored_at": "2026-10-17T15:59:34Z",
+      "subject": "Animate the central accretion ribbon and its HD detail with the photo flow",
+      "body": "",
+      "on_implementation_ancestry": true,
+      "url": "https://github.com/MalikHariyanto/Sistem-BTD/commit/df2d92decf75aa1da246810838b6c2a09be0a49f"
+    },
+    {
+      "sha": "0b8a4ce711095bfe88b31af80d29f5050773b67a",
+      "authored_at": "2026-10-17T16:38:28Z",
+      "subject": "Move the original accretion disk rim and dark grain without a static copy",
+      "body": "",
+      "on_implementation_ancestry": true,
+      "url": "https://github.com/MalikHariyanto/Sistem-BTD/commit/0b8a4ce711095bfe88b31af80d29f5050773b67a"
+    },
+    {
+      "sha": "f3861aee2ea26995485b6bf2ae6fb0097583d631",
+      "authored_at": "2026-10-17T17:10:54Z",
+      "subject": "Revert \"Move the original accretion disk rim and dark grain without a static copy\"",
+      "body": "This reverts commit 0b8a4ce711095bfe88b31af80d29f5050773b67a.",
+      "on_implementation_ancestry": true,
+      "url": "https://github.com/MalikHariyanto/Sistem-BTD/commit/f3861aee2ea26995485b6bf2ae6fb0097583d631"
+    },
+    {
+      "sha": "6ad0d3083f838e91429e83a06e2b056be6b19efb",
+      "authored_at": "2026-10-17T17:53:28Z",
+      "subject": "Synchronize chapter transitions and fit all reading layouts on laptops",
+      "body": "",
+      "on_implementation_ancestry": true,
+      "url": "https://github.com/MalikHariyanto/Sistem-BTD/commit/6ad0d3083f838e91429e83a06e2b056be6b19efb"
+    },
+    {
+      "sha": "5587ca18c52bc9db77c389142d18ac3f0c0a3e17",
+      "authored_at": "2026-10-18T05:47:48Z",
+      "subject": "Make the birthday letter a continuous scroll with romantic photo crossfades",
+      "body": "",
+      "on_implementation_ancestry": true,
+      "url": "https://github.com/MalikHariyanto/Sistem-BTD/commit/5587ca18c52bc9db77c389142d18ac3f0c0a3e17"
+    },
+    {
+      "sha": "7db3dad6551c2275ee54cce5bbced52e5409afc2",
+      "authored_at": "2026-10-18T16:38:54Z",
+      "subject": "Blend Gargantua artwork into full-screen space without rectangular edge seams",
+      "body": "",
+      "on_implementation_ancestry": true,
+      "url": "https://github.com/MalikHariyanto/Sistem-BTD/commit/7db3dad6551c2275ee54cce5bbced52e5409afc2"
+    },
+    {
+      "sha": "d3b2aa5f973b2575b511f761f4dba532b1229eef",
+      "authored_at": "2026-10-18T17:02:09Z",
+      "subject": "Center the Gargantua camera throughout the slow middle approach",
+      "body": "",
+      "on_implementation_ancestry": true,
+      "url": "https://github.com/MalikHariyanto/Sistem-BTD/commit/d3b2aa5f973b2575b511f761f4dba532b1229eef"
+    },
+    {
+      "sha": "8d0ad6fe9da6ae8e01980e6e35b1c4f14483f411",
+      "authored_at": "2026-10-18T17:13:08Z",
+      "subject": "Add a few more mobile ending portraits and gently accelerate their shared orbit",
+      "body": "",
+      "on_implementation_ancestry": true,
+      "url": "https://github.com/MalikHariyanto/Sistem-BTD/commit/8d0ad6fe9da6ae8e01980e6e35b1c4f14483f411"
+    },
+    {
+      "sha": "40ac6ca6cc2bb598809b1d52c7d42f43160bd908",
+      "authored_at": "2026-10-18T18:38:29Z",
+      "subject": "Fix photo atlas corruption and expand orbit uploads to 200",
+      "body": "",
+      "on_implementation_ancestry": true,
+      "url": "https://github.com/MalikHariyanto/Sistem-BTD/commit/40ac6ca6cc2bb598809b1d52c7d42f43160bd908"
+    },
+    {
+      "sha": "5ae2dd85c149979fe9466919b715a8e8ec7bc7f3",
+      "authored_at": "2026-10-18T18:54:36Z",
+      "subject": "Make slow-motion disk photographs larger and more readable",
+      "body": "",
+      "on_implementation_ancestry": true,
+      "url": "https://github.com/MalikHariyanto/Sistem-BTD/commit/5ae2dd85c149979fe9466919b715a8e8ec7bc7f3"
+    },
+    {
+      "sha": "f9420575b2cb19d56e77970d920425a1cf18ef36",
+      "authored_at": "2026-10-18T19:06:15Z",
+      "subject": "Match mobile letter typography to the preceding prayer chapter",
+      "body": "",
+      "on_implementation_ancestry": true,
+      "url": "https://github.com/MalikHariyanto/Sistem-BTD/commit/f9420575b2cb19d56e77970d920425a1cf18ef36"
+    },
+    {
+      "sha": "4dad2e01398715a03e60ffdf0a02fdfd56346335",
+      "authored_at": "2026-10-18T19:18:09Z",
+      "subject": "Add Country soundtrack with autoplay and first-tap fallback",
+      "body": "",
+      "on_implementation_ancestry": true,
+      "url": "https://github.com/MalikHariyanto/Sistem-BTD/commit/4dad2e01398715a03e60ffdf0a02fdfd56346335"
+    },
+    {
+      "sha": "cf96dc08f16a79c8a893d34c1612f5aed2698083",
+      "authored_at": "2026-10-18T19:34:10Z",
+      "subject": "Trim soundtrack silence and remove recipient music switches",
+      "body": "",
+      "on_implementation_ancestry": true,
+      "url": "https://github.com/MalikHariyanto/Sistem-BTD/commit/cf96dc08f16a79c8a893d34c1612f5aed2698083"
+    },
+    {
+      "sha": "8d083367492da85d16f8d85fd6f5447d8b0b26c7",
+      "authored_at": "2026-10-18T20:15:08Z",
+      "subject": "Sharpen nearby orbit photos with bounded detail textures",
+      "body": "",
+      "on_implementation_ancestry": true,
+      "url": "https://github.com/MalikHariyanto/Sistem-BTD/commit/8d083367492da85d16f8d85fd6f5447d8b0b26c7"
+    },
+    {
+      "sha": "7ad904d2ea9daf5adf3ed41d8fd85445f0a5da2a",
+      "authored_at": "2026-10-19T05:22:09Z",
+      "subject": "Clarify photographs on the rotating black hole disk during slowmo",
+      "body": "",
+      "on_implementation_ancestry": true,
+      "url": "https://github.com/MalikHariyanto/Sistem-BTD/commit/7ad904d2ea9daf5adf3ed41d8fd85445f0a5da2a"
+    },
+    {
+      "sha": "9ca9a0138b19c0374203cad86c7076ed5d970b35",
+      "authored_at": "2026-10-20T16:37:50Z",
+      "subject": "Apply Midnight Universe palette across the birthday story",
+      "body": "",
+      "on_implementation_ancestry": true,
+      "url": "https://github.com/MalikHariyanto/Sistem-BTD/commit/9ca9a0138b19c0374203cad86c7076ed5d970b35"
+    },
+    {
+      "sha": "6d6a437ba571857afd1724d139d7312286d0e9df",
+      "authored_at": "2026-10-20T16:46:59Z",
+      "subject": "Soften midnight contrast and blend photo albums into the story",
+      "body": "",
+      "on_implementation_ancestry": true,
+      "url": "https://github.com/MalikHariyanto/Sistem-BTD/commit/6d6a437ba571857afd1724d139d7312286d0e9df"
+    },
+    {
+      "sha": "322b9bb7dddd0dac4885e746dd7318c99e6b5836",
+      "authored_at": "2026-10-20T17:00:27Z",
+      "subject": "Restore the original Midnight Universe theme from 9ca9a01",
+      "body": "",
+      "on_implementation_ancestry": true,
+      "url": "https://github.com/MalikHariyanto/Sistem-BTD/commit/322b9bb7dddd0dac4885e746dd7318c99e6b5836"
+    },
+    {
+      "sha": "1d75447a29fb0380990bcb3fc9c4f694025f46ca",
+      "authored_at": "2026-10-20T17:32:46Z",
+      "subject": "Add downloadable Gargantua concept previews and offline viewer",
+      "body": "",
+      "on_implementation_ancestry": false,
+      "url": "https://github.com/MalikHariyanto/Sistem-BTD/commit/1d75447a29fb0380990bcb3fc9c4f694025f46ca"
+    },
+    {
+      "sha": "439b944c72b73bf55e4c15a515fb79d4262f0d63",
+      "authored_at": "2026-10-20T18:59:11Z",
+      "subject": "Restore 7ad904d before implementing the clean photo disk",
+      "body": "",
+      "on_implementation_ancestry": true,
+      "url": "https://github.com/MalikHariyanto/Sistem-BTD/commit/439b944c72b73bf55e4c15a515fb79d4262f0d63"
+    },
+    {
+      "sha": "cdf68fc1c615356f996785de671f1c03c6d1600b",
+      "authored_at": "2026-10-20T19:15:02Z",
+      "subject": "Keep the photo disk dense with clear, spaced orbit portraits",
+      "body": "",
+      "on_implementation_ancestry": true,
+      "url": "https://github.com/MalikHariyanto/Sistem-BTD/commit/cdf68fc1c615356f996785de671f1c03c6d1600b"
+    },
+    {
+      "sha": "67aaa1aacb51a5aad293ed5a8b2d94162791ccf0",
+      "authored_at": "2026-10-21T01:18:13Z",
+      "subject": "Fill the upper and lower accretion arcs with readable orbit photos",
+      "body": "",
+      "on_implementation_ancestry": true,
+      "url": "https://github.com/MalikHariyanto/Sistem-BTD/commit/67aaa1aacb51a5aad293ed5a8b2d94162791ccf0"
+    },
+    {
+      "sha": "7f83337e3f58c49e8bd09db5ee87357604d1500c",
+      "authored_at": "2026-10-21T05:55:35Z",
+      "subject": "Give orbit photos perspective, paper lighting, and sharper foreground detail",
+      "body": "",
+      "on_implementation_ancestry": true,
+      "url": "https://github.com/MalikHariyanto/Sistem-BTD/commit/7f83337e3f58c49e8bd09db5ee87357604d1500c"
+    },
+    {
+      "sha": "c04d970beab312a26906794e2e7a0f3a6b68ee90",
+      "authored_at": "2026-10-21T06:08:30Z",
+      "subject": "Prevent duplicate ending photos during fade transitions",
+      "body": "",
+      "on_implementation_ancestry": true,
+      "url": "https://github.com/MalikHariyanto/Sistem-BTD/commit/c04d970beab312a26906794e2e7a0f3a6b68ee90"
+    },
+    {
+      "sha": "845af4eb66a4e24d005130ccccfe51aef609d98d",
+      "authored_at": "2026-10-22T02:08:56Z",
+      "subject": "Add three downloadable crystal photo marker concepts",
+      "body": "",
+      "on_implementation_ancestry": false,
+      "url": "https://github.com/MalikHariyanto/Sistem-BTD/commit/845af4eb66a4e24d005130ccccfe51aef609d98d"
+    },
+    {
+      "sha": "50825cb23854a934e772b221d635f802cce20d55",
+      "authored_at": "2026-10-22T03:45:58Z",
+      "subject": "Render lit crystal photo pins anchored to the accretion disk",
+      "body": "",
+      "on_implementation_ancestry": true,
+      "url": "https://github.com/MalikHariyanto/Sistem-BTD/commit/50825cb23854a934e772b221d635f802cce20d55"
+    },
+    {
+      "sha": "6316a41603d1020dc9a541ca1bc981a65705ec3b",
+      "authored_at": "2026-10-22T06:08:33Z",
+      "subject": "Anchor crystal photo pins to the luminous accretion disk",
+      "body": "",
+      "on_implementation_ancestry": true,
+      "url": "https://github.com/MalikHariyanto/Sistem-BTD/commit/6316a41603d1020dc9a541ca1bc981a65705ec3b"
+    },
+    {
+      "sha": "a89038e00f52e27affd48bb521187feb8cc54f66",
+      "authored_at": "2026-10-22T17:38:56Z",
+      "subject": "Reduce Gargantua render overhead while preserving visual output",
+      "body": "",
+      "on_implementation_ancestry": true,
+      "url": "https://github.com/MalikHariyanto/Sistem-BTD/commit/a89038e00f52e27affd48bb521187feb8cc54f66"
+    },
+    {
+      "sha": "ff11daebe946d9fcac50e248d0fcb30e4eafa9d1",
+      "authored_at": "2026-10-23T06:07:53Z",
+      "subject": "Reorder the birthday story and give its final letter a refined presentation",
+      "body": "",
+      "on_implementation_ancestry": true,
+      "url": "https://github.com/MalikHariyanto/Sistem-BTD/commit/ff11daebe946d9fcac50e248d0fcb30e4eafa9d1"
+    },
+    {
+      "sha": "b9128de205a47d64e332b1750542265327738ef0",
+      "authored_at": "2026-10-23T06:30:00Z",
+      "subject": "Add three interactive navigation concepts with downloadable previews",
+      "body": "",
+      "on_implementation_ancestry": false,
+      "url": "https://github.com/MalikHariyanto/Sistem-BTD/commit/b9128de205a47d64e332b1750542265327738ef0"
+    },
+    {
+      "sha": "d12beb961d62f6d555b84d1ec678a2f58ff66142",
+      "authored_at": "2026-10-23T18:28:50Z",
+      "subject": "Add tactile navigation prototypes with page turns and motion previews",
+      "body": "",
+      "on_implementation_ancestry": false,
+      "url": "https://github.com/MalikHariyanto/Sistem-BTD/commit/d12beb961d62f6d555b84d1ec678a2f58ff66142"
+    },
+    {
+      "sha": "65884d5f95533455159ddb88810990e7742d2a43",
+      "authored_at": "2026-10-23T19:01:37Z",
+      "subject": "Replace chapter navigation with tactile romantic keepsakes",
+      "body": "",
+      "on_implementation_ancestry": true,
+      "url": "https://github.com/MalikHariyanto/Sistem-BTD/commit/65884d5f95533455159ddb88810990e7742d2a43"
+    },
+    {
+      "sha": "4f607acad2f818d944423e171d9946bb928860e0",
+      "authored_at": "2026-10-27T10:08:58Z",
+      "subject": "Migrate birthday gift to code-managed content and media",
+      "body": "",
+      "on_implementation_ancestry": true,
+      "url": "https://github.com/MalikHariyanto/Sistem-BTD/commit/4f607acad2f818d944423e171d9946bb928860e0"
+    }
+  ]
+}

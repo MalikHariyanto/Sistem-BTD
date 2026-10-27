@@ -2,6 +2,8 @@
 
 Hadiah ulang tahun dengan pembuka Gargantua, lalu lima bab: **Hari lahirmu → Bunga & doa → Bait untukmu → Tiup lilin → Surat untukmu**. Surat menjadi penutup cerita. Warna ivory, cokelat hangat, dan cahaya keemasan. Vanilla JavaScript, CSS, dan WebGL dengan fallback Canvas 2D; tanpa framework runtime, backend, atau video animasi besar.
 
+[Arsip chat yang tersedia dan serah terima ke chat baru](docs/chat-archive/2026-10-28/README.md) — transkrip Markdown/JSON, referensi lampiran, riwayat implementasi, dan paket ZIP. Batas kelengkapan arsip dijelaskan di dalamnya.
+
 ## Menjalankan
 
 Node.js 22.12+ atau 24 LTS dan npm:

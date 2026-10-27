@@ -1,0 +1,266 @@
+{
+  "schema_version": 1,
+  "archived_on": "2026-10-28",
+  "note": "A reference or description is not the original attachment. Missing originals have not been recreated.",
+  "attachments": [
+    {
+      "id": "file_000000004ab08211981cabb4bb88f957",
+      "message_number": 3,
+      "pointer": "sediment://file_000000004ab08211981cabb4bb88f957",
+      "fileName": "Pasted text.txt",
+      "preview": "Berikut adalah analisis teknis dan struktural untuk **Video 4 (File: Digital_Su…",
+      "bundled_in_archive": false,
+      "status": "unavailable_from_attachment_store",
+      "retrieval_error": "file could not be authorized or resolved",
+      "note": "Isi file tidak dikarang. Teks yang ditempel langsung di pesan tetap disalin dalam transkrip."
+    },
+    {
+      "id": "file_00000000377082118668534a8e1bd9aa",
+      "message_number": 3,
+      "pointer": "sediment://file_00000000377082118668534a8e1bd9aa",
+      "fileName": "Pasted text.txt",
+      "preview": "Berikut adalah analisis teknis dan struktural untuk **Video 3 (File: codecoder_…",
+      "bundled_in_archive": false,
+      "status": "unavailable_from_attachment_store",
+      "retrieval_error": "file could not be authorized or resolved",
+      "note": "Isi file tidak dikarang. Teks yang ditempel langsung di pesan tetap disalin dalam transkrip."
+    },
+    {
+      "id": "file_0000000002008207a7086ca616feec68",
+      "message_number": 3,
+      "pointer": "sediment://file_0000000002008207a7086ca616feec68",
+      "fileName": "Pasted text.txt",
+      "preview": "Berikut adalah analisis teknis dan struktural untuk **Video 2 (File: canvaseola…",
+      "bundled_in_archive": false,
+      "status": "unavailable_from_attachment_store",
+      "retrieval_error": "file could not be authorized or resolved",
+      "note": "Isi file tidak dikarang. Teks yang ditempel langsung di pesan tetap disalin dalam transkrip."
+    },
+    {
+      "id": "file_00000000dcb082079aede7c0ab03c9f4",
+      "message_number": 3,
+      "pointer": "sediment://file_00000000dcb082079aede7c0ab03c9f4",
+      "fileName": "Pasted text.txt",
+      "preview": "Untuk mereplikasi website *scrapbook* tersebut secara presisi melalui AI *gener…",
+      "bundled_in_archive": false,
+      "status": "unavailable_from_attachment_store",
+      "retrieval_error": "file could not be authorized or resolved",
+      "note": "Isi file tidak dikarang. Teks yang ditempel langsung di pesan tetap disalin dalam transkrip."
+    },
+    {
+      "id": "inline-images-003",
+      "message_number": 3,
+      "type": "inline_image_group",
+      "count": 1,
+      "status": "no_exportable_original_file_available",
+      "description": "satu gambar inline referensi website fotografi pernikahan, nuansa cream/cokelat, judul “TIMELESS PHOTOS FOR HOPELESS ROMANTICS”. Berkas gambar asli tidak tersedia untuk ekspor.",
+      "bundled_in_archive": false
+    },
+    {
+      "id": "file_00000000445082079997f658021099a4",
+      "message_number": 4,
+      "pointer": "sediment://file_00000000445082079997f658021099a4",
+      "fileName": "Pasted text.txt",
+      "preview": "Untuk mereplikasi website *scrapbook* tersebut secara presisi melalui AI *gener…",
+      "bundled_in_archive": false,
+      "status": "unavailable_from_attachment_store",
+      "retrieval_error": "file could not be authorized or resolved",
+      "note": "Isi file tidak dikarang. Teks yang ditempel langsung di pesan tetap disalin dalam transkrip."
+    },
+    {
+      "id": "file_00000000fa608207860a119b1cf15513",
+      "message_number": 4,
+      "pointer": "sediment://file_00000000fa608207860a119b1cf15513",
+      "fileName": "Pasted text.txt",
+      "preview": "Berikut adalah analisis teknis dan struktural untuk **Video 2 (File: canvaseola…",
+      "bundled_in_archive": false,
+      "status": "unavailable_from_attachment_store",
+      "retrieval_error": "file could not be authorized or resolved",
+      "note": "Isi file tidak dikarang. Teks yang ditempel langsung di pesan tetap disalin dalam transkrip."
+    },
+    {
+      "id": "file_00000000f99482118718962c2e653d90",
+      "message_number": 4,
+      "pointer": "sediment://file_00000000f99482118718962c2e653d90",
+      "fileName": "Pasted text.txt",
+      "preview": "Berikut adalah analisis teknis dan struktural untuk **Video 3 (File: codecoder_…",
+      "bundled_in_archive": false,
+      "status": "unavailable_from_attachment_store",
+      "retrieval_error": "file could not be authorized or resolved",
+      "note": "Isi file tidak dikarang. Teks yang ditempel langsung di pesan tetap disalin dalam transkrip."
+    },
+    {
+      "id": "file_00000000e58c8207bea65f376d765b22",
+      "message_number": 4,
+      "pointer": "sediment://file_00000000e58c8207bea65f376d765b22",
+      "fileName": "Pasted text.txt",
+      "preview": "Berikut adalah analisis teknis dan struktural untuk **Video 4 (File: Digital_Su…",
+      "bundled_in_archive": false,
+      "status": "unavailable_from_attachment_store",
+      "retrieval_error": "file could not be authorized or resolved",
+      "note": "Isi file tidak dikarang. Teks yang ditempel langsung di pesan tetap disalin dalam transkrip."
+    },
+    {
+      "id": "inline-images-004",
+      "message_number": 4,
+      "type": "inline_image_group",
+      "count": 2,
+      "status": "no_exportable_original_file_available",
+      "description": "dua gambar inline referensi website pernikahan. Pertama “TIMELESS PHOTOS FOR HOPELESS ROMANTICS”, kedua “NINA RENEE / Beauty WITHOUT COMPROMISE”; warna cream, charcoal, cokelat hangat dan tipografi editorial. Berkas gambar asli tidak tersedia untuk ekspor.",
+      "bundled_in_archive": false
+    },
+    {
+      "id": "inline-images-008",
+      "message_number": 8,
+      "type": "inline_image_group",
+      "count": 4,
+      "status": "no_exportable_original_file_available",
+      "description": "empat gambar inline referensi Gargantua/Interstellar; dua gambar dekat cakram berwarna emas serupa, satu pandangan utuh Gargantua, satu gambar lubang hitam dengan horizon melengkung. Berkas asli tidak tersedia untuk ekspor.",
+      "bundled_in_archive": false
+    },
+    {
+      "id": "file_000000009e2c82119272c2bfe96aafc4",
+      "message_number": 23,
+      "pointer": "sediment://file_000000009e2c82119272c2bfe96aafc4",
+      "fileName": "videoplayback (4).mp4",
+      "bundled_in_archive": false,
+      "status": "original_exists_in_workspace_not_bundled",
+      "note": "Biner asli tidak diduplikasi dalam arsip teks.",
+      "bytes": 1443914,
+      "sha256": "0953a389107568c8de7b1ef46ede1420ddc9d2fdc71d01b14fa6fc97220af342"
+    },
+    {
+      "id": "inline-images-023",
+      "message_number": 23,
+      "type": "inline_image_group",
+      "count": 2,
+      "status": "no_exportable_original_file_available",
+      "description": "dua screenshot inline. Pertama kebun tiga bunga/doa dengan narasi di bawah bertabrakan dengan navigasi; kedua kolase foto/ucapan cream dengan header menutupi foto saat scroll. Berkas asli tidak tersedia untuk ekspor.",
+      "bundled_in_archive": false
+    },
+    {
+      "id": "inline-images-031",
+      "message_number": 31,
+      "type": "inline_image_group",
+      "count": 1,
+      "status": "no_exportable_original_file_available",
+      "description": "screenshot browser Vercel “Import Git Repository” dengan tombol Install, berdampingan dengan GitHub MalikHariyanto/Sistem-BTD. Berkas asli tidak tersedia untuk ekspor.",
+      "bundled_in_archive": false
+    },
+    {
+      "id": "inline-images-032",
+      "message_number": 32,
+      "type": "inline_image_group",
+      "count": 1,
+      "status": "no_exportable_original_file_available",
+      "description": "screenshot Vercel “New Project”, repo MalikHariyanto/Sistem-BTD main, team ZORC Hobby, project sistem-btd, root ./, preset Vite, tombol Deploy. Berkas asli tidak tersedia untuk ekspor.",
+      "bundled_in_archive": false
+    },
+    {
+      "id": "inline-images-033",
+      "message_number": 33,
+      "type": "inline_image_group",
+      "count": 1,
+      "status": "no_exportable_original_file_available",
+      "description": "screenshot Vercel setelah deploy, preview website dan tombol “Continue to Project”. Berkas asli tidak tersedia untuk ekspor.",
+      "bundled_in_archive": false
+    },
+    {
+      "id": "inline-images-036",
+      "message_number": 36,
+      "type": "inline_image_group",
+      "count": 2,
+      "status": "no_exportable_original_file_available",
+      "description": "dua screenshot inline. Pertama pembuka di HP dengan Gargantua di atas dan ruang vertikal besar; kedua Gargantua desktop dengan banyak keping foto kecil di cakram dan tombol “Lewati perjalanan”. Berkas asli tidak tersedia untuk ekspor.",
+      "bundled_in_archive": false
+    },
+    {
+      "id": "inline-images-038",
+      "message_number": 38,
+      "type": "inline_image_group",
+      "count": 1,
+      "status": "no_exportable_original_file_available",
+      "description": "screenshot ending “Ternyata, semuanya kamu.”, beberapa foto kecil mengelilingi ucapan, tombol “Ini cerita untukmu”. Berkas asli tidak tersedia untuk ekspor.",
+      "bundled_in_archive": false
+    },
+    {
+      "id": "inline-images-040",
+      "message_number": 40,
+      "type": "inline_image_group",
+      "count": 1,
+      "status": "no_exportable_original_file_available",
+      "description": "screenshot dekat pita tengah Gargantua dengan banyak foto kecil. Berkas asli tidak tersedia untuk ekspor.",
+      "bundled_in_archive": false
+    },
+    {
+      "id": "inline-images-041",
+      "message_number": 41,
+      "type": "inline_image_group",
+      "count": 1,
+      "status": "no_exportable_original_file_available",
+      "description": "screenshot utuh Gargantua dengan pita cakram di tengah, foto-foto pada lengkungan atas/depan/bawah, dan tombol lewati. Berkas asli tidak tersedia untuk ekspor.",
+      "bundled_in_archive": false
+    },
+    {
+      "id": "inline-images-043",
+      "message_number": 43,
+      "type": "inline_image_group",
+      "count": 1,
+      "status": "no_exportable_original_file_available",
+      "description": "screenshot bab surat cream/cokelat, judul besar, amplop terpotong oleh navigasi bawah dan scrollbar konten tebal. Berkas asli tidak tersedia untuk ekspor.",
+      "bundled_in_archive": false
+    },
+    {
+      "id": "inline-images-045",
+      "message_number": 45,
+      "type": "inline_image_group",
+      "count": 1,
+      "status": "no_exportable_original_file_available",
+      "description": "screenshot pembuka Gargantua desktop, batas persegi artwork/latar hitam berbeda terlihat di kiri/kanan. Berkas asli tidak tersedia untuk ekspor.",
+      "bundled_in_archive": false
+    },
+    {
+      "id": "inline-images-048",
+      "message_number": 48,
+      "type": "inline_image_group",
+      "count": 1,
+      "status": "no_exportable_original_file_available",
+      "description": "gambar inline kecil menunjukkan satu foto terkorupsi menjadi garis horizontal. Berkas asli tidak tersedia untuk ekspor.",
+      "bundled_in_archive": false
+    },
+    {
+      "id": "file_000000000ec482078b5c498a5c4ba717",
+      "message_number": 51,
+      "pointer": "sediment://file_000000000ec482078b5c498a5c4ba717",
+      "fileName": "Koshun Nakao - Country (Performance Video).mp3",
+      "bundled_in_archive": false,
+      "status": "original_exists_in_workspace_not_bundled",
+      "note": "Biner asli tidak diduplikasi dalam arsip teks.",
+      "bytes": 2230113,
+      "sha256": "3a3c4750f6cb0a68ab5948c1fa12def73ee5902c01bb51a1616548691e58cab7",
+      "website_version_path": "public/music/koshun-nakao-country-intro-cut.mp3",
+      "website_version_url": "https://github.com/MalikHariyanto/Sistem-BTD/blob/4f607ac/public/music/koshun-nakao-country-intro-cut.mp3",
+      "website_version_sha256": "ac7cb208c4da069d1e2419ce120f2087302d7408a44d0e3d5a55c5f40f9515de"
+    },
+    {
+      "id": "inline-images-055",
+      "message_number": 55,
+      "type": "inline_image_group",
+      "count": 1,
+      "status": "no_exportable_original_file_available",
+      "description": "gambar inline “3 palet warna yang cocok”. Midnight Universe: Navy #10182F, Blue #202C49, Gold #E8D8B0, Cream #F5EFE4. Warm Nostalgia: Cream #F1E6D2, Sand #D5B99A, Brown #98765B, Cocoa #45362F. Lavender Twilight: Indigo #25223B, Mauve #5D526F, Lilac #B8A8C8, Ivory #F0E8F0. Kode warna ditranskripsi secara manual dari gambar referensi; gambar asli tidak tersedia untuk ekspor.",
+      "bundled_in_archive": false
+    },
+    {
+      "id": "file_00000000186c82118939b40db9a21cbf",
+      "message_number": 57,
+      "pointer": "sediment://file_00000000186c82118939b40db9a21cbf",
+      "fileName": "Pasted text.txt",
+      "preview": "S1: validasi silang, fold 1 dari 5. Data uji disimpan untuk evaluasi akhir. S1 …",
+      "bundled_in_archive": false,
+      "status": "unavailable_from_attachment_store",
+      "retrieval_error": "file could not be authorized or resolved",
+      "note": "Isi file tidak dikarang. Teks yang ditempel langsung di pesan tetap disalin dalam transkrip."
+    }
+  ]
+}

@@ -1,0 +1,78 @@
+%%aes
+def ordinal_copy(prediction, cfg):
+    categories = np.arange(cfg['score_min'], cfg['score_max']+1)
+    return categories[np.abs(np.clip(prediction, categories[0], categories[-1])[:, None]-categories).argmin(axis=1)]
+
+
+def prediction_frame(bundle, indices, prediction, cfg):
+    teacher = bundle.y[indices]
+    ordinal = ordinal_copy(np.asarray(prediction), cfg)
+    return pd.DataFrame({'row_id': [bundle.rows[i]['row_id'] for i in indices],
+                         'skor_guru': teacher, 'prediksi_mentah': prediction,
+                         'kategori_QWK_AC2': ordinal, 'selisih_mentah': prediction-teacher,
+                         'selisih_kuadrat': (prediction-teacher)**2,
+                         'bobot_agreement_kuadratik': 1-((ordinal-teacher)/(cfg['score_max']-cfg['score_min']))**2})
+
+
+def export_training_event(kind, scenario, result, bundle, cfg, journal):
+    if kind == 'cv_fold':
+        history = []
+        for entry in result['training']['history']:
+            history.append({**{k: v for k, v in entry.items() if k != 'validation'},
+                            **entry.get('validation', {})})
+        predictions = prediction_frame(bundle, result['validation_indices'], np.asarray(result['prediction']), cfg)
+        journal.save(f'09_{scenario}_fold_{result["fold"]}', {'Riwayat_epoch': pd.DataFrame(history),
+                                                           'Prediksi_validation': predictions,
+                                                           'Metrik_validation': pd.DataFrame([result['metrics']])},
+                     'CV development; bukan final test', scenario=scenario,
+                     selected_epoch=result['training']['best_epoch'], encoder_fine_tuned=scenario != 'S2')
+    elif kind == 'refit':
+        journal.save(f'10_{scenario}_refit', {'Riwayat_epoch': pd.DataFrame(result['history']),
+                                            'Bukti_parameter': pd.DataFrame([result['parameter_samples_changed']])},
+                     'Refit seluruh development; test belum dibuka', scenario=scenario,
+                     epochs=result['epochs_completed'], BGE_encoder_trained=False)
+    elif kind == 'test':
+        raw = pd.DataFrame(result['predictions'])
+        lookup = {r['row_id']: i for i, r in enumerate(bundle.rows)}
+        ids = [lookup[row_id] for row_id in raw['row_id']]
+        expanded = prediction_frame(bundle, ids, raw['prediksi_mentah'].to_numpy(), cfg)
+        journal.save(f'11_{scenario}_test', {'Prediksi_test': expanded,
+                                           'Metrik_test': pd.DataFrame([result['metrics']])},
+                     'Final test satu skor guru', scenario=scenario)
+
+
+def export_completed_training(report, bundle, cfg, output, journal):
+    output = Path(output)
+    # Juga membangun ulang Excel dari artefak cocok hash ketika run di-resume.
+    for scenario in ('S1','S2','S3'):
+        for path in sorted((output/scenario).glob('cv_fold_*.json')):
+            export_training_event('cv_fold', scenario, json.loads(path.read_text()), bundle, cfg, journal)
+        checkpoint = output/scenario/'final.pt'
+        if digest(checkpoint) != report['checkpoints'][scenario]:
+            raise ValueError('Checkpoint final berbeda dari yang dievaluasi.')
+        payload = torch.load(checkpoint, map_location='cpu', weights_only=True)
+        export_training_event('refit', scenario, payload['training'], bundle, cfg, journal)
+        del payload
+        predicted = pd.read_csv(output/scenario/'test_predictions.csv')
+        row = next(x for x in report['rows'] if x['Skenario'] == scenario)
+        export_training_event('test', scenario, {'metrics': row, 'predictions': predicted.to_dict('records')}, bundle, cfg, journal)
+    cv = pd.DataFrame(report['cv'])
+    summary = cv.groupby('Skenario')[['QWK','AC2','RMSE','Pearson']].agg(['mean','std','count'])
+    summary.columns = [f'{metric}_{stat}' for metric,stat in summary.columns]
+    journal.save('12_evaluasi_tiga_skenario', {'CV_semua_fold': cv, 'CV_mean_SD_n': summary.reset_index(),
+                                             'TEST_final': pd.DataFrame(report['rows']),
+                                             'Epoch_refit': pd.DataFrame([report['selected_epochs']])},
+                 'Empat metrik QWK/AC2/RMSE/Pearson; CV dan test terpisah',
+                 test_evaluations_per_scenario=report['test_evaluations_per_scenario'])
+
+if RUN_TRAINING:
+    if not RUN_MODELS:raise RuntimeError('Aktifkan RUN_MODELS sebelumtraining.')
+    def on_training_stage(kind,scenario,result):
+        export_training_event(kind,scenario,result,bundle,cfg,journal)
+    report=train_all(bundle,manifest,bge,cfg,output,observer=on_training_stage)
+    export_completed_training(report,bundle,cfg,output,journal)
+    show(pd.DataFrame(report['cv']),'Hasil validasi silang (lima fold)',rows=15)
+    final_table=pd.DataFrame(report['rows'])[['Skenario','RMSE','Pearson','QWK','AC2']]
+    show(final_table,'Perbandingan model pada data uji',rows=3)
+else:
+    print('Pelatihan belum dijalankan. Prediksi dan evaluasi belum tersedia.')
