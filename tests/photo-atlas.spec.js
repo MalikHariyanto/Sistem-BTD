@@ -1,3 +1,4 @@
+import { pauseUniverse } from "./gift-fixtures.js";
 import { test, expect } from "@playwright/test";
 
 // Patterned inputs catch wrong rows / stretched stripes that solid-color
@@ -6,7 +7,7 @@ test("every photo keeps its own image rows and padded edges at full and mobile a
   test.setTimeout(90000);
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
-  await page.locator("#open-editor").click();
+  await pauseUniverse(page);
   const result = await page.evaluate(async () => {
     const { createUniverseGPU } = await import("/src/universe-gpu.js");
     const canvas = document.createElement("canvas");
@@ -78,7 +79,7 @@ test("failed replacement retains the matching old texture and layout, then recov
   test.setTimeout(90000);
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
-  await page.locator("#open-editor").click();
+  await pauseUniverse(page);
   const result = await page.evaluate(async () => {
     const { createUniverseGPU } = await import("/src/universe-gpu.js");
     const canvas = document.createElement("canvas"), renderer = createUniverseGPU(canvas);

@@ -1,3 +1,4 @@
+import { pauseUniverse } from "./gift-fixtures.js";
 import { test, expect } from "@playwright/test";
 import { cameraAt, createOrbit, orbitAt, projectOrbit, photoFieldAt, photoDepthAt } from "../src/universe-camera.js";
 import { assignOrbitPhotos } from "../src/photo-textures.js";
@@ -74,7 +75,7 @@ test("uploaded image colors stay visible on the clean middle disk, including dar
   test.setTimeout(60000);
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
-  await page.locator("#open-editor").click();
+  await pauseUniverse(page);
   const result = await page.evaluate(async () => {
     const { createUniverseGPU } = await import("/src/universe-gpu.js");
     const { cameraAt } = await import("/src/universe-camera.js");
@@ -126,7 +127,7 @@ test("close disk photographs retain readable internal image contrast with 200 up
   await page.setViewportSize(isMobile ? { width: 390, height: 844 } : { width: 1280, height: 800 });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
-  await page.locator("#open-editor").click();
+  await pauseUniverse(page);
   const result = await page.evaluate(async () => {
     const { createUniverseGPU } = await import("/src/universe-gpu.js");
     const m = await import("/src/universe-camera.js");

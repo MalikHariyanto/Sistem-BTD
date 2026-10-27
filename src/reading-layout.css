@@ -86,9 +86,6 @@ body[data-chapter="0"] .story-header {
 .story-nav > .nav-next {
   align-self: center;
 }
-.edit-trigger {
-  bottom: 8px;
-}
 .garden-layout {
   padding-top: 8px;
   padding-bottom: 30px;
@@ -220,10 +217,7 @@ body[data-chapter="0"] .story-header {
 /* All controls dissolve on the same clock as the chapter, without a second
    delayed color transition or a clipping edge during the full-screen opening. */
 .story-header,
-.story-nav,
-.edit-trigger {
-  transition: none;
-}
+.story-nav { transition: none; }
 
 /* A small, persistent choice row keeps the next flower within reach. Full-size
    botanical flowers remain in the introduction; wishes still accumulate. */

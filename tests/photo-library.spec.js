@@ -1,3 +1,4 @@
+import { installGift, orbitFixtures } from "./gift-fixtures.js";
 import { test, expect } from "@playwright/test";
 import { content, ORBIT_PHOTO_COUNT } from "../src/content.js";
 import { createOrbit, orbitAt } from "../src/universe-camera.js";
@@ -62,119 +63,36 @@ test("photo assignment reduces close duplicates, balances the full library and s
   }
 });
 
-test("all 200 orbit inputs upload in a batch, persist and fit a valid WebGL atlas", async ({
-  page,
-}) => {
+test("all 200 code-configured orbit photos survive reload and fit a valid WebGL atlas", async ({ page }) => {
   test.setTimeout(60000);
   await page.emulateMedia({ reducedMotion: "reduce" });
+  await installGift(page, { photos: orbitFixtures(200) });
   await page.goto("/");
-  await page.locator("#open-editor").click();
-  await expect(page.locator("[data-upload]")).toHaveCount(209);
-  const photos = await page.evaluate(() => {
-    const c = document.createElement("canvas");
-    c.width = 80;
-    c.height = 100;
-    const p = c.getContext("2d");
-    return Array.from({ length: 200 }, (_, i) => {
-      p.fillStyle = `hsl(${(i * 137.5) % 360} 100% 50%)`;
-      p.fillRect(0, 0, 80, 100);
-      return c.toDataURL().split(",")[1];
-    });
-  });
-  const buffer = Buffer.from(photos[0], "base64");
-  const files = photos.map((photo, i) => ({
-    name: `memory-${i + 1}.png`, mimeType: "image/png", buffer: Buffer.from(photo, "base64"),
-  }));
-  await page.locator("#bulk-photos").setInputFiles(
-    files.slice(0, 120),
-  );
-  await expect(page.locator("#editor-status")).toHaveText(
-    "120 foto tersimpan.",
-    { timeout: 40000 },
-  );
-  await expect(page.locator("#photo-count")).toHaveText(
-    "120 foto terisi · 89 tempat kosong",
-  );
-  await expect(page.locator("#universe")).toHaveAttribute(
-    "data-photo-sources",
-    "120",
-    { timeout: 15000 },
-  );
+  await expect(page.locator("#universe")).toHaveAttribute("data-photo-sources", "200", { timeout: 20000 });
   await page.reload();
-  await expect(page.locator("#universe")).toHaveAttribute(
-    "data-photo-sources",
-    "120",
-    { timeout: 15000 },
-  );
-  await page.locator("#open-editor").click();
-  await page.locator("#bulk-photos").setInputFiles(files.slice(120));
-  await expect(page.locator("#editor-status")).toHaveText("80 foto tersimpan.", { timeout: 40000 });
-  await expect(page.locator("#photo-count")).toHaveText("200 foto terisi · 9 tempat kosong");
-  await page.reload();
-  await expect(page.locator("#universe")).toHaveAttribute("data-photo-sources", "200", { timeout: 15000 });
-  // Every existing key survives the capacity increase; none is overwritten.
-  const stored = await page.evaluate(async () => {
-    const { openMemories } = await import("/src/memories.js");
-    const entries = await (await openMemories()).all();
-    return Promise.all(entries.filter(([key]) => key.startsWith("orbit")).map(async ([key, blob]) => {
-      const image = await createImageBitmap(blob);
-      const c = document.createElement("canvas"); c.width = c.height = 1;
-      c.getContext("2d").drawImage(image, 0, 0, 1, 1); image.close();
-      return { key, rgb: [...c.getContext("2d").getImageData(0, 0, 1, 1).data].slice(0, 3) };
-    }));
+  await expect(page.locator("#universe")).toHaveAttribute("data-photo-sources", "200", { timeout: 20000 });
+  const atlas = await page.locator("#universe").evaluate(canvas => {
+    const gl = canvas.getContext("webgl");
+    return { error: gl.getError(), size: gl.getParameter(gl.MAX_TEXTURE_SIZE), width: Number(canvas.dataset.atlasWidth), height: Number(canvas.dataset.atlasHeight) };
   });
-  expect(stored).toHaveLength(200);
-  expect(stored.find(p => p.key === "orbit01").rgb[0]).toBeGreaterThan(240);
-  expect(stored.find(p => p.key === "orbit200")).toBeTruthy();
-  expect(
-    await page.locator("#universe").evaluate((c) => {
-      const gl = c.getContext("webgl");
-      return {
-        error: gl.getError(),
-        size: gl.getParameter(gl.MAX_TEXTURE_SIZE),
-        width: Number(c.dataset.atlasWidth),
-        height: Number(c.dataset.atlasHeight),
-      };
-    }),
-  ).toMatchObject({ error: 0 });
-  await page.locator("#open-editor").click();
-  await page.getByText("Atur masing-masing foto", { exact: true }).click();
-  await page
-    .locator('[data-upload="hero"]')
-    .setInputFiles({ name: "portrait.png", mimeType: "image/png", buffer });
-  await expect(page.locator("#editor-status")).toContainText("Foto tersimpan");
-  await expect(page.locator("#universe")).toHaveAttribute(
-    "data-photo-sources",
-    "201",
-  );
-  await page.keyboard.press("Escape");
+  expect(atlas.error).toBe(0);
+  expect(atlas.width).toBeLessThanOrEqual(atlas.size);
+  expect(atlas.height).toBeLessThanOrEqual(atlas.size);
   await page.locator("#begin").click();
   await page.locator("#skip-intro").click();
   await expect(page.locator("#reveal-title")).toBeVisible();
-  expect(
-    await page
-      .locator("#universe")
-      .evaluate((c) => c.getContext("webgl").getError()),
-  ).toBe(0);
-  const hueBins = await page.locator("#universe").evaluate((c) => {
-    const gl = c.getContext("webgl"),
-      pixels = new Uint8Array(c.width * c.height * 4);
-    gl.readPixels(0, 0, c.width, c.height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
-    const bins = new Set();
+  const bins = await page.locator("#universe").evaluate(canvas => {
+    const gl = canvas.getContext("webgl"), pixels = new Uint8Array(canvas.width * canvas.height * 4);
+    gl.readPixels(0, 0, canvas.width, canvas.height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+    const hues = new Set();
     for (let i = 0; i < pixels.length; i += 16) {
-      const r = pixels[i],
-        g = pixels[i + 1],
-        b = pixels[i + 2];
-      const max = Math.max(r, g, b),
-        min = Math.min(r, g, b),
-        d = max - min;
+      const [r,g,b] = pixels.slice(i,i+3), max = Math.max(r,g,b), min = Math.min(r,g,b), d = max-min;
       if (d < 45 || max < 70) continue;
-      const h =
-        max === r ? (g - b) / d : max === g ? 2 + (b - r) / d : 4 + (r - g) / d;
-      bins.add(Math.floor(((h * 60 + 360) % 360) / 30));
+      const hue = max === r ? (g-b)/d : max === g ? 2+(b-r)/d : 4+(r-g)/d;
+      hues.add(Math.floor(((hue*60+360)%360)/30));
     }
-    return bins.size;
+    return hues.size;
   });
-  // Distinct uploaded colors must reach the screen, not just the atlas count.
-  expect(hueBins).toBeGreaterThanOrEqual(6);
+  expect(bins).toBeGreaterThanOrEqual(6);
+  await expect(page.locator('input[type="file"], #editor-dialog, #open-editor')).toHaveCount(0);
 });

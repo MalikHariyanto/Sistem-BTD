@@ -36,22 +36,3 @@
   bottom: -8%;
   transform: rotate(20deg);
 }
-
-.editor-heading {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) clamp(64px, 18vw, 100px);
-  gap: 16px;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-.editor-heading h2 {
-  font-size: clamp(38px, 7vw, 50px);
-  margin-bottom: 0;
-}
-
-.editor-heading .flower-editor {
-  position: static;
-  width: 100%;
-  transform: rotate(10deg);
-}

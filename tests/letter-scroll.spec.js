@@ -1,4 +1,5 @@
-import { chooseChapter, openEditor } from "./story-helpers.js";
+import { installGift, photoData } from "./gift-fixtures.js";
+import { chooseChapter } from "./story-helpers.js";
 import { test, expect } from '@playwright/test';
 
 async function openLetter(page) {
@@ -113,21 +114,11 @@ test('long letters stay readable in short windows; keyboard navigation reaches t
   await expect(page.locator('#letter-reading')).toHaveAttribute('data-letter-active', '0');
 });
 
-test('existing uploaded photographs populate all four letter scenes and are ready before scrolling', async ({ page }) => {
-  await openLetter(page);
-  await openEditor(page);
+test('code-configured photographs populate all four letter scenes and are ready before scrolling', async ({ page }) => {
   const colors = ['#9b604d', '#6b8174', '#b89856', '#78668c'];
   const keys = ['hero', 'moment0', 'moment1', 'moment3'];
-  for (let i = 0; i < keys.length; i++) {
-    const data = await page.evaluate(color => {
-      const canvas = document.createElement('canvas'); canvas.width = 80; canvas.height = 100;
-      const ctx = canvas.getContext('2d'); ctx.fillStyle = color; ctx.fillRect(0, 0, 80, 100);
-      return canvas.toDataURL().split(',')[1];
-    }, colors[i]);
-    await page.locator(`[data-upload="${keys[i]}"]`).setInputFiles({ name: `letter-${i}.png`, mimeType: 'image/png', buffer: Buffer.from(data, 'base64') });
-    await expect(page.locator(`[data-letter-photo="${i}"] img`)).toHaveAttribute('src', /^blob:/);
-  }
-  await page.keyboard.press('Escape');
+  await installGift(page, { photos: Object.fromEntries(keys.map((key, i) => [key, photoData(colors[i])])) });
+  await openLetter(page);
   const photos = page.locator('.letter-frame .photo-slot img');
   await expect(photos).toHaveCount(4);
   await expect.poll(() => photos.evaluateAll(images => images.every(image => image.complete && image.naturalWidth > 0 && image.loading === 'eager'))).toBe(true);

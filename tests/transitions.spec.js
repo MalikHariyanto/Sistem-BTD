@@ -162,11 +162,17 @@ test("disk texture orbits at rest, the central shadow stays fixed, and reduced m
   expect(Math.max(...first.center)).toBeLessThan(50);
   for (let i = 0; i < 3; i++)
     expect(Math.abs(first.center[i] - second.center[i])).toBeLessThanOrEqual(3);
-  await page.locator("#open-editor").click();
+  await page.evaluate(() => {
+    Object.defineProperty(document, "hidden", { configurable: true, value: true });
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
   const paused = await page.locator("#universe").getAttribute("data-flow");
   await page.waitForTimeout(400);
   await expect(page.locator("#universe")).toHaveAttribute("data-flow", paused);
-  await page.keyboard.press("Escape");
+  await page.evaluate(() => {
+    Object.defineProperty(document, "hidden", { configurable: true, value: false });
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
   await expect
     .poll(async () =>
       Number(await page.locator("#universe").getAttribute("data-flow")),

@@ -679,7 +679,7 @@ export function createUniverse(canvas) {
     portraitDetails.clear();
     const unreadable = sources.length - images.length;
     if (unreadable) window.dispatchEvent(new CustomEvent("photosrendererror", {
-      detail: `${unreadable} foto belum terbaca. Unggah ulang foto tersebut; foto lain tetap tersimpan.`,
+      detail: `${unreadable} foto belum terbaca. Foto lain tetap ditampilkan.`,
     }));
     if (gpu) gpu.setPhotos(images);
     else {

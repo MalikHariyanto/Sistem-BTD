@@ -6,12 +6,3 @@ export async function chooseChapter(page, sceneOrName) {
     : page.getByRole("button", { name: `Ke ${sceneOrName}`, exact: true });
   await target.click();
 }
-
-export async function openEditor(page) {
-  if (await page.locator("#open-editor").isVisible()) {
-    await page.locator("#open-editor").click();
-  } else {
-    await page.locator("#chapter-index").click();
-    await page.locator("#edit-from-chapters").click();
-  }
-}

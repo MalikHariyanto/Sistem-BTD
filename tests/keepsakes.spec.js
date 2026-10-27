@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { chooseChapter, openEditor } from "./story-helpers.js";
+import { chooseChapter } from "./story-helpers.js";
 
 async function enter(page) {
   await page.emulateMedia({ reducedMotion: "reduce" });
@@ -37,10 +37,10 @@ test("the keepsakes explain the next destination and work with keyboard activati
   await page.locator('#replay').click();
   await expect(page.locator('#cover-copy')).toBeVisible();
   await expect(page.locator('#chapter-index')).toBeHidden();
-  await expect(page.locator('#open-editor')).toBeVisible();
+  await expect(page.locator('#open-editor')).toHaveCount(0);
 });
 
-test("the index closes for the current chapter, restores focus on Escape, and exposes the editor", async ({ page }) => {
+test("the index closes for the current chapter, restores focus on Escape, and has no editor entry", async ({ page }) => {
   await enter(page);
   await page.locator('#chapter-index').focus();
   await page.keyboard.press('Enter');
@@ -51,9 +51,8 @@ test("the index closes for the current chapter, restores focus on Escape, and ex
   await chooseChapter(page, 1);
   await expect(page.locator('#chapter-dialog')).not.toBeVisible();
   await expect(page.locator('#dedication-title')).toBeFocused();
-  await openEditor(page);
-  await expect(page.locator('#editor-dialog')).toBeVisible();
-  await expect(page.locator('#chapter-dialog')).not.toBeVisible();
+  await page.locator('#chapter-index').click();
+  await expect(page.locator('#edit-from-chapters, #editor-dialog, input[type="file"]')).toHaveCount(0);
   await page.keyboard.press('Escape');
   await expect(page.locator('#chapter-index')).toBeFocused();
 });

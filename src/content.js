@@ -1,12 +1,12 @@
-// Semua konten permanen dapat diganti di sini. Path foto/audio relatif ke public/.
-// Contoh: photo: '/photos/portrait.webp'. Kosong = bingkai tanpa foto.
-export const ORBIT_PHOTO_COUNT = 200;
+// Semua hadiah permanen diatur di file ini. File media disimpan di public/.
+import { photoManifest } from "./generated/photo-manifest.js";
+import { createPhotoLibrary } from "./media/photo-library.js";
+export { ORBIT_PHOTO_COUNT } from "./media/photo-library.js";
 
-export const content = {
-  recipient: "Kamu",
-  sender: "Seseorang yang selalu memilihmu",
-  birthday: "", // ISO lengkap dengan zona, misalnya 2027-02-14T00:00:00+07:00
-  photos: {
+export const photoConfig = {
+  // Kosong = cari otomatis nama slot yang sama di public/photos/story/.
+  // Contoh manual: portrait: "/photos/orbit/001.webp".
+  story: {
     hero: "",
     portrait: "",
     poem0: "",
@@ -16,14 +16,19 @@ export const content = {
     moment1: "",
     moment2: "",
     moment3: "",
-    // 200 foto untuk Gargantua. Semua kunci lama tetap dipertahankan.
-    ...Object.fromEntries(
-      Array.from({ length: ORBIT_PHOTO_COUNT }, (_, i) => [
-        `orbit${String(i + 1).padStart(2, "0")}`,
-        "",
-      ]),
-    ),
   },
+  // Kosong = baca semua JPG/PNG/WebP di public/photos/orbit/ saat build.
+  // Urutan alami: 1.jpg, 2.jpg, ... 200.jpg. Nama file bebas, maksimal 200.
+  // Untuk memilih urutan sendiri, isi path secara manual:
+  // orbit: ["/photos/orbit/001.webp", "/photos/orbit/002.webp"],
+  orbit: [],
+};
+
+export const content = {
+  recipient: "Kamu",
+  sender: "Seseorang yang selalu memilihmu",
+  birthday: "", // ISO lengkap dengan zona, misalnya 2027-02-14T00:00:00+07:00
+  photos: createPhotoLibrary(photoConfig, photoManifest),
   poems: [
     {
       title: "Gravitasi",
@@ -69,14 +74,14 @@ export const content = {
       title: "Country",
       artist: "Koshun Nakao",
       src: "/music/koshun-nakao-country-intro-cut.mp3",
-      // Reuse the edited soundtrack when an old preview contains the raw upload.
+      // Metadata file asal disimpan sebagai catatan; musik memakai src di atas.
       originalUpload: {
         bytes: 2230113,
         sha256: "3a3c4750f6cb0a68ab5948c1fa12def73ee5902c01bb51a1616548691e58cab7",
       },
     },
   ],
-  // Foto menemani setiap bait surat saat di-scroll, memakai slot unggahan yang ada.
+  // Foto menemani setiap bait surat saat di-scroll, memakai slot foto di atas.
   letterPhotos: ["hero", "moment0", "moment1", "moment3"],
   letter: [
     "Selamat ulang tahun, manusia kesayanganku. Di hari ketika dunia pertama kali mengenalmu, aku ingin mengucapkan terima kasih. Untuk hadirmu, untuk tawamu, untuk semua hal kecil yang mungkin tak kamu sadari telah membuat hidupku lebih hangat.",

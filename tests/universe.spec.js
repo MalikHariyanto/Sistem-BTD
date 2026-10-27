@@ -1,3 +1,4 @@
+import { installGift, photoData } from "./gift-fixtures.js";
 import { test, expect } from "@playwright/test";
 import {
   INFLOW,
@@ -171,28 +172,9 @@ test("uploaded photos form the live accretion disk and resolve through perspecti
       return hash;
     });
 
-  await page.locator("#open-editor").click();
-  const photo = await page.evaluate(() => {
-    const c = document.createElement("canvas");
-    c.width = 300;
-    c.height = 400;
-    const p = c.getContext("2d");
-    p.fillStyle = "#00ffff";
-    p.fillRect(0, 0, 300, 400);
-    return c.toDataURL().split(",")[1];
-  });
-  await page.getByText("Atur masing-masing foto", { exact: true }).click();
-  await page.locator('[data-upload="hero"]').setInputFiles({
-    name: "sample.png",
-    mimeType: "image/png",
-    buffer: Buffer.from(photo, "base64"),
-  });
-  await expect(page.locator("#editor-status")).toContainText("Foto tersimpan");
-  await expect(page.locator("#universe")).toHaveAttribute(
-    "data-photo-sources",
-    "1",
-  );
-  await page.keyboard.press("Escape");
+  await installGift(page, { photos: { hero: photoData("#00ffff", 300, 400) } });
+  await page.reload();
+  await expect(page.locator("#universe")).toHaveAttribute("data-photo-sources", "1");
   expect(await fingerprint()).toEqual(expect.any(Number));
   await page.locator("#begin").click();
   await page.locator("#skip-intro").click();

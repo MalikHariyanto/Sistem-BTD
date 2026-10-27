@@ -1,4 +1,5 @@
-import { chooseChapter, openEditor } from "./story-helpers.js";
+import { installGift, photoData } from "./gift-fixtures.js";
+import { chooseChapter } from "./story-helpers.js";
 import { test, expect } from "@playwright/test";
 
 async function chapter(page, label) {
@@ -219,63 +220,23 @@ test("replay cancels an unfinished celebration and resets the story", async ({
   await expect(page.locator("#wish-result")).toBeHidden();
 });
 
-test("209 photo slots and bulk uploads persist, with old photo keys preserved", async ({
-  page,
-}) => {
-  test.setTimeout(45000); // Multiple uploads, reloads, and scene transitions on software GPU.
-  await page.goto("/");
-  await openEditor(page);
-  await expect(page.locator("[data-upload]")).toHaveCount(209);
-  await page.getByRole("textbox", { name: "Nama panggilan" }).fill("Sayang");
-  await page.locator('input[name="birthday"]').fill("2099-02-14T00:00");
-  await page.getByRole("button", { name: "Simpan nama & tanggal" }).click();
-  await expect(page.locator("#editor-status")).toContainText(
-    "Nama & tanggal tersimpan",
-  );
-  const base64 = await page.evaluate(() => {
-    const c = document.createElement("canvas");
-    c.width = 120;
-    c.height = 160;
-    const ctx = c.getContext("2d");
-    ctx.fillStyle = "#9b7253";
-    ctx.fillRect(0, 0, 120, 160);
-    return c.toDataURL().split(",")[1];
+test("code-configured names, dates and photographs survive reload without a browser editor", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await installGift(page, {
+    recipient: "Sayang", birthday: "2099-02-14T00:00:00+07:00",
+    photos: { hero: photoData("#9b7253"), orbit01: photoData(1), orbit02: photoData(2) },
   });
-  const fixture = {
-    name: "memory.png",
-    mimeType: "image/png",
-    buffer: Buffer.from(base64, "base64"),
-  };
-  await page
-    .locator("#bulk-photos")
-    .setInputFiles([fixture, { ...fixture, name: "memory2.png" }]);
-  await expect(page.locator("#editor-status")).toHaveText("2 foto tersimpan.");
-  await page.getByText("Atur masing-masing foto", { exact: true }).click();
-  await page.locator('[data-upload="hero"]').setInputFiles(fixture);
-  await expect(page.locator("#editor-status")).toContainText("Foto tersimpan");
+  await page.goto("/");
+  await expect(page.locator("#birthday-countdown")).toContainText("Menuju hari spesialmu");
+  await expect(page.locator("#universe")).toHaveAttribute("data-photo-sources", "3");
   await page.reload();
-  await expect(page.locator("#birthday-countdown")).toContainText(
-    "Menuju hari spesialmu",
-  );
-  await page.locator("#begin").click();
-  await page.locator("#skip-intro").click();
-  await page.locator("#enter-story").click();
-  await expect(page.locator(".dedication-copy [data-recipient]")).toHaveText(
-    "Sayang",
-  );
+  await enter(page);
+  await expect(page.locator(".dedication-copy [data-recipient]")).toHaveText("Sayang");
   await expect(page.locator('[data-photo="orbit01"]')).toHaveClass(/has-photo/);
   await chapter(page, "Surat untukmu");
   await page.locator("#open-letter").click();
   await expect(page.locator('[data-photo="hero"] img')).toBeVisible();
-  await openEditor(page);
-  await page.locator("#reset-local").click();
-  await expect(page.locator("#editor-status")).toContainText(
-    "Semua isian lokal dihapus",
-  );
-  await page.reload();
-  await expect(page.locator("#birthday-countdown")).not.toContainText(
-    "Menuju hari spesialmu",
-  );
+  await expect(page.locator('input[type="file"], #editor-dialog, #open-editor')).toHaveCount(0);
 });
 
 test("reduced motion, keyboard focus and responsive scenes", async ({
@@ -301,8 +262,8 @@ test("reduced motion, keyboard focus and responsive scenes", async ({
         .evaluate((e) => e.scrollWidth <= e.clientWidth),
     ).toBe(true);
   }
-  await openEditor(page);
+  await page.locator("#chapter-index").click();
   await page.keyboard.press("Escape");
-  await expect(page.locator("#editor-dialog")).not.toBeVisible();
+  await expect(page.locator("#chapter-dialog")).not.toBeVisible();
   await expect(page.locator("#chapter-index")).toBeFocused();
 });

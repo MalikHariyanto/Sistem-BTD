@@ -221,8 +221,7 @@ button {
 .story-header button > span:first-child {
   font-size: 20px;
 }
-.dark-scene .story-header,
-.dark-scene .edit-trigger {
+.dark-scene .story-header {
   color: #e8dbc6;
 }
 .dark-scene .story-header > a i {
@@ -1117,22 +1116,6 @@ button {
 .dark-scene .story-nav {
   color: #d2b996;
 }
-.edit-trigger {
-  position: fixed;
-  right: 5vw;
-  bottom: 9px;
-  border: 0;
-  background: none;
-  color: #7e6a50;
-  font-size: 8px;
-  letter-spacing: 0.3px;
-  padding: 7px 0;
-  z-index: 5;
-  opacity: 0.75;
-}
-.edit-trigger:hover {
-  opacity: 1;
-}
 .sr-only {
   position: absolute;
   width: 1px;
@@ -1210,25 +1193,6 @@ code {
   font-size: 11px;
   overflow-wrap: anywhere;
 }
-.editor-close {
-  position: absolute;
-  top: 18px;
-  right: 24px;
-  padding: 8px 0;
-  border: 0;
-  border-bottom: 1px solid #a78b68;
-  background: none;
-  font-size: 11px;
-}
-.bulk-upload {
-  margin-top: 35px;
-  border-top: 1px solid #c4b395;
-  padding-top: 5px;
-}
-.bulk-upload > p {
-  font-size: 10px;
-  color: var(--muted);
-}
 details {
   margin: 28px 0;
   border-top: 1px solid #c4b395;
@@ -1238,31 +1202,6 @@ details {
 summary {
   cursor: pointer;
   font-size: 11px;
-}
-.editor-photo-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0 20px;
-}
-.editor-photo-grid label {
-  font-size: 10px;
-}
-.remove-photo {
-  font-size: 9px;
-  border: 0;
-  background: none;
-  padding: 7px 0;
-  text-decoration: underline;
-  color: var(--muted);
-}
-#editor-status {
-  font-size: 12px;
-  color: #7d5a34;
-  min-height: 25px;
-  line-height: 1.8;
-}
-#reset-local {
-  font-size: 10px;
 }
 @keyframes spin {
   to {
@@ -1736,11 +1675,6 @@ summary {
     width: 12px;
     height: 24px;
   }
-  .edit-trigger {
-    right: 24px;
-    bottom: 7px;
-    font-size: 7px;
-  }
   dialog {
     padding: 60px 24px 30px;
   }
@@ -1750,15 +1684,8 @@ summary {
   dialog > p:not(.eyebrow) {
     font-size: 11px;
   }
-  .editor-photo-grid {
-    grid-template-columns: 1fr;
-    gap: 0;
-  }
   input[type="file"] {
     font-size: 10px;
-  }
-  .editor-photo-grid label {
-    margin: 12px 0;
   }
 }
 @media (max-height: 740px) and (min-width: 601px) {
@@ -1921,8 +1848,7 @@ summary {
     top: -64px;
   }
 }
-body.intro-running .story-header,
-body.intro-running .edit-trigger {
+body.intro-running .story-header {
   opacity: 0;
   pointer-events: none;
 }

@@ -1,3 +1,4 @@
+import { pauseUniverse } from "./gift-fixtures.js";
 import { test, expect } from "@playwright/test";
 import { createOrbit, orbitAt, cameraAt, diskY } from "../src/universe-camera.js";
 import { crystalSurface } from "../src/accretion-lens.js";
@@ -88,7 +89,7 @@ test("GPU crystal markers retain photo detail and render lit facets and their or
   await page.setViewportSize(isMobile ? {width:390,height:844} : {width:1280,height:800});
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
-  await page.locator("#open-editor").click();
+  await pauseUniverse(page);
   const result = await page.evaluate(async () => {
     const {createUniverseGPU}=await import('/src/universe-gpu.js');
     const {createOrbit,cameraAt,photoDepthAt}=await import('/src/universe-camera.js');

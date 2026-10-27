@@ -1,9 +1,10 @@
+import { pauseUniverse } from "./gift-fixtures.js";
 import { test, expect } from "@playwright/test";
 
 test("near-photo cache preserves photo identity, stays bounded and only uploads changed portraits", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
-  await page.locator("#open-editor").click();
+  await pauseUniverse(page);
   const result = await page.evaluate(async () => {
     const { createPortraitAtlas } = await import("/src/portrait-textures.js");
     const gl = document.createElement("canvas").getContext("webgl");
@@ -92,7 +93,7 @@ test("full-library near photographs resolve fine detail on screen without changi
   test.setTimeout(90000);
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
-  await page.locator("#open-editor").click();
+  await pauseUniverse(page);
   const result = await page.evaluate(async () => {
     const { createUniverseGPU } = await import("/src/universe-gpu.js");
     const { cameraAt } = await import("/src/universe-camera.js");

@@ -181,7 +181,6 @@
 .chapter-dialog [data-chapter] > span { font: 9px "DM Sans", Arial, sans-serif; letter-spacing: 1px; color: #967953; }
 .chapter-dialog [aria-current] { color: #966b3e; }
 .chapter-dialog [aria-current]::after { content: ''; width: 5px; height: 5px; border-radius: 50%; background: #ad895d; margin-left: auto; }
-.chapter-dialog .chapter-edit { min-height: 44px; margin-top: 20px; padding: 9px 0; border: 0; background: none; color: #8a7051; font-size: 10px; text-underline-offset: 4px; text-decoration: underline; }
 @keyframes keepsake-flicker { from { transform: rotate(-6deg) scale(.97, 1); opacity: .85; } to { transform: rotate(3deg) scale(1, 1.04); opacity: 1; } }
 @media (max-width: 700px) {
   #app { grid-template-rows: 66px minmax(0, 1fr) 106px; }

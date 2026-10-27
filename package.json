@@ -4,11 +4,13 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "prepare:media": "node scripts/prepare-media.mjs",
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0",
     "test": "playwright test",
-    "benchmark:orbits": "node scripts/benchmark-orbits.mjs"
+    "benchmark:orbits": "node scripts/benchmark-orbits.mjs",
+    "test:media": "node tests/media-config.unit.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.56.1",
