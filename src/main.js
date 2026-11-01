@@ -5,6 +5,7 @@ import "./reading-layout.css";
 import "./letter-scroll.css";
 import "./story-polish.css";
 import "./keepsakes.css";
+import "./scrapbook.css";
 import { setKeepsake, liftKeepsake } from "./keepsakes.js";
 import { createWishGarden } from "./wish-garden.js";
 import { content } from "./content.js";

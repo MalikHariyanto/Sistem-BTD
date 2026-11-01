@@ -135,3 +135,22 @@ Versi baru **tidak membaca atau menghapus IndexedDB lama**. Data lokal itu tidak
 Renderer, kamera Gargantua, komposisi Crystal Pin, urutan lima bab, dan gaya bacaan tidak diganti. Penghapusan editor hanya menghilangkan kontrol pemilik dan formulirnya.
 
 [Catatan pemeriksaan migrasi](code-migration-validation.md) mencatat perbandingan tampilan, pengujian media, dan batas hasil tes.
+
+## Scrapbook cerita, scenery dan puisi
+
+Desain cerita memakai kolase kertas, postcard, bunga dan stationery. Bila `portrait`, `hero`, atau `moment0`–`moment3` belum diisi, slot itu dapat meminjam `orbit01`; file cerita milikmu selalu mendapat prioritas. Foto orbit asli tidak diubah.
+
+Untuk foto scenery asli, simpan `edinburgh.webp` dan `prague.webp` di `public/photos/scenery/`, kemudian isi `scrapbook` di `src/content.js`:
+
+```js
+scrapbook: {
+  edinburgh: "/photos/scenery/edinburgh.webp",
+  prague: "/photos/scenery/prague.webp",
+},
+```
+
+Ekstensi harus mengikuti berkas aslinya. Path scenery diperiksa saat build dan mendukung deployment subpath. Jika kosong, postcard memakai ilustrasi dekoratif orisinal, bukan foto dokumenter.
+
+Untuk gambar pilihan dari film **Bumi Manusia**, isi `public/photos/story/poem0.jpg`, `poem1.jpg`, `poem2.jpg` (atau PNG/WebP). Ketiganya otomatis mengikuti halaman puisi. Default yang terlihat sebelum gambar film ditambahkan adalah ilustrasi veranda Jawa akhir abad19, bukan still film atau potret aktor. Ilustrasi ini tidak menyatakan peristiwa/karakter historis tertentu. Layout bernuansa arsip Hindia, batik dan kertas tua adalah interpretasi artistik.
+
+`public/art/stationery-desk.webp` dan `travel-atelier.webp` merupakan gambar dekoratif hasil image generation. Yang pertama dipakai ulang untuk latar kertas/meja; yang kedua adalah triptych Edinburgh, Praha dan veranda Jawa. Semua dekorasi statis; foto pribadi dan teks asli tetap terpisah dari gambar latar. Keduanya total sekitar568KiB, tanpa video atau library animasi baru.

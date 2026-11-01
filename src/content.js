@@ -29,6 +29,8 @@ export const content = {
   sender: "Seseorang yang selalu memilihmu",
   birthday: "", // ISO lengkap dengan zona, misalnya 2027-02-14T00:00:00+07:00
   photos: createPhotoLibrary(photoConfig, photoManifest),
+  // Opsional: foto scenery asli di public/photos/scenery/; kosong memakai ilustrasi dekoratif orisinal.
+  scrapbook: { edinburgh: "", prague: "" },
   poems: [
     {
       title: "Gravitasi",

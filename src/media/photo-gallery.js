@@ -29,7 +29,9 @@ export function createPhotoGallery(content, base = "/") {
 
   function bind(root = document) {
     root.querySelectorAll("[data-photo]").forEach(slot => {
-      const source = photos[slot.dataset.photo] || "";
+      const key = slot.dataset.photo;
+      // A personal story slot can borrow an existing orbit photo until its own file is added.
+      const source = photos[key] || (["portrait", "hero", "moment0", "moment1", "moment2", "moment3"].includes(key) ? photos.orbit01 || "" : "");
       if (slot.dataset.src === source) return;
       slot.querySelector("img")?.remove();
       slot.dataset.src = source;

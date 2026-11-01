@@ -40,7 +40,7 @@ export async function validateMedia(content, publicDir) {
   for (const key of content.letterPhotos)
     if (!(key in content.photos)) throw new Error(`Slot foto surat tidak dikenal: ${key}`);
   if (!content.tracks?.[0]?.src) throw new Error("Sumber musik latar belum diisi.");
-  const sources = new Set([...Object.values(content.photos).filter(Boolean), content.tracks[0].src]);
+  const sources = new Set([...Object.values(content.photos).filter(Boolean), ...Object.values(content.scrapbook || {}).filter(Boolean), content.tracks[0].src]);
   for (const source of sources) {
     if (/^https?:/i.test(source)) continue;
     if (/^(blob:|data:)/i.test(source)) throw new Error(`Media permanen harus berupa file di public/: ${source.slice(0, 45)}`);
