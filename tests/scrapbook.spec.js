@@ -17,3 +17,17 @@ test('scrapbook keeps personal photos, all poem pages, flowers and letter readab
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
  await page.locator('#close-letter').click();await expect(page.locator('#letter-intro')).toBeVisible();
 });
+
+test('third flower keeps desktop keepsake visible; candle has a distinct background and readable navigation',async({page,isMobile})=>{
+ await page.emulateMedia({reducedMotion:'reduce'});await installGift(page,{photos:{orbit01:photoData(1)}});
+ await page.goto('/');await page.locator('#begin').click();await page.locator('#skip-intro').click();await page.locator('#enter-story').click();
+ await chooseChapter(page,3);
+ for(const name of ['Bahagia','Bertumbuh','Dicintai'])await page.getByRole('button',{name:`Mekarkan doa: ${name}`,exact:true}).click();
+ await expect(page.locator('.garden-note:not([hidden])')).toHaveCount(3);
+ if(!isMobile){const b=await page.locator('.garden-intro').boundingBox();const s=await page.locator('.garden-scene').boundingBox();expect(b.y).toBeGreaterThanOrEqual(s.y);expect(b.y+b.height).toBeLessThanOrEqual(s.y+s.height+2);}
+ await chooseChapter(page,6);
+ const style=await page.locator('.wish-scene').evaluate(e=>({bg:getComputedStyle(e,'::before').backgroundImage,blur:getComputedStyle(e,'::before').filter}));
+ expect(style.bg).toContain('candle-scrapbook.webp');expect(style.bg).not.toContain('stationery-desk.webp');expect(style.blur).toBe('blur(2px)');
+ await expect(page.locator('#previous-scene')).toBeVisible();
+ const color=await page.locator('#previous-scene').evaluate(e=>getComputedStyle(e).color);expect(color).toBe('rgb(255, 242, 216)');
+});

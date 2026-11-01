@@ -76,3 +76,18 @@ test("build validation fails on missing assets instead of silently shipping brok
   await writeFile(resolve(root, "sore kita.jpg"), "");
   await assert.rejects(validateMedia(sample, root), /kosong/);
 });
+
+test('orbit thumbnails preserve originals, orientation bounds, cache identity and subpath URLs', async t => {
+  const sharp = (await import('sharp')).default;
+  const { createOrbitThumbnails } = await import('../scripts/prepare-media.mjs');
+  const root=await mkdtemp(resolve(tmpdir(),'orbit-thumb-'));t.after(()=>rm(root,{recursive:true,force:true}));
+  await mkdir(resolve(root,'photos/orbit'),{recursive:true});
+  const file=resolve(root,'photos/orbit/test image.jpg');
+  await sharp({create:{width:1200,height:1800,channels:3,background:'#ac7854'}}).jpeg().toFile(file);
+  const original=await readFile(file);const map=await createOrbitThumbnails(root,['/photos/orbit/test%20image.jpg']);
+  assert.deepEqual(await readFile(file),original);
+  const path=resolve(root,'.'+map['/photos/orbit/test%20image.jpg']);const info=await sharp(path).metadata();
+  assert.equal(info.format,'webp');assert.equal(info.height,480);assert.equal(info.width,320);
+  assert.deepEqual(await createOrbitThumbnails(root,['/photos/orbit/test%20image.jpg']),map);
+  assert.match(mediaUrl(map['/photos/orbit/test%20image.jpg'],'/gift/'),/^\/gift\/generated\/orbit\//);
+});

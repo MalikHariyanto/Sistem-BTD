@@ -32,6 +32,7 @@ export function createScrollLetter(root, { content, photo, flowers, escapeHtml: 
     root.dataset.letterActive = String(index);
     stanzas.forEach((stanza, i) => stanza.classList.toggle('is-current', i === index));
     frames.forEach((frame, i) => {
+      frame.classList.toggle('is-leaving', frame.classList.contains('is-current') && i !== index);
       frame.classList.toggle('is-current', i === index);
       frame.setAttribute('aria-hidden', String(i !== index));
     });

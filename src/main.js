@@ -297,10 +297,26 @@ $("#replay").onclick = replay;
 let poemChanging = false;
 async function changePage(elements, render) {
   const version = storyVersion;
-  await Promise.all(elements.map(el => animate(el, [{ opacity: 1 }, { opacity: 0 }], 220)));
-  if (version !== storyVersion) return;
-  render();
-  await Promise.all(elements.map(el => animate(el, [{ opacity: 0 }, { opacity: 1 }], 550)));
+  const page = elements[0], frame = elements[1];
+  const old = frame.cloneNode(true);
+  old.removeAttribute("id");
+  old.querySelectorAll("[id]").forEach(el => el.removeAttribute("id"));
+  old.classList.add("poem-leaving"); old.setAttribute("aria-hidden", "true"); old.inert = true;
+  Object.assign(old.style, { width: frame.offsetWidth + "px", height: frame.offsetHeight + "px", left: frame.offsetLeft + "px", top: frame.offsetTop + "px" });
+  if (!motion.matches) frame.parentElement.append(old);
+  try {
+    await animate(page, [{ opacity:1 }, { opacity:0 }], 180);
+    if (version !== storyVersion) return;
+    frame.style.opacity = "0";
+    render();
+    await Promise.all([...frame.querySelectorAll("img")].map(image => image.decode?.().catch(() => {})));
+    if (version !== storyVersion) return;
+    await Promise.all([
+      animate(page, [{ opacity:0, transform:"translateY(5px)" }, { opacity:1, transform:"translateY(0)" }], 650),
+      animate(frame, [{ opacity:0, transform:"perspective(1000px) translateX(8px) rotateY(9deg) rotate(-2deg)" }, { opacity:1, transform:"perspective(1000px) translateX(0) rotateY(0deg) rotate(-4deg)" }], 950),
+      motion.matches ? Promise.resolve() : animate(old, [{ opacity:1, transform:"perspective(1000px) rotateY(0) rotate(-4deg)" }, { opacity:0, transform:"perspective(1000px) translateX(-14px) rotateY(-14deg) rotate(-7deg)" }], 1000),
+    ]);
+  } finally { old.remove(); effects.reset(frame); effects.reset(page); }
 }
 function renderPoem() {
   const p = content.poems[poemIndex];

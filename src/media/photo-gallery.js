@@ -5,6 +5,7 @@ import { mediaUrl } from "./asset-url.js";
 export function createPhotoGallery(content, base = "/") {
   const photos = Object.fromEntries(Object.entries(content.photos).map(([key, source]) => [key, mediaUrl(source, base)]));
   const sources = [...new Set(Object.values(photos).filter(Boolean))];
+  const orbitSources = new Map(Object.entries(content.orbitThumbnails || {}).map(([src, thumb]) => [mediaUrl(src, base), mediaUrl(thumb, base)]));
   const prefetchedPoems = new Set();
   let initialized = false;
 
@@ -57,7 +58,7 @@ export function createPhotoGallery(content, base = "/") {
       bind();
       if (initialized) return;
       initialized = true;
-      window.dispatchEvent(new CustomEvent("photoschanged", { detail: sources }));
+      window.dispatchEvent(new CustomEvent("photoschanged", { detail: sources.map(source => orbitSources.get(source) || source) }));
     },
   };
 }
