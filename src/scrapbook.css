@@ -97,7 +97,7 @@ body[data-chapter="3"] .story-nav > .keepsake-button { --keepsake-ink:#705138; -
 }
 /* Only this background layer is softened; the cake, text and controls remain sharp. */
 .wish-scene { isolation:isolate; }
-.wish-scene::before { content:''; position:absolute; inset:-6px; z-index:-1; pointer-events:none; background:linear-gradient(#24160ec2,#23150dbb),url('/art/candle-scrapbook.webp') center/cover; filter:blur(2px); }
+body[data-chapter="6"] #app::before { content:''; position:absolute; inset:-6px; z-index:-1; pointer-events:none; background:linear-gradient(to bottom,#43240dc2,#4b2a125e 22%,#43240d85 72%,#43240dc2),url('/art/candle-scrapbook.webp') center/cover; filter:blur(2px); }
 .poem-leaving { position:absolute; z-index:8; pointer-events:none; margin:0; border:10px solid #f9f5ec; border-bottom-width:50px; background:#f9f5ec; box-shadow:0 12px 35px #66513c20; transform-origin:left center; }
 .poem-leaving > .photo-slot { height:100%; min-height:0; }
 #poem-photo { transform-origin:left center; }
@@ -106,14 +106,13 @@ body[data-chapter="3"] .story-nav > .keepsake-button { --keepsake-ink:#705138; -
 .letter-frame.is-current { transform:translate3d(0,0,0) rotateY(0) rotateZ(-2deg) scale(1); }
 .letter-frame.is-leaving { z-index:2; transform:translate3d(-12px,0,0) rotateY(-14deg) rotateZ(-5deg) scale(.985); }
 @media(prefers-reduced-motion:reduce) { .letter-frame,.letter-frame.is-current,.letter-frame.is-leaving { transform:none; transition:none; } }
-/* Navigation always has its own readable surface, independent of photo luminance. */
+/* Theme ink stays readable over the continuous page backdrop. */
 body:is([data-chapter="1"],[data-chapter="2"],[data-chapter="3"],[data-chapter="4"]) .story-header,
-body:is([data-chapter="1"],[data-chapter="2"],[data-chapter="3"],[data-chapter="4"]) .story-nav { background:linear-gradient(to bottom,#f5ead8c4, #f5ead83d); color:#503b29; }
+body:is([data-chapter="1"],[data-chapter="2"],[data-chapter="3"],[data-chapter="4"]) .story-nav { background:transparent; color:#503b29; }
 body:is([data-chapter="1"],[data-chapter="2"],[data-chapter="3"],[data-chapter="4"]) .story-nav > .keepsake-button { --keepsake-ink:#503b29; --keepsake-muted:#644a32; }
 body:is([data-chapter="1"],[data-chapter="2"],[data-chapter="3"],[data-chapter="4"]) :is(.nav-back,.chapter-progress,.story-dedication,#home-link,.chapter-index) { color:#503b29; }
 body[data-chapter="6"] #app { background:#63412b; }
-body[data-chapter="6"] :is(.story-header,.story-nav) { background:linear-gradient(to bottom,#43291985,#43291914); color:#fff2d8; }
+body[data-chapter="6"] :is(.story-header,.story-nav) { background:transparent; color:#fff2d8; }
 body[data-chapter="6"] .story-nav > .keepsake-button { --keepsake-ink:#fff2d8; --keepsake-muted:#f2d8b0; }
 body[data-chapter="6"] :is(.nav-back,.chapter-progress,.story-dedication,#home-link,.chapter-index) { color:#fff2d8; }
-.wish-scene::before { background-image:linear-gradient(#4b2a125e,#43240d85),url('/art/candle-scrapbook.webp'); }
 .story-nav button:focus-visible,.story-header button:focus-visible { outline:2px solid currentColor; outline-offset:5px; }

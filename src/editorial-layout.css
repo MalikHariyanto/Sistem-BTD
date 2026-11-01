@@ -9,8 +9,12 @@
 .story-nav > .nav-back { font-size:14px; }
 .story-nav .keepsake-hint { font-size:9px; }
 .story-nav .chapter-progress { gap:8px; }
-body:is([data-chapter="1"],[data-chapter="2"],[data-chapter="3"],[data-chapter="4"]) .story-nav { background:linear-gradient(to top,#f5ead8ce,#f5ead86b 60%,transparent); }
-body[data-chapter="6"] .story-nav { background:linear-gradient(to top,#43291999,transparent); }
+/* Feather the shared backdrop across the page, never at a control-row edge. */
+body:is([data-chapter="1"],[data-chapter="2"],[data-chapter="3"],[data-chapter="4"],[data-chapter="6"]) #app { position:relative; isolation:isolate; }
+body:is([data-chapter="1"],[data-chapter="2"],[data-chapter="3"],[data-chapter="4"]) #app::before {
+  content:''; position:absolute; inset:0; z-index:-1; pointer-events:none;
+  background:linear-gradient(to bottom,#f5ead899,transparent 22%,transparent 72%,#f5ead8c2);
+}
 /* Soften the surfaces while retaining a quiet, opaque-enough reading zone. */
 .dedication-copy,.garden-intro,.garden-experience,.poem-paper { border-color:#b2956c30; box-shadow:0 8px 24px #6344250c; }
 .dedication-copy { background:#fbf3e2d9; }
