@@ -31,3 +31,17 @@ test('third flower keeps desktop keepsake visible; candle has a distinct backgro
  await expect(page.locator('#previous-scene')).toBeVisible();
  const color=await page.locator('#previous-scene').evaluate(e=>getComputedStyle(e).color);expect(color).toBe('rgb(255, 242, 216)');
 });
+
+test('editorial letter has generous margins, restrained type and slim translucent navigation',async({page,isMobile},info)=>{
+ await page.emulateMedia({reducedMotion:'reduce'});await installGift(page,{photos:{portrait:photoData('#bda588'),hero:photoData('#bda588')}});
+ await page.goto('/');await page.locator('#begin').click();await page.locator('#skip-intro').click();await page.locator('#enter-story').click();
+ await chooseChapter(page,4);await page.locator('#open-letter').click();
+ const geometry=await page.evaluate(()=>{
+  const paper=document.querySelector('.letter-stanzas'),verse=document.querySelector('.letter-verse'),header=document.querySelector('.story-header'),nav=document.querySelector('.story-nav');
+  return {padding:parseFloat(getComputedStyle(paper).paddingLeft),font:parseFloat(getComputedStyle(verse).fontSize),header:header.getBoundingClientRect().height,footer:nav.getBoundingClientRect().height,background:getComputedStyle(nav).backgroundColor,overflow:document.documentElement.scrollWidth>innerWidth,heading:parseFloat(getComputedStyle(document.querySelector('#letter-title')).fontSize)};
+ });
+ expect(geometry.padding).toBeGreaterThanOrEqual(24);expect(geometry.font).toBeGreaterThanOrEqual(16);expect(geometry.font).toBeLessThanOrEqual(21);
+ expect(geometry.heading).toBeLessThanOrEqual(42);expect(geometry.header).toBeLessThanOrEqual(60);expect(geometry.footer).toBeLessThanOrEqual(84);
+ expect(geometry.background).toBe('rgba(0, 0, 0, 0)');expect(geometry.overflow).toBe(false);
+ await page.screenshot({path:`/tmp/btd-editorial-${info.project.name}.png`});
+});
