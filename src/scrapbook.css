@@ -7,8 +7,8 @@ body:is([data-chapter="1"],[data-chapter="2"],[data-chapter="3"],[data-chapter="
   background-size:cover;
   background-position:center;
 }
-body[data-chapter="2"] #app { background-image:linear-gradient(#d8c5a9ce,#e4d5bdc4),url('/art/stationery-desk.webp'); }
-body[data-chapter="3"] #app { background-image:linear-gradient(#eadbc6b3,#d4bda2b8),url('/art/stationery-desk.webp'); }
+body[data-chapter="2"] #app { background-image:linear-gradient(#f2e5cfeb,#eee0c9e6),url('/art/stationery-desk.webp'); }
+body[data-chapter="3"] #app { background-image:linear-gradient(#f4e9d8e8,#eee0cbe3),url('/art/stationery-desk.webp'); }
 body[data-chapter="4"] #app { background-image:linear-gradient(#70523625,#70523638),url('/art/stationery-desk.webp'); }
 body:is([data-chapter="1"],[data-chapter="2"],[data-chapter="3"],[data-chapter="4"]) .story-header,
 body:is([data-chapter="1"],[data-chapter="2"],[data-chapter="3"],[data-chapter="4"]) .story-nav { color:var(--scrap-ink); }
@@ -36,18 +36,25 @@ body:is([data-chapter="1"],[data-chapter="2"],[data-chapter="3"],[data-chapter="
 .memory-constellation > .handwritten { bottom:-58px; }
 .dedication-copy { position:relative; padding:28px 26px 32px; background:#fbf3e2e8; box-shadow:5px 8px 22px #63442514; border:1px solid #b2956c45; }
 .dedication-copy::before { content:'A LITTLE BIRTHDAY ARCHIVE'; display:block; font:8px var(--sans); letter-spacing:3px; color:#927652; padding-bottom:18px; border-bottom:1px solid #b59c774d; margin-bottom:22px; }
-.garden-intro { position:relative; padding:26px; background:#f6eddbeb; color:var(--scrap-ink); border:1px solid #baa27c59; box-shadow:5px 10px 24px #50392315; }
+/* Text and photographs share the page; only the keepsake photos have frames. */
+.garden-layout, .poem-layout { position:relative; isolation:isolate; column-gap:7%; }
+.garden-layout::before, .poem-layout::before {
+  content:''; position:absolute; z-index:-1; pointer-events:none;
+  inset:0 -5%;
+  background:radial-gradient(ellipse at 60% 40%,#fff8e8a8,transparent 72%);
+}
+.garden-intro { position:relative; padding:22px 12px; color:var(--scrap-ink); }
 .garden-intro > :not(.album-ephemera) { position:relative; z-index:1; }
 .garden-intro .album-ephemera { opacity:.5; }
 .garden-photos > .travel-postcard { min-height:130px; border:7px solid #fff8eb; border-bottom-width:22px; transform:rotate(7deg); box-shadow:3px 8px 15px #513a2925; }
-.garden-experience { background:#f8f0e2e8; padding:22px 25px; border:1px solid #bea68455; box-shadow:4px 12px 30px #50392314; }
+.garden-experience { padding:22px 12px; }
 .garden-experience :is(.garden-wish,.garden-wish-title,.garden-kicker,.garden-source,.garden-source a,.garden-source summary,.garden-note-heading h3,.garden-invitation,.garden-bloom strong,.garden-bloom small) { color:#57422f; }
 .garden-experience .garden-note { border-color:#ac8d6650; }
 .garden-experience .garden-source blockquote { color:#795c40; }
 .garden-experience button { text-shadow:none; }
 .poem-visual { isolation:isolate; padding:30px 0 45px; }
-.poem-visual::before { content:''; position:absolute; inset:0 -12% 2%; background:repeating-linear-gradient(90deg,#573d2710 0 1px,transparent 1px 18px),#cfb591; z-index:-2; transform:rotate(3deg); clip-path:polygon(0 2%,100% 0,97% 98%,80% 96%,61% 100%,40% 97%,20% 100%,0 96%); }
-.poem-visual > #poem-photo { position:relative; background:#fff8e8; transform:rotate(-4deg); }
+.poem-visual::before { content:''; position:absolute; inset:0 -14%; background:radial-gradient(ellipse,#c9a97b40,transparent 70%); z-index:-2; pointer-events:none; }
+.poem-visual > #poem-photo { position:relative; background:#fff8e8; transform:rotate(-3deg); border-width:7px; border-bottom-width:34px; border-radius:3px 8px 4px 7px; box-shadow:0 14px 30px #66513c1c; }
 .poem-visual [data-photo^="poem"]:not(.has-photo) { background:url('/art/travel-atelier.webp') right center/300% 100%; }
 .poem-visual [data-photo^="poem"]:not(.has-photo) > span { visibility:hidden; }
 .poem-visual [data-photo="poem1"]:not(.has-photo) { background-position:96% center; filter:sepia(.2); }
@@ -56,8 +63,9 @@ body:is([data-chapter="1"],[data-chapter="2"],[data-chapter="3"],[data-chapter="
 .archive-slip { position:absolute; z-index:6; top:-8px; right:-6%; background:#e3d0aa; border:1px solid #93754d77; padding:12px 15px; transform:rotate(8deg); color:#6b5035; font:9px/1.8 var(--sans); letter-spacing:2px; }
 .archive-slip b { display:block; font:italic 19px var(--serif); letter-spacing:.5px; }
 .archive-slip small { font:italic 12px var(--serif); letter-spacing:0; }
-.poem-paper { background:#fbf3e3ed; padding:30px 32px; border:1px solid #b59a7355; box-shadow:5px 12px 24px #5039231a; position:relative; }
-.poem-paper::before { content:''; position:absolute; left:12px; top:0; bottom:0; border-left:1px solid #bb8f6d33; }
+.poem-paper { padding:30px 12px 24px; position:relative; }
+.poem-paper .eyebrow { border-bottom:0; padding-bottom:0; }
+.poem-paper .page-controls { border-top:0; }
 .poem-paper .poem-text { color:#503e2f; }
 .letter-intro { position:relative; padding:45px 55px; background:#fcf3e1ed; box-shadow:8px 15px 35px #40271835; border:1px solid #af926b70; }
 .letter-intro > :not(.album-ephemera) { position:relative; z-index:1; }
@@ -71,11 +79,12 @@ body:is([data-chapter="1"],[data-chapter="2"],[data-chapter="3"],[data-chapter="
   .dedication-layout { gap:35px; }
   .memory-constellation { width:94%; margin-inline:auto; height:380px; max-height:65cqh; min-height:280px; margin-bottom:35px; }
   .dedication-copy { padding:25px 22px; }
-  .garden-intro { padding:22px 19px; }
-  .garden-experience { padding:18px 15px; }
+  .garden-intro { padding:8px 0 0; }
+  .garden-intro .album-ephemera { display:none; }
+  .garden-experience { padding:6px 0 18px; }
   .poem-visual { width:83%; margin:24px auto 22px; }
   .archive-slip { right:-8%; padding:8px 10px; }
-  .poem-paper { padding:25px 23px; }
+  .poem-paper { padding:12px 3px 24px; }
   .letter-intro { padding:35px 22px; }
   .letter-postmark { right:-8px; top:-12px; font-size:7px; padding:12px; }
   .letter-stanzas { padding:0 21px; }
@@ -116,3 +125,27 @@ body[data-chapter="6"] :is(.story-header,.story-nav) { background:transparent; c
 body[data-chapter="6"] .story-nav > .keepsake-button { --keepsake-ink:#fff2d8; --keepsake-muted:#f2d8b0; }
 body[data-chapter="6"] :is(.nav-back,.chapter-progress,.story-dedication,#home-link,.chapter-index) { color:#fff2d8; }
 .story-nav button:focus-visible,.story-header button:focus-visible { outline:2px solid currentColor; outline-offset:5px; }
+
+/* The small flower choices stay readable while notes scroll underneath, with
+   a feathered edge rather than the old dark rectangular strip. */
+.garden-picks {
+  background:linear-gradient(#f2e6d3 72%,#f2e6d300);
+  border-bottom:0;
+  box-shadow:none;
+  padding-bottom:22px;
+}
+.garden-picks button {
+  color:#654b34;
+  background:#fff8e666;
+  border-color:#ac8d6638;
+  border-radius:24px;
+}
+.garden-picks [aria-expanded="true"] { border-color:#9c7853; background:#fff8e6a8; }
+.garden-picks .pick-check { color:#795b39; }
+.garden-experience .garden-note { border-top:0; }
+.garden-empty { border-top:0; }
+@media(max-width:700px) {
+  .garden-layout { row-gap:20px; }
+  .poem-layout { row-gap:30px; }
+  .garden-layout::before, .poem-layout::before { inset:0; }
+}
