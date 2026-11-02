@@ -1,3 +1,4 @@
+import { finishIntro } from "./story-helpers.js";
 import { pauseUniverse } from "./gift-fixtures.js";
 import { test, expect } from "@playwright/test";
 import { cameraAt, createOrbit, orbitAt, projectOrbit, photoFieldAt, photoDepthAt } from "../src/universe-camera.js";
@@ -71,7 +72,7 @@ test("the moving middle balances clear foreground crystals with fading rear phot
   }
 });
 
-test("uploaded image colors stay visible on the clean middle disk, including dark regions", async ({ page }) => {
+test("uploaded image colors stay visible on the clean middle disk, including dark regions", async ({ page, isMobile }) => {
   test.setTimeout(60000);
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
@@ -112,7 +113,7 @@ test("uploaded image colors stay visible on the clean middle disk, including dar
       filaments: Number(canvas.dataset.filaments), pins: Number(canvas.dataset.crystalPins), error: gl.getError() };
   });
   expect(result.error).toBe(0);
-  expect(result.filaments).toBe(32768);
+  expect(result.filaments).toBe(isMobile ? 8192 : 32768);
   expect(result.photos).toBeGreaterThan(result.width < 700 ? 12 : 24);
   expect(result.pins).toBeGreaterThan(result.width < 700 ? 12 : 24);
   expect(result.photos).toBeLessThanOrEqual(result.width < 700 ? 90 : 160);
@@ -135,9 +136,11 @@ test("close disk photographs retain readable internal image contrast with 200 up
     const { assignOrbitPhotos } = await import("/src/photo-textures.js");
     const { photoSurfaceAt, projectPhotoSurface } = await import("/src/photo-surface.js");
     const { crystalCenter } = await import("/src/crystal-pin.js");
+    const { universeQuality } = await import("/src/universe-quality.js");
     const width = innerWidth, height = innerHeight;
     const canvas = document.createElement("canvas"); canvas.width = width; canvas.height = height;
-    const gpu = createUniverseGPU(canvas), gl = canvas.getContext("webgl");
+    const quality = universeQuality(canvas);
+    const gpu = createUniverseGPU(canvas, quality), gl = canvas.getContext("webgl");
     const photo = document.createElement("canvas"); photo.width = 256; photo.height = 320;
     const ctx = photo.getContext("2d");
     ctx.fillStyle = "#303030"; ctx.fillRect(0, 0, 128, 320);
@@ -154,7 +157,7 @@ test("close disk photographs retain readable internal image contrast with 200 up
       const i = ((height - 1 - Math.round(y)) * width + Math.round(x)) * 4;
       return pixels[i] * .2126 + pixels[i + 1] * .7152 + pixels[i + 2] * .0722;
     }
-    const orbit = m.createOrbit(), photoIds = assignOrbitPhotos(orbit, 200);
+    const orbit = m.createOrbit(quality.particles), photoIds = assignOrbitPhotos(orbit, 200);
     const photos = createOrbitComposition(orbit).update({ camera, width, height, time: 6, photoIds,
       ratios: Array(200).fill(.8), now: 1000, reduced: true });
     const contrast = photo => {
@@ -218,13 +221,13 @@ test("Canvas fallback also shows uploaded photographs across the middle and can 
     return { fraction: cyan / (pixels.length / 16), progress: Number(canvas.dataset.progress), renderer: canvas.dataset.renderer, photos: Number(canvas.dataset.diskPhotos), filaments: Number(canvas.dataset.filaments) };
   });
   expect(image.renderer).toBe("canvas2d");
-  expect(image.filaments).toBe(8192);
+  expect(image.filaments).toBe(await page.evaluate(() => matchMedia('(pointer: coarse)').matches || innerWidth <= 700) ? 2048 : 8192);
   expect(image.photos).toBeGreaterThan(8);
   expect(image.photos).toBeLessThanOrEqual(await page.evaluate(() => innerWidth < 700 ? 90 : 160));
   expect(image.progress).toBeGreaterThanOrEqual(0.3);
   expect(image.progress).toBeLessThan(0.41);
   expect(image.fraction).toBeGreaterThan(0.006);
-  await page.locator("#skip-intro").click();
+  await finishIntro(page);
   await page.locator("#enter-story").click();
   await expect(page.locator('[data-scene="1"]')).toHaveClass(/is-active/);
 });

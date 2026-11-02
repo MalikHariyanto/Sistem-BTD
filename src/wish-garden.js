@@ -1,7 +1,7 @@
 import { flowerTypes } from "./florals.js";
 
 // A small, cumulative ritual: each flower reveals its own wish. Nothing pages
-// away, and every literary excerpt keeps its own translation and source.
+// away, and every English literary excerpt keeps its original wording and source.
 export function createWishGarden(
   root,
   quotes,
@@ -34,7 +34,7 @@ export function createWishGarden(
           ) => `<article class="garden-note" id="garden-wish-${i}" tabindex="-1" aria-labelledby="garden-theme-${i}" hidden>
         <div class="garden-note-heading"><img src="${flowerTypes[i % flowerTypes.length].src}" alt="" aria-hidden="true" width="34" height="51" loading="lazy"><h3 id="garden-theme-${i}">${esc(q.theme)}</h3></div>
         <p class="garden-wish">${esc(q.wish)}</p>
-        <details class="garden-source"><summary>Kata ${esc(q.author)}</summary><div class="garden-source-body"><blockquote>${esc(q.original)}</blockquote><p class="garden-author">${esc(q.author)} — ${esc(q.work)}</p><p class="garden-translation-label">TERJEMAHAN BEBAS</p><p class="garden-translation">${esc(q.translation)}</p><a href="${esc(q.source)}" target="_blank" rel="noopener noreferrer">Baca karya aslinya →</a></div></details>
+        <details class="garden-source"><summary>Kata ${esc(q.author)}</summary><div class="garden-source-body"><blockquote lang="en">${esc(q.original)}</blockquote><p class="garden-author">${esc(q.author)} — ${esc(q.work)}</p><a href="${esc(q.source)}" target="_blank" rel="noopener noreferrer">Baca karya aslinya →</a></div></details>
       </article>`,
         )
         .join("")}

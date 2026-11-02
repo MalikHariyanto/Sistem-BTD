@@ -1,11 +1,11 @@
-import { chooseChapter } from "./story-helpers.js";
+import { chooseChapter, finishIntro } from "./story-helpers.js";
 import { test, expect } from "@playwright/test";
 
 async function enter(page) {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
   await page.locator("#begin").click();
-  await page.locator("#skip-intro").click();
+  await finishIntro(page);
   await page.locator("#enter-story").click();
 }
 

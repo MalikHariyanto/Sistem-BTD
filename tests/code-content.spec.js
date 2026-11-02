@@ -1,3 +1,4 @@
+import { finishIntro } from "./story-helpers.js";
 import { test, expect } from "@playwright/test";
 import { installGift, photoData } from "./gift-fixtures.js";
 
@@ -29,7 +30,7 @@ test("deployed content ignores legacy browser overrides without deleting the old
   await expect(page.locator('#universe')).toHaveAttribute('data-photo-sources', '1');
   await expect(page.locator('#birthday-countdown')).not.toContainText('Menuju hari spesialmu');
   await page.locator('#begin').click();
-  await page.locator('#skip-intro').click();
+  await finishIntro(page);
   await page.locator('#enter-story').click();
   await expect(page.locator('.dedication-copy [data-recipient]')).toHaveText('Dari kode');
   expect(await page.evaluate(() => window.databaseReads)).toBe(0);
@@ -55,7 +56,7 @@ test("fresh browser sessions show the same configured gift without uploads", asy
       await installGift(page, config);
       await page.goto('http://127.0.0.1:5173/');
       await expect(page.locator('#universe')).toHaveAttribute('data-photo-sources', '1');
-      await page.locator('#begin').click(); await page.locator('#skip-intro').click(); await page.locator('#enter-story').click();
+      await page.locator('#begin').click(); await finishIntro(page); await page.locator('#enter-story').click();
       await expect(page.locator('.dedication-copy [data-recipient]')).toHaveText(config.recipient);
       await expect(page.locator('[data-photo="portrait"] img')).toHaveAttribute('src', config.photos.portrait);
       await expect(page.locator('input[type="file"], #editor-dialog, #edit-from-chapters')).toHaveCount(0);
@@ -70,7 +71,7 @@ test("a failed image download leaves other photos and navigation working", async
   await page.goto('/');
   await expect(page.locator('#universe')).toHaveAttribute('data-photo-sources', '1');
   await expect(page.locator('#media-status')).toContainText('1 foto belum terbaca');
-  await page.locator('#begin').click(); await page.locator('#skip-intro').click(); await page.locator('#enter-story').click();
+  await page.locator('#begin').click(); await finishIntro(page); await page.locator('#enter-story').click();
   await expect(page.locator('[data-photo="portrait"]')).not.toHaveClass(/has-photo/);
   await page.locator('#next-scene').click();
   await expect(page.locator('.scene.is-active')).toHaveAttribute('data-scene', '3');

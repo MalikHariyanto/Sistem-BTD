@@ -7,6 +7,7 @@ import "./story-polish.css";
 import "./keepsakes.css";
 import "./scrapbook.css";
 import "./editorial-layout.css";
+import "./celebration.css";
 import { setKeepsake, liftKeepsake } from "./keepsakes.js";
 import { createWishGarden } from "./wish-garden.js";
 import { content } from "./content.js";
@@ -215,9 +216,9 @@ function phase(value) {
 }
 function revealIntro() {
   universe.settle();
+  warmChapter(1);
   phase("revealed");
   $("#intro-count").hidden = true;
-  $("#skip-intro").hidden = true;
   $("#cover-copy").hidden = true;
   $("#cover-footnote").hidden = true;
   $("#reveal-copy").hidden = false;
@@ -237,7 +238,6 @@ async function beginIntro() {
   phase("countdown");
   universe.prepare();
   $("#cover-copy").inert = true;
-  $("#skip-intro").hidden = false;
   await animate($("#cover-copy"), [{ opacity: 1 }, { opacity: 0 }], 450);
   if (token !== introRun) return;
   $("#cover-copy").hidden = true;
@@ -261,10 +261,6 @@ async function beginIntro() {
   revealIntro();
 }
 $("#begin").onclick = beginIntro;
-$("#skip-intro").onclick = () => {
-  introRun++;
-  revealIntro();
-};
 $("#enter-story").onclick = () => goTo(1);
 async function replay() {
   if (changing) return;
@@ -276,7 +272,6 @@ async function replay() {
   $("#cover-footnote").hidden = false;
   $("#reveal-copy").hidden = true;
   $("#intro-count").hidden = true;
-  $("#skip-intro").hidden = true;
   storyVersion++;
   letterRun++;
   openingLetter = false;
@@ -521,5 +516,4 @@ applySettings();
 updateNav();
 gallery.initialize();
 warmChapter(active);
-warmChapter(adjacentScene(active, 1));
 setInterval(updateCountdown, 1000);

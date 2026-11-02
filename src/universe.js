@@ -7,7 +7,6 @@ import {
   photoFieldAt,
   orbitRateAt,
   DISK,
-  PARTICLE_COUNT,
   ORBIT_SPEED,
   createOrbit,
   orbitAt,
@@ -22,7 +21,8 @@ import {
 } from "./universe-camera.js";
 
 import { createOrbitComposition, compositionAt } from "./orbit-composition.js";
-import { assignOrbitPhotos } from "./photo-textures.js";
+import { assignPhotosOffscreen } from "./orbit-photo-loader.js";
+import { universeQuality } from "./universe-quality.js";
 import { createUniverseGPU } from "./universe-gpu.js";
 import { createDiskStream } from "./disk-stream.js";
 import { createSpaceBackdrop } from "./space-background.js";
@@ -37,7 +37,8 @@ const PLATE_URL = `${import.meta.env.BASE_URL}art/gargantua.webp`;
 // A photographic gravitational lens and a physical annulus of photo particles.
 // The flight approaches the very same orbits visible from the first frame.
 export function createUniverse(canvas) {
-  const gpu = createUniverseGPU(canvas);
+  const quality = universeQuality(canvas);
+  const gpu = createUniverseGPU(canvas, quality);
   if (!gpu) {
     const fallback = canvas.cloneNode(false);
     canvas.replaceWith(fallback);
@@ -94,7 +95,7 @@ export function createUniverse(canvas) {
   }
   let photosReady = Promise.resolve();
   const aspect = 1672 / 941;
-  const orbit = createOrbit(gpu ? PARTICLE_COUNT : 8192);
+  const orbit = createOrbit(gpu ? quality.particles : quality.fallbackParticles);
   let photoIds = new Float32Array(orbit.length / 4);
   const composition = createOrbitComposition(orbit);
 
@@ -238,6 +239,8 @@ export function createUniverse(canvas) {
         ctx.restore();
         rearClipped = false;
       }
+      // Keep all photo candidates, but paint one quarter of distant light on phones.
+      if (quality.phone && point.index % 4 !== 0) continue;
       const dust = projectOrbit(
         orbitAt(orbit, point.index, flowSeconds),
         camera,
@@ -267,7 +270,7 @@ export function createUniverse(canvas) {
         true, true, true,
       );
     canvas.dataset.diskPhotos = String(field > .5 ? focused.filter(p => p.alpha * p.point.opacity > .5).length : 0);
-    canvas.dataset.filaments = String(orbit.length / 4);
+    canvas.dataset.filaments = String(orbit.length / (quality.phone ? 16 : 4));
     canvas.dataset.crystalPins = String(focused.filter(p => p.projected.crystal > .75 && p.alpha * p.point.opacity > .45).length);
     canvas.dataset.focusPhotos = String(
       focused.filter((p) => p.alpha * p.point.opacity > 0.5).length,
@@ -581,9 +584,11 @@ export function createUniverse(canvas) {
     height = canvas.clientHeight;
     if (!width || !height) return;
     // Retina drawing with a pixel budget, rather than the old fixed 1100px field.
-    dpr = Math.min(devicePixelRatio || 1, 2, 3840 / width, 2160 / height);
+    dpr = Math.min(devicePixelRatio || 1, quality.pixelRatio, 3840 / width, 2160 / height);
     canvas.width = Math.round(width * dpr);
     canvas.height = Math.round(height * dpr);
+    canvas.dataset.pixelRatio = String(dpr);
+    canvas.dataset.quality = quality.phone ? "phone" : "desktop";
     ctx?.setTransform(dpr, 0, 0, dpr, 0, 0);
     draw();
     resume();
@@ -630,11 +635,17 @@ export function createUniverse(canvas) {
     if (thumbnails.has(src)) return Promise.resolve(thumbnails.get(src));
     return new Promise((resolve) => {
       const im = new Image();
+      im.decoding = "async";
+      let completed = false;
       const finish = (image) => {
+        if (completed) return;
+        completed = true;
+        clearTimeout(timeout);
         im.onload = im.onerror = null;
         im.src = "";
         resolve(image);
       };
+      const timeout = setTimeout(() => finish(null), 8000);
       im.onload = () => {
         try {
           if (!im.naturalWidth || !im.naturalHeight) throw Error("Empty photo");
@@ -681,10 +692,10 @@ export function createUniverse(canvas) {
     if (unreadable) window.dispatchEvent(new CustomEvent("photosrendererror", {
       detail: `${unreadable} foto belum terbaca. Foto lain tetap ditampilkan.`,
     }));
-    if (gpu) gpu.setPhotos(images);
-    else {
-      photoIds = assignOrbitPhotos(orbit, images.length);
-    }
+    const ids = await assignPhotosOffscreen(orbit, images.length);
+    if (current !== generation) return;
+    if (gpu) gpu.setPhotos(images, ids);
+    else photoIds = ids;
     if (!gpu) canvas.dataset.photoSources = String(images.length);
     for (const key of thumbnails.keys())
       if (!sources.includes(key)) thumbnails.delete(key);
@@ -705,7 +716,12 @@ export function createUniverse(canvas) {
   }
   return {
     get ready() {
-      return Promise.all([ready, photosReady]);
+      // A slow photo connection must not hold the countdown indefinitely.
+      // The complete library continues loading and joins the moving disk.
+      return Promise.all([ready, Promise.race([
+        photosReady,
+        new Promise(resolve => setTimeout(resolve, 1800)),
+      ])]);
     },
     prepare() {
       immersionStarted = performance.now();

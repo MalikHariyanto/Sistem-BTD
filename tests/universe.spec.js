@@ -1,3 +1,4 @@
+import { finishIntro } from "./story-helpers.js";
 import { installGift, photoData } from "./gift-fixtures.js";
 import { test, expect } from "@playwright/test";
 import {
@@ -177,7 +178,7 @@ test("uploaded photos form the live accretion disk and resolve through perspecti
   await expect(page.locator("#universe")).toHaveAttribute("data-photo-sources", "1");
   expect(await fingerprint()).toEqual(expect.any(Number));
   await page.locator("#begin").click();
-  await page.locator("#skip-intro").click();
+  await finishIntro(page);
   await expect(page.locator("#universe")).toHaveAttribute(
     "data-photo-mix",
     "1.0000",
@@ -212,7 +213,7 @@ test("missing art has a non-blocking fallback, and the gift still opens", async 
     "fallback",
   );
   await page.locator("#begin").click();
-  await page.locator("#skip-intro").click();
+  await finishIntro(page);
   await expect(page.locator("#reveal-copy")).toBeVisible();
   await page.locator("#enter-story").click();
   await expect(page.locator('[data-scene="1"]')).toHaveClass(/is-active/);
@@ -222,6 +223,7 @@ for (const renderer of ["webgl", "canvas2d"]) {
   test(`${renderer}: original photo edges, orientation and distinct colors survive the close-up`, async ({
     page,
   }) => {
+    await installGift(page, { photos: {} });
     if (renderer === "canvas2d")
       await page.addInitScript(() => {
         const get = HTMLCanvasElement.prototype.getContext;
@@ -272,7 +274,7 @@ for (const renderer of ["webgl", "canvas2d"]) {
       "2",
     );
     await page.locator("#begin").click();
-    await page.locator("#skip-intro").click();
+    await finishIntro(page);
     await expect(page.locator("#reveal-title")).toBeVisible();
     const result = await page.locator("#universe").evaluate((c) => {
       const ctx = c.getContext("2d"),

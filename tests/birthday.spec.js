@@ -1,5 +1,5 @@
 import { installGift, photoData } from "./gift-fixtures.js";
-import { chooseChapter } from "./story-helpers.js";
+import { chooseChapter, finishIntro } from "./story-helpers.js";
 import { test, expect } from "@playwright/test";
 
 async function chapter(page, label) {
@@ -18,7 +18,7 @@ async function chapter(page, label) {
 async function enter(page) {
   await page.goto("/");
   await page.locator("#begin").click();
-  await page.locator("#skip-intro").click();
+  await finishIntro(page);
   await page.locator("#enter-story").click();
   await expect(page.locator('[data-scene="1"]')).toHaveClass(/is-active/);
 }
@@ -209,7 +209,7 @@ test("replay cancels an unfinished celebration and resets the story", async ({
   await expect(page.locator("#cover-copy")).toBeVisible();
   await page.waitForTimeout(250);
   await page.locator("#begin").click();
-  await page.locator("#skip-intro").click();
+  await finishIntro(page);
   await page.locator("#enter-story").click();
   await chapter(page, "Bait untukmu");
   await expect(page.locator("#poem-title")).toHaveText("Gravitasi");

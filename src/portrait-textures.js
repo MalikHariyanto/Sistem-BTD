@@ -34,7 +34,7 @@ export function sharpenPortrait(image) {
   return canvas;
 }
 
-export function createPortraitAtlas(gl, maxSize) {
+export function createPortraitAtlas(gl, maxSize, { sharpen = true, uploadsPerFrame = Infinity } = {}) {
   let texture, plan, unavailable = false;
   const slots = new Array(PORTRAIT_CAPACITY).fill(null), cached = new Map();
   function bind() {
@@ -85,7 +85,7 @@ export function createPortraitAtlas(gl, maxSize) {
       // A replacement library can need more slots than the previous one.
       plan = undefined; unavailable = false;
     },
-    update(ids, images, baseTile) {
+    update(ids, images, baseTile, maxUploads = uploadsPerFrame) {
       const wanted = new Set([...new Set(ids.filter(id => images[id]))].slice(0, PORTRAIT_CAPACITY));
       if (!wanted.size || gl.isContextLost() || !ensure(images.length, baseTile)) {
         bind();
@@ -97,6 +97,7 @@ export function createPortraitAtlas(gl, maxSize) {
       let attempted = false;
       for (const id of wanted) {
         if (cached.has(id)) continue;
+        if (uploaded.length >= maxUploads) break;
         const slot = slots.findIndex((old, index) => index < plan.capacity && !wanted.has(old));
         if (slot < 0) continue;
         const tile = document.createElement("canvas");
@@ -105,7 +106,7 @@ export function createPortraitAtlas(gl, maxSize) {
         const g = plan.gutter, w = tile.width, h = tile.height;
         try {
           ctx.imageSmoothingQuality = "high";
-          ctx.drawImage(sharpenPortrait(images[id]), g, g, w - 2 * g, h - 2 * g);
+          ctx.drawImage(sharpen ? sharpenPortrait(images[id]) : images[id], g, g, w - 2 * g, h - 2 * g);
           ctx.imageSmoothingEnabled = false;
           ctx.drawImage(tile, g, g, w - 2*g, 1, g, 0, w - 2*g, g);
           ctx.drawImage(tile, g, h-g-1, w - 2*g, 1, g, h-g, w - 2*g, g);

@@ -1,3 +1,4 @@
+import { finishIntro } from "./story-helpers.js";
 import { installGift, orbitFixtures } from "./gift-fixtures.js";
 import { test, expect } from "@playwright/test";
 import { content, ORBIT_PHOTO_COUNT } from "../src/content.js";
@@ -79,7 +80,7 @@ test("all 200 code-configured orbit photos survive reload and fit a valid WebGL 
   expect(atlas.width).toBeLessThanOrEqual(atlas.size);
   expect(atlas.height).toBeLessThanOrEqual(atlas.size);
   await page.locator("#begin").click();
-  await page.locator("#skip-intro").click();
+  await finishIntro(page);
   await expect(page.locator("#reveal-title")).toBeVisible();
   const bins = await page.locator("#universe").evaluate(canvas => {
     const gl = canvas.getContext("webgl"), pixels = new Uint8Array(canvas.width * canvas.height * 4);

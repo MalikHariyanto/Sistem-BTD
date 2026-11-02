@@ -1,3 +1,4 @@
+import { finishIntro } from "./story-helpers.js";
 import { test, expect } from "@playwright/test";
 import { ASPECT, HORIZON, cameraAt, photoDepthAt, occludedByHole, horizonOutline } from "../src/universe-camera.js";
 
@@ -88,7 +89,7 @@ test("opening recenters smoothly during countdown and resets correctly on replay
     expect(frames[i].y - lastChange.y).toBeLessThan(0.42 * elapsed + 0.015);
     lastChange = frames[i];
   }
-  await page.locator('#skip-intro').click();
+  await finishIntro(page);
   await page.locator('#home-link').click();
   await expect(canvas).toHaveAttribute('data-immersion', '0.0000');
   expect(Number(await canvas.getAttribute('data-framing-y'))).toBeCloseTo(initial);

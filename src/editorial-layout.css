@@ -44,6 +44,31 @@ body:is([data-chapter="1"],[data-chapter="2"],[data-chapter="3"],[data-chapter="
 .letter-intro .envelope { transform:scale(.88); margin-block:12px; }
 .letter-postmark { right:10px; top:12px; font-size:7px; padding:12px; opacity:.7; }
 @media(max-width:700px) {
+  /* A small keepsake collage introduces the note without filling the phone. */
+  .dedication-layout { min-height:0; gap:34px; }
+  .dedication-layout .memory-constellation {
+    width:min(76%,270px); height:clamp(185px,29cqh,235px);
+    min-height:0; max-height:none; margin:12px auto 30px;
+  }
+  .memory-constellation .scrapbook-caption { font-size:13px; bottom:-20px; }
+  .memory-constellation > .handwritten { bottom:-42px; font-size:18px; }
+  .memory-constellation .album-stamp { display:none; }
+  .dedication-copy { padding:22px 18px; }
+  .dedication-copy::before { font-size:8px; letter-spacing:1.5px; padding-bottom:12px; margin-bottom:16px; }
+  /* Let the photograph determine its frame instead of leaving a tall mount. */
+  .poem-layout .poem-visual {
+    width:min(80%,260px); max-width:260px; height:auto;
+    padding:0 0 18px; margin:20px auto 24px;
+  }
+  .poem-visual > #poem-photo {
+    width:100%; height:auto; padding:0;
+    border-width:6px; border-bottom-width:22px;
+  }
+  .poem-visual > #poem-photo > .photo-slot { height:auto; aspect-ratio:4/3; min-height:0; }
+  .poem-visual .poem-small-photo { width:32%; height:auto; bottom:-5px; right:-12px; border-width:4px; border-bottom-width:12px; }
+  .poem-visual > .handwritten { bottom:-22px; font-size:13px; }
+  .poem-visual .archive-slip { font-size:7px; padding:7px 9px; top:-16px; right:-9px; }
+  .poem-visual .archive-slip b { font-size:15px; }
   #app { grid-template-rows:54px minmax(0,1fr) 78px; }
   .story-header { padding-inline:22px; gap:10px; }
   #home-link { font-size:15px; }

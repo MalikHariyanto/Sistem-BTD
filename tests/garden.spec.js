@@ -1,10 +1,10 @@
-import { chooseChapter } from "./story-helpers.js";
+import { chooseChapter, finishIntro } from "./story-helpers.js";
 import { test, expect } from "@playwright/test";
 
 async function enterGarden(page) {
   await page.goto("/");
   await page.locator("#begin").click();
-  await page.locator("#skip-intro").click();
+  await finishIntro(page);
   await page.locator("#enter-story").click();
   await expect(page.locator('[data-scene="1"]')).toHaveClass(/is-active/);
   await chooseChapter(page, 'Bunga & doa');
@@ -48,7 +48,7 @@ test("garden wishes bloom in any order and accumulate without replacing the earl
   await page.locator("#home-link").click();
   await expect(page.locator('[data-scene="0"]')).toHaveClass(/is-active/);
   await page.locator("#begin").click();
-  await page.locator("#skip-intro").click();
+  await finishIntro(page);
   await page.locator("#enter-story").click();
   await expect(page.locator('[data-scene="1"]')).toHaveClass(/is-active/);
   await chooseChapter(page, 'Bunga & doa');
@@ -78,7 +78,8 @@ test("garden works with keyboard and reduced motion, with sourced quotes and no 
       "href",
       `https://www.gutenberg.org/ebooks/${sources[i]}`,
     );
-    await expect(note).toContainText("TERJEMAHAN BEBAS");
+    await expect(note.locator("blockquote")).toHaveAttribute("lang", "en");
+    await expect(note.locator(".garden-translation, .garden-translation-label")).toHaveCount(0);
     expect(
       await page
         .locator('[data-scene="3"]')

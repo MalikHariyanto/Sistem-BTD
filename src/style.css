@@ -20,6 +20,7 @@
   src: url("/fonts/dm-sans-latin-400-normal.woff2") format("woff2");
 }
 :root {
+  --sans: "DM Sans", Arial, sans-serif;
   font-family: "DM Sans", Arial, sans-serif;
   color: #342d25;
   background: #100f0e;
@@ -333,18 +334,7 @@ button {
   color: #dfc197;
   letter-spacing: 5px;
 }
-.skip-intro {
-  position: absolute;
-  right: 5vw;
-  bottom: 40px;
-  background: none;
-  color: #d5c1a3;
-  border: 0;
-  border-bottom: 1px solid #6b5b46;
-  font-size: 10px;
-  padding: 10px 0;
-  z-index: 2;
-}
+
 .reveal-copy {
   position: absolute;
   inset: 0;
@@ -1361,11 +1351,7 @@ summary {
     right: 14%;
     line-height: 1.4;
   }
-  .skip-intro {
-    right: 24px;
-    bottom: 38px;
-    font-size: 9px;
-  }
+
   .intro-count {
     bottom: 13%;
     font-size: 55px !important;

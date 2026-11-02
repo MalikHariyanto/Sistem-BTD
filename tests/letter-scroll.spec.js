@@ -1,12 +1,12 @@
 import { installGift, photoData } from "./gift-fixtures.js";
-import { chooseChapter } from "./story-helpers.js";
+import { chooseChapter, finishIntro } from "./story-helpers.js";
 import { test, expect } from '@playwright/test';
 
 async function openLetter(page) {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/');
   await page.locator('#begin').click();
-  await page.locator('#skip-intro').click();
+  await finishIntro(page);
   await page.locator('#enter-story').click();
   await chooseChapter(page, 4);
   await page.locator('#open-letter').click();

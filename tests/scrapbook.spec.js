@@ -1,10 +1,11 @@
+import { finishIntro } from "./story-helpers.js";
 import {test,expect} from '@playwright/test';
 import {installGift,photoData} from './gift-fixtures.js';
 import {chooseChapter} from './story-helpers.js';
 test('scrapbook keeps personal photos, all poem pages, flowers and letter readable',async({page})=>{
  await page.emulateMedia({reducedMotion:'reduce'});
  await installGift(page,{photos:{orbit01:photoData(1),orbit03:photoData(3),portrait:photoData(2),poem0:photoData(4),poem1:photoData(5),poem2:photoData(6),hero:photoData(7)}});
- await page.goto('/');await page.locator('#begin').click();await page.locator('#skip-intro').click();await page.locator('#enter-story').click();
+ await page.goto('/');await page.locator('#begin').click();await finishIntro(page);await page.locator('#enter-story').click();
  await expect(page.locator('.memory .travel-postcard')).toHaveCount(2);
  await expect(page.locator('[data-photo="portrait"] img')).toBeVisible();
  await chooseChapter(page,3);await page.getByRole('button',{name:'Mekarkan doa: Bahagia',exact:true}).click();
@@ -20,7 +21,7 @@ test('scrapbook keeps personal photos, all poem pages, flowers and letter readab
 
 test('third flower keeps desktop keepsake visible; candle has a distinct background and readable navigation',async({page,isMobile})=>{
  await page.emulateMedia({reducedMotion:'reduce'});await installGift(page,{photos:{orbit01:photoData(1)}});
- await page.goto('/');await page.locator('#begin').click();await page.locator('#skip-intro').click();await page.locator('#enter-story').click();
+ await page.goto('/');await page.locator('#begin').click();await finishIntro(page);await page.locator('#enter-story').click();
  await chooseChapter(page,3);
  for(const name of ['Bahagia','Bertumbuh','Dicintai'])await page.getByRole('button',{name:`Mekarkan doa: ${name}`,exact:true}).click();
  await expect(page.locator('.garden-note:not([hidden])')).toHaveCount(3);
@@ -34,7 +35,7 @@ test('third flower keeps desktop keepsake visible; candle has a distinct backgro
 
 test('editorial letter has generous margins, restrained type and slim translucent navigation',async({page,isMobile},info)=>{
  await page.emulateMedia({reducedMotion:'reduce'});await installGift(page,{photos:{portrait:photoData('#bda588'),hero:photoData('#bda588')}});
- await page.goto('/');await page.locator('#begin').click();await page.locator('#skip-intro').click();await page.locator('#enter-story').click();
+ await page.goto('/');await page.locator('#begin').click();await finishIntro(page);await page.locator('#enter-story').click();
  await chooseChapter(page,4);await page.locator('#open-letter').click();
  const geometry=await page.evaluate(()=>{
   const paper=document.querySelector('.letter-stanzas'),verse=document.querySelector('.letter-verse'),header=document.querySelector('.story-header'),nav=document.querySelector('.story-nav');

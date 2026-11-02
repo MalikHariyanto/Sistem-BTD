@@ -1,4 +1,4 @@
-import { chooseChapter } from "./story-helpers.js";
+import { chooseChapter, finishIntro } from "./story-helpers.js";
 import { test, expect } from "@playwright/test";
 
 // Browser zoom reduces CSS viewport space too. Cover the short laptop window
@@ -13,7 +13,7 @@ for (const [width, height] of [[1280, 580], [1280, 620], [1366, 768], [1920, 930
     const cover = await page.locator('#semesta').boundingBox();
     expect(cover).toMatchObject({ x: 0, y: 0, width, height });
     await page.locator("#begin").click();
-    await page.locator("#skip-intro").click();
+    await finishIntro(page);
     await page.locator("#enter-story").click();
 
     async function fits(selectors) {

@@ -1,11 +1,11 @@
-import { chooseChapter } from "./story-helpers.js";
+import { chooseChapter, finishIntro } from "./story-helpers.js";
 import { test, expect } from "@playwright/test";
 import { cameraAt } from "../src/universe-camera.js";
 
 async function enter(page) {
   await page.goto("/");
   await page.locator("#begin").click();
-  await page.locator("#skip-intro").click();
+  await finishIntro(page);
   await page.locator("#enter-story").click();
   await expect(page.locator('[data-scene="1"]')).toHaveClass(/is-active/);
 }
@@ -207,7 +207,7 @@ test("Canvas fallback still runs the story when WebGL is unavailable", async ({
 test("header, footer and chapter dissolve together without a late theme change", async ({ page }) => {
   await page.goto("/");
   await page.locator("#begin").click();
-  await page.locator("#skip-intro").click();
+  await finishIntro(page);
   // Check the full-screen opening as well as every reading chapter and return.
   for (const target of [1, 3, 2, 6, 4, 6, 2, 3, 1]) {
     const result = await page.evaluate(async target => {

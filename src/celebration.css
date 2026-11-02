@@ -1,0 +1,28 @@
+/* Two paper-confetti fountains continue across the birthday reveal. Only
+   transforms and opacity animate; the short-lived pieces do not intercept taps. */
+.celebration-particles { z-index:3; contain:strict; }
+.celebration-particles > span {
+  left:var(--origin); bottom:18%; width:7px; height:12px;
+  border-radius:1px; background:#f1cc77; opacity:0;
+}
+.celebration-particles > span:nth-child(4n+1) { background:#e7a8a0; }
+.celebration-particles > span:nth-child(4n+2) { background:#faf0d4; height:7px; border-radius:50%; }
+.celebration-particles > span:nth-child(4n+3) { background:#a7c2aa; }
+.celebration-particles > span:nth-child(7n) { width:15px; height:15px; background:#ffe0a3; clip-path:polygon(50% 0,61% 38%,100% 50%,61% 62%,50% 100%,39% 62%,0 50%,39% 38%); }
+.celebrating .celebration-particles > span { animation: birthday-confetti var(--duration) var(--delay) cubic-bezier(.16,.5,.42,1) both; }
+.celebrating .wish-result::before {
+  content:''; position:absolute; inset:-12%; z-index:-1; pointer-events:none;
+  background:radial-gradient(ellipse,#efc78136,transparent 65%);
+  animation:birthday-glow 1.8s ease-out both;
+}
+.wish-result { position:relative; isolation:isolate; }
+@keyframes birthday-confetti {
+  0% { opacity:0; transform:translate3d(0,0,0) rotate(0); }
+  8% { opacity:1; }
+  36% { opacity:1; transform:translate3d(calc(var(--drift) * .5),calc(-1 * var(--rise)),0) rotate(190deg); }
+  80% { opacity:.9; }
+  100% { opacity:0; transform:translate3d(var(--drift),22vh,0) rotate(710deg); }
+}
+@keyframes birthday-glow { from { opacity:0; transform:scale(.7); } to { opacity:1; transform:scale(1); } }
+@media(max-width:700px) { .celebration-particles > span:nth-child(n+43) { display:none; } }
+@media(prefers-reduced-motion:reduce) { .celebration-particles { display:none; } }

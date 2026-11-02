@@ -1,6 +1,5 @@
 import {
   createOrbit,
-  PARTICLE_COUNT,
   ORBIT_SPEED,
   portraitScaleAt,
   INFLOW,
@@ -18,8 +17,9 @@ import { DISK_STREAM } from "./disk-stream.js";
 import { spaceGLSL } from "./space-background.js";
 import { photoPoseGLSL } from "./photo-surface.js";
 import { crystalPinGLSL, CRYSTAL_FOOTPRINT, CRYSTAL_TIP } from "./crystal-pin.js";
+import { universeQuality } from "./universe-quality.js";
 
-// A photographic halo plus 32,768 persistent orbiting photo sprites. No engine dependency.
+// A photographic halo and persistent orbiting sprites, budgeted for the device.
 const vertex = `
 attribute vec2 aPosition;
 varying vec2 vScreen;
@@ -494,7 +494,7 @@ function buildPhotoSheet(images, plan) {
   return sheet;
 }
 
-export function createUniverseGPU(canvas) {
+export function createUniverseGPU(canvas, quality = universeQuality(canvas)) {
   const gl = canvas.getContext("webgl", {
     alpha: false,
     antialias: false,
@@ -514,12 +514,13 @@ export function createUniverseGPU(canvas) {
     instancing,
     last;
   const sources = { wide: null, detail: null, photos: null };
-  const orbit = createOrbit();
+  const particleCount = quality.particles;
+  const orbit = createOrbit(particleCount);
   const composition = createOrbitComposition(orbit);
   let ratios = [], portraitImages = [], portraitAtlas;
-  let photoIds = new Float32Array(PARTICLE_COUNT);
-  let photoAttributes = new Float32Array(PARTICLE_COUNT * 2);
-  const maxTextureSize = Math.min(4096, gl.getParameter(gl.MAX_TEXTURE_SIZE));
+  let photoIds = new Float32Array(particleCount);
+  let photoAttributes = new Float32Array(particleCount * 2);
+  const maxTextureSize = Math.min(quality.textureSize, gl.getParameter(gl.MAX_TEXTURE_SIZE));
   let atlas = [1, 1, 1];
   let atlasInset = [0, 0],
     pendingPhotos;
@@ -661,7 +662,9 @@ export function createUniverseGPU(canvas) {
       return t;
     });
     ["wide", "detail", "photos"].forEach((n, i) => upload(i, sources[n]));
-    portraitAtlas = createPortraitAtlas(gl, maxTextureSize);
+    portraitAtlas = createPortraitAtlas(gl, maxTextureSize, {
+      sharpen: !quality.phone, uploadsPerFrame: quality.phone ? 1 : Infinity,
+    });
   }
   try {
     initialize();
@@ -681,7 +684,10 @@ export function createUniverseGPU(canvas) {
       now: performance.now(), reduced: args.reduced,
     });
     const detailIds = selectPortraitIds(focused, photoIds);
-    const detailSlots = portraitAtlas.update(detailIds, portraitImages, sources.photos ? Number(canvas.dataset.atlasTile) : 256);
+    // A reduced-motion still has no next animation frame to finish its tiles.
+    const detailSlots = portraitAtlas.update(detailIds, portraitImages,
+      sources.photos ? Number(canvas.dataset.atlasTile) : 256,
+      args.reduced ? Infinity : undefined);
     const detailPlan = portraitAtlas.plan;
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.clearDepth(1);
@@ -757,12 +763,12 @@ export function createUniverseGPU(canvas) {
     // second ring or leave an unbent copy of the same rear photograph behind.
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL);
-    gl.drawArrays(gl.POINTS, 0, PARTICLE_COUNT);
-    // Option A leaves all 32,768 small orbits as filaments. Only the
+    gl.drawArrays(gl.POINTS, 0, quality.filaments);
+    // The small orbit population remains filaments. Only the
     // spaced, readable subset below becomes photographs; no field overlay.
     gl.uniform1f(u.uLayer, 1);
     if (compositionAt(camera.zoom) < 1)
-      gl.drawArrays(gl.POINTS, 0, PARTICLE_COUNT);
+      gl.drawArrays(gl.POINTS, 0, quality.filaments);
     if (detailPlan) {
       gl.uniform2f(u.uPortraitGrid, detailPlan.columns, detailPlan.rows);
       gl.uniform2f(u.uPortraitInset, (detailPlan.gutter + .5) / detailPlan.tileWidth, (detailPlan.gutter + .5) / detailPlan.tileHeight);
@@ -811,7 +817,7 @@ export function createUniverseGPU(canvas) {
     } else gl.drawArrays(gl.POINTS, 0, focused.length);
     canvas.dataset.portraitGeometry=instancing?"instanced-quads":"point-sprites";
     canvas.dataset.diskPhotos = String(field > .5 ? focused.filter(p => p.alpha * p.point.opacity > .5).length : 0);
-    canvas.dataset.filaments = String(PARTICLE_COUNT);
+    canvas.dataset.filaments = String(quality.filaments);
     canvas.dataset.crystalPins = String(focused.filter(p => p.projected.crystal > .75 && p.alpha * p.point.opacity > .45).length);
     canvas.dataset.focusPhotos = String(
       focused.filter((p) => p.alpha * p.point.opacity > 0.5).length,
@@ -822,18 +828,18 @@ export function createUniverseGPU(canvas) {
     gl.disable(gl.BLEND);
     gl.disable(gl.DEPTH_TEST);
   }
-  function setPhotos(images) {
+  function setPhotos(images, assignedIds) {
     if (gl.isContextLost()) {
-      pendingPhotos = images;
+      pendingPhotos = { images, assignedIds };
       canvas.dataset.photosStatus = "waiting";
       return false;
     }
     const count = images.length || 6;
     const nextIds = images.length
-      ? assignOrbitPhotos(orbit, count)
-      : Float32Array.from({ length: PARTICLE_COUNT }, (_, i) => i % count);
-    const nextAttributes = new Float32Array(PARTICLE_COUNT * 2);
-    for (let i = 0; i < PARTICLE_COUNT; i++) {
+      ? assignedIds || assignOrbitPhotos(orbit, count)
+      : Float32Array.from({ length: particleCount }, (_, i) => i % count);
+    const nextAttributes = new Float32Array(particleCount * 2);
+    for (let i = 0; i < particleCount; i++) {
       const image = images[nextIds[i]];
       nextAttributes[i * 2] = nextIds[i];
       nextAttributes[i * 2 + 1] = image ? image.width / image.height : 0.8;
@@ -841,7 +847,7 @@ export function createUniverseGPU(canvas) {
     let nextSheet, nextTexture, nextBuffer, plan;
     // Stage and validate the texture BEFORE changing IDs or atlas dimensions.
     // If a device rejects an upload, retry a smaller atlas as one complete unit.
-    for (let maxTile = 256; maxTile >= 32; ) {
+    for (let maxTile = quality.tileSize; maxTile >= 32; ) {
       try {
         plan = planPhotoAtlas(count, maxTextureSize, maxTile);
       } catch {
@@ -890,7 +896,7 @@ export function createUniverseGPU(canvas) {
       gl.deleteTexture(candidate);
       if (candidateBuffer) gl.deleteBuffer(candidateBuffer);
       if (gl.isContextLost()) {
-        pendingPhotos = images;
+        pendingPhotos = { images, assignedIds };
         break;
       }
       maxTile = plan.tileWidth - 1;
@@ -940,7 +946,7 @@ export function createUniverseGPU(canvas) {
     if (pendingPhotos) {
       const pending = pendingPhotos;
       pendingPhotos = undefined;
-      setPhotos(pending);
+      setPhotos(pending.images, pending.assignedIds);
     }
     if (last) draw(last);
   });
