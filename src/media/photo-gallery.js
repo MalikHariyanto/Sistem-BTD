@@ -1,10 +1,10 @@
 import { mediaUrl } from "./asset-url.js";
 
-// The library is fixed by deployed code. Replacing a poem binds its new slot,
-// without rebuilding the orbit atlas or loading a browser-local alternative.
+// Deployed files provide defaults; the photo editor can override individual slots.
 export function createPhotoGallery(content, base = "/") {
   const photos = Object.fromEntries(Object.entries(content.photos).map(([key, source]) => [key, mediaUrl(source, base)]));
-  const sources = [...new Set(Object.values(photos).filter(Boolean))];
+  for (const place of ["edinburgh", "prague"]) photos[`scenery-${place}`] = mediaUrl(content.scrapbook?.[place] || "", base);
+  const defaults = { ...photos };
   const orbitSources = new Map(Object.entries(content.orbitThumbnails || {}).map(([src, thumb]) => [mediaUrl(src, base), mediaUrl(thumb, base)]));
   const prefetchedPoems = new Set();
   let initialized = false;
@@ -29,6 +29,19 @@ export function createPhotoGallery(content, base = "/") {
   }
 
   function bind(root = document) {
+    root.querySelectorAll("[data-scenery]").forEach(card => {
+      const source = photos[card.dataset.scenery];
+      if (card.dataset.src === source) return;
+      card.dataset.src = source;
+      card.querySelector("img")?.remove();
+      let art = card.querySelector(".travel-art");
+      if (!art) { art = document.createElement("div"); art.className = "travel-art"; card.prepend(art); }
+      art.hidden = !!source;
+      if (source) {
+        const image = new Image(); image.alt = card.getAttribute("aria-label");
+        image.src = source; image.decoding = "async"; card.prepend(image);
+      }
+    });
     root.querySelectorAll("[data-photo]").forEach(slot => {
       const key = slot.dataset.photo;
       // A personal story slot can borrow an existing orbit photo until its own file is added.
@@ -51,14 +64,25 @@ export function createPhotoGallery(content, base = "/") {
     });
   }
 
+  function publish() {
+    const sources = [...new Set(Object.values(photos).filter(Boolean))];
+    window.dispatchEvent(new CustomEvent("photoschanged", { detail: sources.map(source => orbitSources.get(source) || source) }));
+  }
+
   return {
+    photos,
+    refresh() { bind(); publish(); },
+    replace(key, source = defaults[key], quiet = false) {
+      photos[key] = source;
+      if (!quiet) { bind(); publish(); }
+    },
     bind,
     warmChapter,
     initialize() {
       bind();
       if (initialized) return;
       initialized = true;
-      window.dispatchEvent(new CustomEvent("photoschanged", { detail: sources.map(source => orbitSources.get(source) || source) }));
+      publish();
     },
   };
 }

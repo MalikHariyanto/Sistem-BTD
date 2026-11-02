@@ -93,9 +93,9 @@ test("chapters dissolve without content modals; poems and sourced wishes can be 
   await page.locator("#next-scene").click();
   await expect(page.locator('[data-scene="2"]')).toHaveClass(/is-active/);
   await page.getByRole("button", { name: "Puisi selanjutnya" }).click();
-  await expect(page.locator("#poem-title")).toHaveText("Hal-hal Kecil");
+  await expect(page.locator("#poem-title")).toHaveText("hari hari");
   await page.getByRole("button", { name: "Puisi sebelumnya" }).click();
-  await expect(page.locator("#poem-title")).toHaveText("Gravitasi");
+  await expect(page.locator("#poem-title")).toHaveText("Gargantua");
   await chapter(page, "Bunga & doa");
   await page
     .getByRole("button", { name: "Mekarkan doa: Bahagia", exact: true })
@@ -201,7 +201,7 @@ test("replay cancels an unfinished celebration and resets the story", async ({
   await enter(page);
   await chapter(page, "Bait untukmu");
   await page.locator("#next-poem").click();
-  await expect(page.locator("#poem-title")).toHaveText("Hal-hal Kecil");
+  await expect(page.locator("#poem-title")).toHaveText("hari hari");
   await chapter(page, "Tiup lilin");
   await page.locator("#ready-wish").click();
   await page.locator("#blow-candle").click();
@@ -212,7 +212,7 @@ test("replay cancels an unfinished celebration and resets the story", async ({
   await finishIntro(page);
   await page.locator("#enter-story").click();
   await chapter(page, "Bait untukmu");
-  await expect(page.locator("#poem-title")).toHaveText("Gravitasi");
+  await expect(page.locator("#poem-title")).toHaveText("Gargantua");
   await chapter(page, "Tiup lilin");
   await expect(page.locator("#ready-wish")).toBeVisible();
   await expect(page.locator("#cake")).toBeVisible();
@@ -231,12 +231,12 @@ test("code-configured names, dates and photographs survive reload without a brow
   await expect(page.locator("#universe")).toHaveAttribute("data-photo-sources", "3");
   await page.reload();
   await enter(page);
-  await expect(page.locator(".dedication-copy [data-recipient]")).toHaveText("Sayang");
+  await expect(page.locator("#birthday-title [data-recipient]")).toHaveText("Sayang");
   await expect(page.locator('[data-photo="orbit01"]')).toHaveClass(/has-photo/);
   await chapter(page, "Surat untukmu");
   await page.locator("#open-letter").click();
   await expect(page.locator('[data-photo="hero"] img')).toBeVisible();
-  await expect(page.locator('input[type="file"], #editor-dialog, #open-editor')).toHaveCount(0);
+  await expect(page.locator('.photo-editor[open]')).toHaveCount(0);
 });
 
 test("reduced motion, keyboard focus and responsive scenes", async ({

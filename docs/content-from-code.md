@@ -1,6 +1,6 @@
 # Mengisi hadiah dari kode
 
-Editor unggahan di web telah dihapus. Nama, tanggal, foto, puisi, surat, dan musik diatur permanen di **`src/content.js`**. Setelah file dikirim ke repo dan dideploy, semua perangkat membuka hadiah yang sama.
+Panel **Foto** di header menyediakan unggahan per bab dengan penyimpanan browser. Pilihan **Unduh salinan foto** dan **Pulihkan salinan** memindahkan foto antarbrowser sebagai JSON. Unggahan ini tidak mengubah repo atau hosting; untuk hadiah permanen di semua perangkat, gunakan langkah di bawah. Nama, tanggal, foto, puisi, surat, dan musik diatur permanen di **`src/content.js`**. Setelah file dikirim ke repo dan dideploy, semua perangkat membuka hadiah yang sama.
 
 Kalau mengedit langsung di GitHub: buka folder tujuan, pilih **Add file → Upload files**, masukkan foto, lalu commit. Untuk teks/nama, buka `src/content.js`, pilih ikon pensil, edit, lalu commit. Jika Vercel terhubung ke branch tersebut, commit akan memicu deploy baru.
 

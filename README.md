@@ -1,4 +1,4 @@
-# Ambis Copenhagen
+# Untuk Hari Lahirmu
 
 Hadiah ulang tahun dengan pembuka Gargantua, lalu lima bab: **Hari lahirmu → Bunga & doa → Bait untukmu → Tiup lilin → Surat untukmu**. Surat menjadi penutup cerita. Warna ivory, cokelat hangat, dan cahaya keemasan. Vanilla JavaScript, CSS, dan WebGL dengan fallback Canvas 2D; tanpa framework runtime, backend, atau video animasi besar.
 
@@ -17,7 +17,7 @@ Buka alamat yang ditampilkan terminal. Build: `npm run build` menghasilkan `dist
 
 ## Mengisi hadiah dari kode
 
-Semua konten permanen diatur di **src/content.js**. Editor unggahan dan penyimpanan isian browser sudah dihapus dari aplikasi; konten yang dideploy menjadi sumber yang sama untuk semua perangkat.
+Semua konten permanen diatur di **src/content.js**. Tombol **Foto** di header membuka pengaturan per bab. Unggahan JPG/PNG/WebP (maksimal 15 MB per foto) disimpan di browser ini, bisa dikembalikan ke foto bawaan, dan bisa diekspor/dipulihkan sebagai salinan JSON. Slot yang sama di beberapa bab ikut berubah. Bab lilin memakai ilustrasi, tanpa foto. Unggahan browser tidak otomatis masuk ke GitHub atau terlihat di perangkat lain; untuk hasil permanen semua perangkat, masukkan file ke repo melalui petunjuk di bawah.
 
 1. Masukkan sampai **200 foto Gargantua** ke **public/photos/orbit/**. JPG/JPEG/PNG/WebP akan didaftarkan otomatis saat dev/build, dengan urutan nama alami. Untuk urutan manual, isi `photoConfig.orbit` di `src/content.js`.
 2. Untuk foto ucapan, puisi, dan surat, masukkan file bernama slot ke **public/photos/story/** (`portrait.jpg`, `hero.webp`, `poem0.webp`, dan seterusnya), atau atur `photoConfig.story`. Identitas **209 slot** tetap sama: 9 slot cerita dan 200 `orbit01`–`orbit200`.

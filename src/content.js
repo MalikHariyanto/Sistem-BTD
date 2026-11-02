@@ -26,7 +26,7 @@ export const photoConfig = {
 
 export const content = {
   recipient: "Kamu",
-  sender: "Seseorang yang selalu memilihmu",
+  sender: "Yang turut mengaminkan",
   birthday: "", // ISO lengkap dengan zona, misalnya 2027-02-14T00:00:00+07:00
   photos: createPhotoLibrary(photoConfig, photoManifest),
   orbitThumbnails: photoManifest.thumbnails || {},
@@ -34,21 +34,21 @@ export const content = {
   scrapbook: { edinburgh: "", prague: "" },
   poems: [
     {
-      title: "Gravitasi",
-      subtitle: "Tentang segala yang selalu kembali",
-      text: "Di antara miliaran arah\nyang ditawarkan semesta,\naku selalu menemukan\njalan pulang yang sama.\n\nBukan utara.\nBukan sebuah kota.\nMelainkan kamu,\ndan caramu menyebut namaku.",
+        "title": "Gargantua",
+        "subtitle": "",
+        "text": "eksistensinya buat jutaan cakram akresi runtuh ke gargantua itu\ndan semua keluh kesah tentram ku pada singularity terasa begitu lamanya\nmaka biarkan aku mati didalamnya, tertinggal digusur oleh waktu\nbiarkan bait bait ini saja semua cerita ku tuturkan padamu\nlewat baris baris puisi yang ku tulis untukmu\nkau akan menemukan namamu yang kusamarkan metafora"
     },
     {
-      title: "Hal-hal Kecil",
-      subtitle: "Yang diam-diam menjadi segalanya",
-      text: "Aku ingin menyimpan\ntawa yang jatuh di sela cerita,\ncara matamu menyala,\ndan hening yang tak perlu diterjemahkan.\n\nSebab bahagia tak selalu\ndatang sebagai peristiwa besar.\nKadang ia hanya duduk di sebelahku,\ndan kebetulan, itu kamu.",
+        "title": "hari hari",
+        "subtitle": "",
+        "text": "hanya detik waktu yang tak berarti mungkin\nBERGERAK tanpa henti\ntanpa peduli\nbagai api yang melahap kamu\nbagai hujan yang menghilangkan awan\nkalau nanti habis tubuhmu diperas sibuk\nbarangkali itulah cara semesta berkenalan denganmu\nmengajakmu berdamai dengan waktu\nwahai putri kecil riang yang kini menjadi wanita cantik nan jelita"
     },
     {
-      title: "Pada Hari Lahirmu",
-      subtitle: "Sebuah doa yang pelan-pelan",
-      text: "Semoga hari-hari memelukmu\nselembut pagi menyentuh jendela.\nSemoga yang kamu tunggu\nmenemukan jalan menuju rumah.\n\nDan bila dunia terasa terlalu riuh,\nsemoga kamu selalu ingat:\nada hati yang menyediakan sunyi,\nagar kamu bisa beristirahat.",
-    },
-  ],
+        "title": "pada hari lahirmu",
+        "subtitle": "",
+        "text": "aku mendengar dari sapardi\nbahwa cinta yang sederhana pun tidak dilakukan dengan sederhana\nhari hari yang indah juga tidak didapatkan dengan mudah\nmaka dihari lahirmu ini, janganlah menuntut untuk mengubah apa apa\ntapi berdoalah agar bisa memainkan peranmu dengan sebaik baiknya\ndan doa yang telah dilangitkan pada muara itu\naku harap kembali kepada jiwa yang memintanya\ndalam sebaik baiknya bentuk"
+    }
+],
   // Catatan lama tetap disimpan agar konten personal tidak hilang.
   moments: [
     {
@@ -87,9 +87,9 @@ export const content = {
   // Foto menemani setiap bait surat saat di-scroll, memakai slot foto di atas.
   letterPhotos: ["hero", "moment0", "moment1", "moment3"],
   letter: [
-    "Selamat ulang tahun, manusia kesayanganku. Di hari ketika dunia pertama kali mengenalmu, aku ingin mengucapkan terima kasih. Untuk hadirmu, untuk tawamu, untuk semua hal kecil yang mungkin tak kamu sadari telah membuat hidupku lebih hangat.",
-    "Aku tidak bisa menjanjikan hari-hari yang selalu mudah. Tapi aku ingin ada: mendengarkan cerita yang sama untuk kesekian kalinya, merayakan langkah kecilmu, dan mengingatkan betapa berharganya kamu ketika kamu sendiri lupa.",
-    "Di usia yang baru ini, semoga kamu tumbuh tanpa kehilangan lembutmu. Semoga mimpi-mimpimu punya ruang, dan hatimu punya tempat pulang. Jangan terburu-buru; bahkan bintang pun membutuhkan waktu untuk sampai pada cahayanya.",
-    "Semoga harapan yang tadi kamu simpan menemukan jalannya. Aku akan menyelipkan doaku di antara harapan-harapanmu. Selamat bertambah cerita. Untuk hari ini, untuk hari-hari biasa setelahnya: aku bahagia bisa menjadi bagian kecil di dalam hidupmu.",
-  ],
+    "Hai, hari ini layak kamu rayakan. Di balik usia yang bertambah, ada keberanian untuk mencoba, keputusan yang tidak mudah, dan banyak hari yang berhasil kamu lewati. Beri dirimu waktu untuk menengok perjalanan itu. Ada yang patut kamu banggakan dari caramu sampai sejauh ini, termasuk usaha kecil yang selama ini luput kamu hargai.",
+    "Semoga pengalaman yang sulit perlahan bisa kamu terima tanpa kehilangan lembutnya hati. Ada bagian dari diri sendiri yang memang perlu dikenali pelan-pelan, seperti halaman yang baru terasa maknanya ketika dibaca kembali. Kamu boleh berubah pikiran, belajar lagi, dan tumbuh dengan waktumu sendiri. Mudah-mudahan prosesnya membantumu lebih mengerti apa yang kamu butuhkan.",
+    "Semoga Allah melapangkan rezekimu, menjernihkan pertimbanganmu, dan memberi arah bagi usaha-usaha yang sedang kamu rawat. Bila suatu rencana berjalan berbeda dari keinginanmu, mudah-mudahan tersedia jalan lain yang baik untukmu. Tetaplah berprasangka baik kepada-Nya, sambil memberi dirimu waktu untuk memahami hal-hal yang belum terjawab.",
+    "Untuk hari-hari mendatang, semoga ada ketenangan dalam keseharianmu dan orang-orang tulus yang turut merayakan kabar baikmu. Semoga tubuhmu sehat, istirahatmu cukup, dan harapan tetap tumbuh di sela kesibukan. Masih banyak tempat yang belum kamu datangi, hal yang belum kamu pelajari, dan kejutan kecil yang kelak membuatmu bersyukur. Selamat menempuh satu musim lagi dalam hidupmu."
+],
 };

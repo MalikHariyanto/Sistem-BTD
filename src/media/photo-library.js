@@ -13,7 +13,7 @@ export const STORY_PHOTO_LABELS = {
   moment3: "Kenangan 04",
 };
 
-export const photoLabel = key => STORY_PHOTO_LABELS[key]
+export const photoLabel = key => ({ "scenery-edinburgh": "Kartu Edinburgh", "scenery-prague": "Kartu Praha" }[key]) || STORY_PHOTO_LABELS[key]
   || `Semesta ${key.replace("orbit", "")}`;
 
 // Preserve the existing 209 identities, independent of filenames or folders.

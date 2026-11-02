@@ -4,19 +4,19 @@ import { keepsakeContent } from "./keepsakes.js";
 // never replaces the words or moves the reader's focus.
 export function createScrollLetter(root, { content, photo, flowers, escapeHtml: esc }) {
   const scene = root.closest('.scene');
-  const captions = ['my favorite person.', 'in the ordinary days.', 'a place to come home to.', 'always, a little longer.'];
-  const themes = ['Untuk hadirmu', 'Aku ingin ada', 'Pelan-pelan, bertumbuh', 'Dan seluruh doaku'];
+  const captions = ['a day to celebrate.', 'every little step.', 'room to grow.', 'a new chapter.'];
+  const themes = ['Hari perayaan', 'Mengenali diri', 'Merawat ikhtiar', 'Satu musim lagi'];
   const keys = content.letterPhotos?.length ? content.letterPhotos : ['hero', 'moment0', 'moment1', 'moment3'];
   const count = content.letter.length;
   root.innerHTML = `
     <div class="letter-stanzas">
       ${content.letter.map((text, i) => `<section class="letter-stanza${i === 0 ? ' is-current' : ''}" data-letter-stanza="${i}" aria-labelledby="${i === 0 ? 'letter-title' : `letter-theme-${i}`}">
         <div class="letter-bait-number" aria-hidden="true"><span>${String(i + 1).padStart(2, '0')}</span><i></i></div>
-        ${i === 0 ? `<p class="eyebrow">UNTUK <span data-recipient></span>, DENGAN SELURUH RASA</p><h2 id="letter-title" tabindex="-1">Happy birthday,<br><em>my love.</em></h2>` : `<h3 id="letter-theme-${i}">${esc(themes[i] || 'Masih tentangmu')}</h3>`}
+        ${i === 0 ? `<p class="eyebrow">UNTUK <span data-recipient></span>, DI USIA YANG BARU</p><h2 id="letter-title" tabindex="-1">Happy birthday,<br><em><span data-recipient></span>.</em></h2>` : `<h3 id="letter-theme-${i}">${esc(themes[i] || 'Masih tentangmu')}</h3>`}
         <p class="letter-verse">${esc(text)}</p>
         ${i === 0 ? '<span class="letter-scroll-hint">Masih ada yang ingin kukatakan <span aria-hidden="true">↓</span></span>' : ''}
       </section>`).join('')}
-      <div class="letter-signoff"><span aria-hidden="true">♡</span><p class="handwritten">Dengan seluruh rasa,</p><p class="letter-sender">${esc(content.sender)}</p><p class="letter-endnote">Ceritanya sampai di sini.<br>Sayangku untukmu, semoga tak pernah selesai.</p><div class="letter-end-actions"><button id="close-letter" class="text-button">Lipat kembali suratnya <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 18 18 6M6 6h12v12"/></svg></button><button id="replay" class="keepsake-button keepsake-replay" data-keepsake="star" aria-label="Baca cerita ini lagi">${keepsakeContent("star")}</button></div></div>
+      <div class="letter-signoff"><span aria-hidden="true">♡</span><p class="handwritten">Dengan doa baik,</p><p class="letter-sender">${esc(content.sender)}</p><p class="letter-endnote">Sampai bertemu di cerita-cerita baik berikutnya.</p><div class="letter-end-actions"><button id="close-letter" class="text-button">Lipat kembali suratnya <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 18 18 6M6 6h12v12"/></svg></button><button id="replay" class="keepsake-button keepsake-replay" data-keepsake="star" aria-label="Baca cerita ini lagi">${keepsakeContent("star")}</button></div></div>
     </div>
     <aside class="letter-gallery" aria-label="Foto yang menemani surat">
       <div class="letter-gallery-note"><span class="eyebrow">SEBUAH SURAT, SEPENUH HATI</span><span class="letter-photo-count" aria-hidden="true">01 / ${String(count).padStart(2, '0')}</span></div>

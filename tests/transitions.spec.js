@@ -104,7 +104,7 @@ test("poem content changes while transparent and stays visible after its animati
   expect(change).toBeGreaterThan(0);
   expect(samples[change - 1].opacity).toBeLessThan(0.08);
   expect(samples[change].opacity).toBeLessThan(0.15);
-  await expect(page.locator("#poem-title")).toHaveText("Hal-hal Kecil");
+  await expect(page.locator("#poem-title")).toHaveText("hari hari");
   expect(samples.at(-1).opacity).toBe(1);
 });
 

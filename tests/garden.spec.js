@@ -33,7 +33,7 @@ test("garden wishes bloom in any order and accumulate without replacing the earl
       .locator(".garden-note:not([hidden])")
       .evaluateAll((els) => els.map((el) => el.id)),
   ).toEqual(["garden-wish-2", "garden-wish-0", "garden-wish-1"]);
-  await expect(page.locator(".garden-complete")).toBeVisible();
+  await expect(page.locator(".garden-complete")).toHaveCount(0);
   await expect(page.locator("dialog[open]")).toHaveCount(0);
   await page.locator('[data-bloom="2"]').click();
   await expect(page.locator("#garden-wish-2")).toBeFocused();
@@ -41,7 +41,7 @@ test("garden wishes bloom in any order and accumulate without replacing the earl
   await chooseChapter(page, 'Bait untukmu');
   await expect(page.locator('[data-scene="2"]')).toHaveClass(/is-active/);
   await page.getByRole("button", { name: "Puisi selanjutnya" }).click();
-  await expect(page.locator("#poem-title")).toHaveText("Hal-hal Kecil");
+  await expect(page.locator("#poem-title")).toHaveText("hari hari");
   await chooseChapter(page, 'Bunga & doa');
   await expect(page.locator('[data-scene="3"]')).toHaveClass(/is-active/);
   await expect(page.locator(".garden-note:not([hidden])")).toHaveCount(3);
@@ -92,7 +92,7 @@ test("garden works with keyboard and reduced motion, with sourced quotes and no 
       .first()
       .evaluate((e) => getComputedStyle(e).transitionDuration),
   ).toBe("0s");
-  await expect(page.locator(".garden-complete")).toBeVisible();
+  await expect(page.locator(".garden-complete")).toHaveCount(0);
   await expect(page.locator("dialog[open]")).toHaveCount(0);
 });
 

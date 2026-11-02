@@ -24,7 +24,7 @@ test("deployed content ignores legacy browser overrides without deleting the old
   await page.addInitScript(() => {
     const open = indexedDB.open.bind(indexedDB);
     window.databaseReads = 0;
-    indexedDB.open = (...args) => { window.databaseReads++; return open(...args); };
+    indexedDB.open = (...args) => { if (args[0] === "ambis-copenhagen") window.databaseReads++; return open(...args); };
   });
   await page.reload();
   await expect(page.locator('#universe')).toHaveAttribute('data-photo-sources', '1');
@@ -32,7 +32,7 @@ test("deployed content ignores legacy browser overrides without deleting the old
   await page.locator('#begin').click();
   await finishIntro(page);
   await page.locator('#enter-story').click();
-  await expect(page.locator('.dedication-copy [data-recipient]')).toHaveText('Dari kode');
+  await expect(page.locator('#birthday-title [data-recipient]')).toHaveText('Dari kode');
   expect(await page.evaluate(() => window.databaseReads)).toBe(0);
   expect(await page.locator('#story-audio').evaluate(audio => audio.src)).toContain('/music/koshun-nakao-country-intro-cut.mp3');
   const legacy = await page.evaluate(async () => new Promise(resolve => {
@@ -57,9 +57,9 @@ test("fresh browser sessions show the same configured gift without uploads", asy
       await page.goto('http://127.0.0.1:5173/');
       await expect(page.locator('#universe')).toHaveAttribute('data-photo-sources', '1');
       await page.locator('#begin').click(); await finishIntro(page); await page.locator('#enter-story').click();
-      await expect(page.locator('.dedication-copy [data-recipient]')).toHaveText(config.recipient);
+      await expect(page.locator('#birthday-title [data-recipient]')).toHaveText(config.recipient);
       await expect(page.locator('[data-photo="portrait"] img')).toHaveAttribute('src', config.photos.portrait);
-      await expect(page.locator('input[type="file"], #editor-dialog, #edit-from-chapters')).toHaveCount(0);
+      await expect(page.locator('.photo-editor[open]')).toHaveCount(0);
     }
   } finally { await Promise.all(contexts.map(context => context.close())); }
 });

@@ -38,15 +38,13 @@ export function createWishGarden(
       </article>`,
         )
         .join("")}
-    </div>
-    <p class="garden-complete" hidden>Semoga semuanya tumbuh di hidupmu.<br><em>Hari ini, dan hari-hari setelahnya.</em></p>`;
+    </div>`;
   const buttons = [...root.querySelectorAll("[data-bloom]")];
   const notes = [...root.querySelectorAll(".garden-note")];
   const picks = root.querySelector(".garden-picks");
   const pickButtons = [...picks.querySelectorAll("button")];
   const opened = new Set();
   const empty = root.querySelector(".garden-empty");
-  const complete = root.querySelector(".garden-complete");
   const status = root.querySelector(".garden-status");
   function scrollToNote(note) {
     const scene = root.closest(".scene");
@@ -97,10 +95,7 @@ export function createWishGarden(
       opened.size === quotes.length
         ? "Semua doaku, untukmu."
         : `Doa untuk ${quotes[i].bloom.toLowerCase()} telah mekar.`;
-    if (opened.size === quotes.length) {
-      complete.hidden = false;
-      effects.play(complete, [{ opacity: 0 }, { opacity: 1 }], 900);
-    }
+
   }
   buttons.forEach((button, i) => { button.onclick = event => bloom(i, event); });
   pickButtons.forEach((button, i) => { button.onclick = event => bloom(i, event); });
@@ -118,8 +113,6 @@ export function createWishGarden(
         notes[i].hidden = true;
         notes[i].querySelector("details").open = false;
       });
-      effects.reset(complete);
-      complete.hidden = true;
       empty.hidden = false;
       status.textContent = "Tiga bunga kecil. Tiga doa baik.";
     },

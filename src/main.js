@@ -8,6 +8,8 @@ import "./keepsakes.css";
 import "./scrapbook.css";
 import "./editorial-layout.css";
 import "./celebration.css";
+import "./birthday-revision.css";
+import { createPhotoEditor } from "./media/photo-editor.js";
 import { setKeepsake, liftKeepsake } from "./keepsakes.js";
 import { createWishGarden } from "./wish-garden.js";
 import { content } from "./content.js";
@@ -497,7 +499,7 @@ function updateCountdown() {
   const date = content.birthday,
     el = $("#birthday-countdown");
   if (!date || Number.isNaN(Date.parse(date))) {
-    el.textContent = "Ambis Copenhagen · dibuat dengan seluruh rasa.";
+    el.textContent = "";
     return;
   }
   const seconds = Math.max(
@@ -517,3 +519,5 @@ updateNav();
 gallery.initialize();
 warmChapter(active);
 setInterval(updateCountdown, 1000);
+
+createPhotoEditor(gallery, () => active);
