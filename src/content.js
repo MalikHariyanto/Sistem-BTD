@@ -4,27 +4,30 @@ import { createPhotoLibrary } from "./media/photo-library.js";
 export { ORBIT_PHOTO_COUNT } from "./media/photo-library.js";
 
 // Hanya untuk slide cerita; tidak ditambahkan ke koleksi Gargantua.
-// Simpan foto di public/photos/scenery/, lalu isi tiga path di bawah.
-// Kosong sementara memakai ilustrasi pemandangan bawaan.
+// Simpan enam foto asli di public/photos/scenery/, lalu isi path di bawah.
+// Slot yang kosong disembunyikan; tidak ada gambar generate sebagai pengganti.
 export const sceneryPhotos = {
   prague: "", // "/photos/scenery/prague-evening.jpg"
   edinburgh: "", // "/photos/scenery/edinburgh-night.jpg"
   street: "", // "/photos/scenery/edinburgh-street.jpg"
+  oldTown: "", // "/photos/scenery/prague-old-town.jpg"
+  castle: "", // "/photos/scenery/prague-castle.jpg"
+  river: "", // "/photos/scenery/prague-river.jpg"
 };
 
 export const photoConfig = {
   // Kosong = cari otomatis nama slot yang sama di public/photos/story/.
   // Contoh manual: portrait: "/photos/orbit/001.webp".
   story: {
-    hero: sceneryPhotos.edinburgh, // Surat: suasana Edinburgh.
+    hero: "", // Surat: foto pertama, isi sendiri.
     portrait: "", // Hari lahirmu: potret utama.
-    poem0: sceneryPhotos.prague, // Bait untukmu: Gargantua.
-    poem1: sceneryPhotos.edinburgh, // Bait untukmu: hari hari.
-    poem2: sceneryPhotos.street, // Bait untukmu: pada hari lahirmu.
+    poem0: "", // Puisi Gargantua: isi foto sendiri.
+    poem1: "", // Puisi hari hari: isi foto sendiri.
+    poem2: "", // Puisi pada hari lahirmu: isi foto sendiri.
     moment0: "", // Hari lahirmu: bingkai personal kedua.
-    moment1: sceneryPhotos.prague, // Bunga & doa + foto surat pertama.
-    moment2: sceneryPhotos.edinburgh, // Pengiring puisi + foto surat kedua.
-    moment3: sceneryPhotos.street, // Hari lahirmu + foto surat ketiga.
+    moment1: "", // Surat: foto kedua, isi sendiri.
+    moment2: "", // Surat: foto ketiga, isi sendiri.
+    moment3: "", // Surat: foto keempat, isi sendiri.
   },
   // Kosong = baca semua JPG/PNG/WebP di public/photos/orbit/ saat build.
   // Urutan alami: 1.jpg, 2.jpg, ... 200.jpg. Nama file bebas, maksimal 200.
@@ -39,7 +42,7 @@ export const content = {
   birthday: "", // ISO lengkap dengan zona, misalnya 2027-02-14T00:00:00+07:00
   photos: createPhotoLibrary(photoConfig, photoManifest),
   orbitThumbnails: photoManifest.thumbnails || {},
-  // Opsional: foto scenery asli di public/photos/scenery/; kosong memakai ilustrasi dekoratif orisinal.
+  // Foto asli untuk Hari lahirmu dan Bunga & doa. Slot kosong tidak ditampilkan.
   scrapbook: sceneryPhotos,
   poems: [
     {
@@ -94,7 +97,7 @@ export const content = {
     },
   ],
   // Foto menemani setiap bait surat saat di-scroll, memakai slot foto di atas.
-  letterPhotos: ["moment1", "moment2", "moment3", "hero"],
+  letterPhotos: ["hero", "moment1", "moment2", "moment3"],
   letter: [
     "Hai, hari ini layak kamu rayakan. Di balik usia yang bertambah, ada keberanian untuk mencoba, keputusan yang tidak mudah, dan banyak hari yang berhasil kamu lewati. Beri dirimu waktu untuk menengok perjalanan itu. Ada yang patut kamu banggakan dari caramu sampai sejauh ini, termasuk usaha kecil yang selama ini luput kamu hargai.",
     "Semoga pengalaman yang sulit perlahan bisa kamu terima tanpa kehilangan lembutnya hati. Ada bagian dari diri sendiri yang memang perlu dikenali pelan-pelan, seperti halaman yang baru terasa maknanya ketika dibaca kembali. Kamu boleh berubah pikiran, belajar lagi, dan tumbuh dengan waktumu sendiri. Mudah-mudahan prosesnya membantumu lebih mengerti apa yang kamu butuhkan.",

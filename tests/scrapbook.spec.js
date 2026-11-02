@@ -6,7 +6,7 @@ test('scrapbook keeps personal photos, all poem pages, flowers and letter readab
  await page.emulateMedia({reducedMotion:'reduce'});
  await installGift(page,{photos:{orbit01:photoData(1),orbit03:photoData(3),portrait:photoData(2),poem0:photoData(4),poem1:photoData(5),poem2:photoData(6),hero:photoData(7)}});
  await page.goto('/');await page.locator('#begin').click();await finishIntro(page);await page.locator('#enter-story').click();
- await expect(page.locator('.memory .travel-postcard')).toHaveCount(2);
+ await expect(page.locator('.memory .travel-postcard')).toHaveCount(3);
  await expect(page.locator('[data-photo="portrait"] img')).toBeVisible();
  await chooseChapter(page,3);await page.getByRole('button',{name:'Mekarkan doa: Bahagia',exact:true}).click();
  await expect(page.locator('.garden-note:not([hidden])')).toHaveCount(1);

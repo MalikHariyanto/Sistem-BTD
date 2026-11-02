@@ -2,7 +2,8 @@ import { installGift, photoData } from "./gift-fixtures.js";
 import { chooseChapter, finishIntro } from "./story-helpers.js";
 import { test, expect } from '@playwright/test';
 
-async function openLetter(page) {
+async function openLetter(page, configurePhotos = true) {
+  if (configurePhotos) await installGift(page, { photos: Object.fromEntries(['hero','moment1','moment2','moment3'].map((key, i) => [key, photoData(i)])) });
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/');
   await page.locator('#begin').click();
@@ -27,7 +28,7 @@ test('a complete letter scrolls in both directions, with the matching photo held
   await expect(page.locator('.letter-verse')).toHaveCount(4);
   await expect(page.locator('#prev-letter, #next-letter')).toHaveCount(0);
   const text = await page.locator('.letter-stanzas').textContent();
-  const expected = ['moment1', 'moment2', 'moment3', 'hero'];
+  const expected = ['hero', 'moment1', 'moment2', 'moment3'];
   for (const index of [0, 1, 2, 3, 1, 0]) {
     await scrollToBait(page, index);
     const frame = page.locator('.letter-frame.is-current');
@@ -116,9 +117,9 @@ test('long letters stay readable in short windows; keyboard navigation reaches t
 
 test('code-configured photographs populate all four letter scenes and are ready before scrolling', async ({ page }) => {
   const colors = ['#9b604d', '#6b8174', '#b89856', '#78668c'];
-  const keys = ['moment1', 'moment2', 'moment3', 'hero'];
+  const keys = ['hero', 'moment1', 'moment2', 'moment3'];
   await installGift(page, { photos: Object.fromEntries(keys.map((key, i) => [key, photoData(colors[i])])) });
-  await openLetter(page);
+  await openLetter(page, false);
   const photos = page.locator('.letter-frame .photo-slot img');
   await expect(photos).toHaveCount(4);
   await expect.poll(() => photos.evaluateAll(images => images.every(image => image.complete && image.naturalWidth > 0 && image.loading === 'eager'))).toBe(true);

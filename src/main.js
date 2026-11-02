@@ -317,6 +317,8 @@ async function changePage(elements, render) {
 }
 function renderPoem() {
   const p = content.poems[poemIndex];
+  const hasPhoto = Boolean(content.photos["poem" + poemIndex]);
+  $(".poem-layout").classList.toggle("is-text-only", !hasPhoto);
   $("#poem-title").textContent = p.title;
   $("#poem-subtitle").textContent = p.subtitle;
   $("#poem-text").textContent = p.text;

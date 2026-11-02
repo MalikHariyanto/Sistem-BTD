@@ -1,14 +1,18 @@
 # Foto suasana untuk slide cerita
 
-Letakkan file asli di folder ini, misalnya:
+Letakkan enam file foto asli di folder ini:
 
-- `prague-evening.jpg`: alun-alun Praha pada sore hari.
+- `prague-evening.jpg`: alun-alun Praha saat senja.
 - `edinburgh-night.jpg`: bangunan Edinburgh dengan lampu jalan.
 - `edinburgh-street.jpg`: jalan Edinburgh setelah hujan.
+- `prague-old-town.jpg`: gang berbatu di kota lama.
+- `prague-castle.jpg`: jalan menuju kastel saat malam.
+- `prague-river.jpg`: panorama sungai dan jembatan saat senja.
 
-Isi tiga path di `sceneryPhotos` pada `src/content.js` sesudah file tersedia.
-JPG/JPEG/PNG/WebP dapat dipakai; sesuaikan nama dan ekstensi pada path.
+Isi path yang sesuai pada `sceneryPhotos` di `src/content.js`. Ekstensi JPG/JPEG,
+PNG, atau WebP didukung. Nilai kosong menyembunyikan bingkai; tidak ada gambar
+generate sebagai pengganti foto asli.
 
-Foto ini mengisi bingkai suasana di slide, bukan koleksi Gargantua. Dua bingkai
-personal di Hari lahirmu memakai `photoConfig.story.portrait` dan `moment0`.
-Tidak ada editor atau pengaturan foto di website.
+Praha, sungai, dan jalan Edinburgh menemani ucapan Hari lahirmu. Edinburgh malam,
+kota lama, dan kastel menemani Bunga & doa. Foto ini tidak ditambahkan ke koleksi
+Gargantua. Foto puisi dan surat diisi sendiri lewat `photoConfig.story`.

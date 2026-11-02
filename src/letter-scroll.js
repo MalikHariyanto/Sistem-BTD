@@ -6,8 +6,10 @@ export function createScrollLetter(root, { content, photo, flowers, escapeHtml: 
   const scene = root.closest('.scene');
   const captions = ['a day to celebrate.', 'every little step.', 'room to grow.', 'a new chapter.'];
   const themes = ['Hari perayaan', 'Mengenali diri', 'Merawat ikhtiar', 'Satu musim lagi'];
-  const keys = content.letterPhotos?.length ? content.letterPhotos : ['moment1', 'moment2', 'moment3', 'hero'];
+  const keys = content.letterPhotos?.length ? content.letterPhotos : ['hero', 'moment1', 'moment2', 'moment3'];
   const count = content.letter.length;
+  const hasPhotos = keys.some(key => Boolean(content.photos[key]));
+  root.classList.toggle("is-text-only", !hasPhotos);
   root.innerHTML = `
     <div class="letter-stanzas">
       ${content.letter.map((text, i) => `<section class="letter-stanza${i === 0 ? ' is-current' : ''}" data-letter-stanza="${i}" aria-labelledby="${i === 0 ? 'letter-title' : `letter-theme-${i}`}">
@@ -18,7 +20,7 @@ export function createScrollLetter(root, { content, photo, flowers, escapeHtml: 
       </section>`).join('')}
       <div class="letter-signoff"><span aria-hidden="true">♡</span><p class="handwritten">Dengan doa baik,</p><p class="letter-sender">${esc(content.sender)}</p><p class="letter-endnote">Sampai bertemu di cerita-cerita baik berikutnya.</p><div class="letter-end-actions"><button id="close-letter" class="text-button">Lipat kembali suratnya <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 18 18 6M6 6h12v12"/></svg></button><button id="replay" class="keepsake-button keepsake-replay" data-keepsake="star" aria-label="Baca cerita ini lagi">${keepsakeContent("star")}</button></div></div>
     </div>
-    <aside class="letter-gallery" aria-label="Foto yang menemani surat">
+    <aside class="letter-gallery" aria-label="Foto yang menemani surat"${hasPhotos ? "" : " hidden"}>
       <div class="letter-gallery-note"><span class="eyebrow">SEBUAH SURAT, SEPENUH HATI</span><span class="letter-photo-count" aria-hidden="true">01 / ${String(count).padStart(2, '0')}</span></div>
       <div class="letter-photo-stack">${content.letter.map((_, i) => `<figure class="letter-frame${i === 0 ? ' is-current' : ''}" data-letter-photo="${i}" aria-hidden="${i !== 0}">${photo(keys[i % keys.length], `Kenangan surat ${i + 1}`)}<figcaption class="handwritten">${esc(captions[i % captions.length])}</figcaption></figure>`).join('')}${flowers('flower-letter')}</div>
       <div class="letter-thread" aria-hidden="true"><span></span><i>♡</i></div>
@@ -43,7 +45,7 @@ export function createScrollLetter(root, { content, photo, flowers, escapeHtml: 
     if (root.hidden || scene.hidden || scene.inert) return;
     const viewport = scene.getBoundingClientRect();
     const mobile = narrow.matches;
-    const readingTop = mobile ? gallery.getBoundingClientRect().bottom : viewport.top;
+    const readingTop = mobile && !gallery.hidden ? gallery.getBoundingClientRect().bottom : viewport.top;
     const anchor = readingTop + (viewport.bottom - readingTop) * .42;
     // Keep the photograph until the next stanza reaches the reading anchor,
     // including long paragraphs and scrolling back through earlier words.

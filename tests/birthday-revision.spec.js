@@ -102,7 +102,7 @@ test('garden stays seamless and the longer poems have room to read', async ({pag
 
 test('scenery fills story frames from code without entering the Gargantua collection', async ({page}) => {
   const orbit = photoData(1), portrait = photoData(2), city = photoData(3);
-  await installGift(page, { photos: { orbit01:orbit, portrait, poem0:city, moment1:city }, scrapbook: { prague:city } });
+  await installGift(page, { photos: { orbit01:orbit, portrait, poem0:city, moment1:city }, scrapbook: { edinburgh:city } });
   await page.addInitScript(() => {
     indexedDB.open = () => { throw new Error('The visitor experience must not open a photo database.'); };
     window.addEventListener('photoschanged', event => { window.orbitSources = event.detail; });
@@ -113,10 +113,71 @@ test('scenery fills story frames from code without entering the Gargantua collec
   expect(sources).not.toContain(city);
   await expect(page.locator('[data-photo="portrait"] img')).toHaveAttribute('src', portrait);
   // The empty scenery frame never borrows the recipient portrait.
-  await expect(page.locator('[data-photo="moment3"] img').first()).toHaveCount(0);
+  await expect(page.locator('.birthday-photo-ribbon .travel-postcard img')).toHaveCount(0);
   await chooseChapter(page, 3);
-  await expect(page.locator('[data-photo="moment1"] img').first()).toHaveAttribute('src', city);
+  await expect(page.locator('.garden-photos .travel-edinburgh img')).toHaveAttribute('src', city);
   await chooseChapter(page, 2);
   await expect(page.locator('#poem-photo img')).toHaveAttribute('src', city);
   await expect(page.locator('input[type="file"], #edit-photos, .photo-editor')).toHaveCount(0);
+});
+
+
+test('birthday greeting has no card, uses one centered flow and only original photo sources', async ({page}) => {
+  const city = photoData(4);
+  await installGift(page, { photos: { orbit01:photoData(1), orbit02:photoData(2) }, scrapbook:{prague:city, street:city, river:city} });
+  await enter(page);
+  const composition = await page.evaluate(() => {
+    const copy = document.querySelector('.dedication-copy'), ribbon = document.querySelector('.birthday-photo-ribbon');
+    const style = getComputedStyle(copy), box = copy.getBoundingClientRect(), photoBox = ribbon.getBoundingClientRect();
+    return { background:style.backgroundColor, border:style.borderTopWidth, shadow:style.boxShadow,
+      pseudo:getComputedStyle(copy,'::before').content, textCenter:box.x + box.width/2, viewportCenter:innerWidth/2,
+      copyBottom:box.bottom, ribbonTop:photoBox.top, overflow:document.documentElement.scrollWidth>innerWidth,
+      display:getComputedStyle(document.querySelector('.dedication-layout')).display };
+  });
+  expect(composition.background).toBe('rgba(0, 0, 0, 0)');
+  expect(composition.border).toBe('0px');
+  expect(composition.shadow).toBe('none');
+  expect(composition.pseudo).toBe('none');
+  expect(composition.textCenter).toBeCloseTo(composition.viewportCenter, 0);
+  expect(composition.ribbonTop).toBeGreaterThan(composition.copyBottom);
+  expect(composition.display).toBe('flex');
+  expect(composition.overflow).toBe(false);
+  await expect(page.locator('.birthday-photo-ribbon [data-photo] img')).toHaveCount(2);
+  await expect(page.locator('.birthday-photo-ribbon .travel-postcard img')).toHaveCount(3);
+});
+
+test('unfilled poem and letter photo slots stay reserved for code without generated stand-ins', async ({page}) => {
+  await installGift(page, { photos: {orbit01:photoData(1)}, scrapbook:{} });
+  await enter(page);
+  await expect(page.locator('.travel-postcard img')).toHaveCount(0);
+  await expect(page.locator('.travel-art')).toHaveCount(0);
+  await chooseChapter(page, 2);
+  await expect(page.locator('.poem-layout')).toHaveClass(/is-text-only/);
+  await expect(page.locator('.poem-visual')).toBeHidden();
+  await expect(page.locator('#poem-title')).toHaveText('Gargantua');
+  await chooseChapter(page, 4);
+  await page.locator('#open-letter').click();
+  await expect(page.locator('#letter-reading')).toHaveClass(/is-text-only/);
+  await expect(page.locator('.letter-gallery')).toBeHidden();
+  await expect(page.locator('.letter-verse')).toHaveCount(4);
+});
+
+test('the reveal button stays still and opens the birthday page on a small phone', async ({page}) => {
+  await page.setViewportSize({width:320,height:640});
+  await installGift(page, {photos:{orbit01:photoData(1)}});
+  await page.goto('/');
+  await page.locator('#begin').click();
+  await finishIntro(page);
+  const button = page.locator('#enter-story');
+  const box = await button.boundingBox();
+  await page.mouse.move(box.x + box.width / 2, box.y + 1);
+  const positions = await button.evaluate(async element => {
+    const values=[];
+    for(let i=0;i<6;i++){await new Promise(requestAnimationFrame);values.push(element.getBoundingClientRect().y);}
+    return values;
+  });
+  expect(Math.max(...positions) - Math.min(...positions)).toBeLessThan(1);
+  await button.click();
+  await expect(page.locator('[data-scene="1"]')).toHaveClass(/is-active/);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });

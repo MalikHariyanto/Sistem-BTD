@@ -54,11 +54,67 @@ body:is([data-chapter="1"],[data-chapter="3"]) #app {
 .letter-photo-stack { isolation:isolate; }
 .letter-photo-stack > .romance-flower { z-index:-1; }
 
-/* Until a scenery path is filled in code, keep a scenery illustration rather
-   than borrowing a portrait. Uploaded files replace this background normally. */
-.photo-slot:is([data-photo="hero"],[data-photo^="poem"],[data-photo="moment1"],[data-photo="moment2"],[data-photo="moment3"]):not(.has-photo) {
-  background:url('/art/travel-atelier.webp') center / 300% 100%;
+/* The greeting is part of the page, with a photo ribbon beneath it. */
+#main .dedication-layout {
+  display:flex; flex-direction:column; justify-content:center; align-items:center;
+  width:min(1100px,100%); min-height:100%; gap:24px; padding:28px 0 36px;
 }
-.photo-slot:is([data-photo="hero"],[data-photo="poem1"],[data-photo="moment2"]):not(.has-photo) { background-position:left center; }
-.photo-slot:is([data-photo="poem2"],[data-photo="moment3"]):not(.has-photo) { background-position:right center; }
-.photo-slot:is([data-photo="hero"],[data-photo^="poem"],[data-photo="moment1"],[data-photo="moment2"],[data-photo="moment3"]):not(.has-photo) > span { visibility:hidden; }
+#main .dedication-copy {
+  width:min(720px,100%); padding:0; margin:0; text-align:center;
+  background:none; border:0; box-shadow:none;
+}
+#main .dedication-copy::before { content:none; }
+#main .dedication-copy h2 {
+  font-size:clamp(43px,8cqh,64px); line-height:1.08; margin:0 0 22px;
+}
+#main .dedication-copy > p:not(.eyebrow) { max-width:46ch; margin:0 auto 16px; font-size:clamp(20px,1.65vw,22px); line-height:1.55; }
+#main .dedication-copy > p:last-child { font-size:clamp(18px,1.65vw,22px); margin-bottom:0; }
+#main .birthday-photo-ribbon {
+  display:flex; justify-content:center; align-items:center; gap:clamp(8px,1.5vw,22px);
+  width:min(920px,100%); height:auto; min-height:0; max-height:none; margin:12px 0 0; padding:14px 8px 26px;
+}
+.birthday-photo-ribbon::before { content:none; }
+#main .birthday-photo-ribbon > .memory {
+  position:relative; inset:auto; flex:0 1 17%; width:auto; height:auto; min-width:0;
+  margin:0; border-width:6px; border-bottom-width:24px;
+}
+.birthday-photo-ribbon > .memory > .photo-slot { height:auto; aspect-ratio:3/4; min-height:0; }
+.birthday-photo-ribbon > .memory > .travel-postcard { height:auto; aspect-ratio:3/4; }
+.birthday-photo-ribbon .travel-postcard > img { aspect-ratio:3/4; height:100%; }
+#main .birthday-photo-ribbon > .memory-1 { transform:translateY(10px) rotate(-8deg); }
+#main .birthday-photo-ribbon > .memory-0 { transform:translateY(-7px) rotate(3deg); }
+#main .birthday-photo-ribbon > .memory-4 { flex-basis:24%; transform:translateY(12px) rotate(-3deg); }
+.birthday-photo-ribbon > .memory-4 > .travel-postcard,
+.birthday-photo-ribbon > .memory-4 > .travel-postcard > img { aspect-ratio:4/3; }
+#main .birthday-photo-ribbon > .memory-3 { transform:translateY(-10px) rotate(-4deg); }
+#main .birthday-photo-ribbon > .memory-2 { transform:translateY(8px) rotate(7deg); }
+.birthday-photo-ribbon .travel-postcard figcaption { display:none; }
+.birthday-photo-ribbon > .romance-flower { width:12%; bottom:0; top:auto; z-index:0; }
+.birthday-photo-ribbon > .flower-memory-left { left:0; }
+.birthday-photo-ribbon > .flower-memory-right { right:0; }
+/* A missing source remains empty, never an illustrated substitute for a photo. */
+.travel-art { display:none; }
+.photo-slot:not(.has-photo) { background:none; }
+.poem-visual [data-photo^="poem"]:not(.has-photo) { background:none; filter:none; }
+.poem-layout.is-text-only { grid-template-columns:minmax(0,1fr); width:min(800px,100%); }
+.poem-layout.is-text-only > .poem-visual { display:none; }
+.poem-layout.is-text-only > .poem-paper { width:100%; }
+.letter-scroll.is-text-only { grid-template-columns:minmax(0,1fr); max-width:760px; }
+.garden-photos:has(> .travel-postcard:not([hidden])) { width:min(100%,360px); height:180px; }
+.garden-photos:not(:has(> .travel-postcard:not([hidden]))) { display:none; }
+.garden-photos > .travel-postcard { min-width:0; min-height:0; }
+@media(max-width:700px) {
+  #main .dedication-layout { padding-block:18px 28px; gap:24px; }
+  #main .dedication-copy h2 { font-size:42px; margin-bottom:22px; }
+  #main .dedication-copy > p:not(.eyebrow) { font-size:21px; line-height:1.55; }
+  #main .dedication-copy > p:last-child { font-size:19px; max-width:30ch; }
+  #main .birthday-photo-ribbon { flex-wrap:wrap; gap:16px 14px; max-width:460px; padding-inline:12px; }
+  #main .birthday-photo-ribbon > .memory { flex-basis:26%; border-width:4px; border-bottom-width:16px; }
+  #main .birthday-photo-ribbon > .memory-4 { flex-basis:30%; }
+  #main .birthday-photo-ribbon > .memory-3 { transform:rotate(-5deg); }
+  #main .birthday-photo-ribbon > .memory-2 { transform:rotate(5deg); }
+  .birthday-photo-ribbon > .romance-flower { width:20%; }
+}
+/* A hover lift must not oscillate when the opening button and reveal button
+   share the same pointer position on a short phone viewport. */
+.reveal-copy .primary:hover { transform:none; }

@@ -15,8 +15,8 @@ test('phone photos introduce the birthday note gently and fill each poem frame',
   test.skip(!isMobile, 'Phone composition');
   await enter(page);
   const collage = await page.locator('.memory-constellation').boundingBox();
-  expect(collage.height).toBeLessThanOrEqual(235);
-  expect(collage.width).toBeLessThanOrEqual(270);
+  expect(collage.width).toBeLessThanOrEqual(390);
+  expect(collage.height).toBeLessThanOrEqual(360);
   await expect(page.locator('#dedication-title')).toBeInViewport();
   await chooseChapter(page, 2);
   for (let i = 0; i < 3; i++) {
