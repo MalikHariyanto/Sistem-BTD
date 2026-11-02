@@ -6,7 +6,7 @@ export function createScrollLetter(root, { content, photo, flowers, escapeHtml: 
   const scene = root.closest('.scene');
   const captions = ['a day to celebrate.', 'every little step.', 'room to grow.', 'a new chapter.'];
   const themes = ['Hari perayaan', 'Mengenali diri', 'Merawat ikhtiar', 'Satu musim lagi'];
-  const keys = content.letterPhotos?.length ? content.letterPhotos : ['hero', 'moment0', 'moment1', 'moment3'];
+  const keys = content.letterPhotos?.length ? content.letterPhotos : ['moment1', 'moment2', 'moment3', 'hero'];
   const count = content.letter.length;
   root.innerHTML = `
     <div class="letter-stanzas">

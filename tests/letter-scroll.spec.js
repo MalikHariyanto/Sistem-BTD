@@ -27,7 +27,7 @@ test('a complete letter scrolls in both directions, with the matching photo held
   await expect(page.locator('.letter-verse')).toHaveCount(4);
   await expect(page.locator('#prev-letter, #next-letter')).toHaveCount(0);
   const text = await page.locator('.letter-stanzas').textContent();
-  const expected = ['hero', 'moment0', 'moment1', 'moment3'];
+  const expected = ['moment1', 'moment2', 'moment3', 'hero'];
   for (const index of [0, 1, 2, 3, 1, 0]) {
     await scrollToBait(page, index);
     const frame = page.locator('.letter-frame.is-current');
@@ -116,7 +116,7 @@ test('long letters stay readable in short windows; keyboard navigation reaches t
 
 test('code-configured photographs populate all four letter scenes and are ready before scrolling', async ({ page }) => {
   const colors = ['#9b604d', '#6b8174', '#b89856', '#78668c'];
-  const keys = ['hero', 'moment0', 'moment1', 'moment3'];
+  const keys = ['moment1', 'moment2', 'moment3', 'hero'];
   await installGift(page, { photos: Object.fromEntries(keys.map((key, i) => [key, photoData(colors[i])])) });
   await openLetter(page);
   const photos = page.locator('.letter-frame .photo-slot img');

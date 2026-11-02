@@ -1,6 +1,6 @@
 # Mengisi hadiah dari kode
 
-Panel **Foto** di header menyediakan unggahan per bab dengan penyimpanan browser. Pilihan **Unduh salinan foto** dan **Pulihkan salinan** memindahkan foto antarbrowser sebagai JSON. Unggahan ini tidak mengubah repo atau hosting; untuk hadiah permanen di semua perangkat, gunakan langkah di bawah. Nama, tanggal, foto, puisi, surat, dan musik diatur permanen di **`src/content.js`**. Setelah file dikirim ke repo dan dideploy, semua perangkat membuka hadiah yang sama.
+Foto, nama, tanggal, puisi, surat, dan musik diatur di **`src/content.js`**, dengan berkas media di **`public/`**. Pengunjung hanya menikmati halaman yang sudah jadi. Tidak ada unggahan, editor, atau penggantian foto dari browser. Setelah file dikirim ke repo dan dideploy, semua perangkat membuka hadiah yang sama.
 
 Kalau mengedit langsung di GitHub: buka folder tujuan, pilih **Add file → Upload files**, masukkan foto, lalu commit. Untuk teks/nama, buka `src/content.js`, pilih ikon pensil, edit, lalu commit. Jika Vercel terhubung ke branch tersebut, commit akan memicu deploy baru.
 
@@ -39,15 +39,15 @@ Ada sembilan slot cerita. Cara otomatis: simpan file dengan nama slot berikut di
 
 | Nama file, ekstensi bebas yang didukung | Tempatnya |
 | --- | --- |
-| `hero.webp` | Foto pertama surat |
+| `hero.webp` | Suasana Edinburgh / foto surat keempat |
 | `portrait.jpg` | Potret ucapan ulang tahun |
 | `poem0.webp` | Puisi pertama |
 | `poem1.webp` | Puisi kedua |
 | `poem2.webp` | Puisi ketiga |
-| `moment0.webp` | Kenangan 01 / pilihan foto surat |
-| `moment1.webp` | Kenangan 02 / kebun doa / pilihan foto surat |
-| `moment2.webp` | Kenangan 03, tersedia untuk dipilih dalam surat |
-| `moment3.webp` | Kenangan 04 / pilihan foto surat |
+| `moment0.webp` | Bingkai personal kedua di Hari lahirmu |
+| `moment1.webp` | Praha / kebun doa / foto surat pertama |
+| `moment2.webp` | Edinburgh / pengiring puisi / foto surat kedua |
+| `moment3.webp` | Jalan Edinburgh / Hari lahirmu / foto surat ketiga |
 
 Nama slot memakai huruf kecil. Gunakan satu file per nama, misalnya `portrait.jpg`, bukan sekaligus `portrait.jpg` dan `portrait.png`.
 
@@ -67,9 +67,38 @@ story: {
 },
 ```
 
-Path manual mengalahkan pemetaan otomatis. Slot kosong memakai file bernama sama di `photos/story/` bila tersedia; jika tidak ada, bingkainya tetap kosong. Foto dekoratif seperti `orbit01`–`orbit05` pada kolase tetap memakai identitas semula.
+Path manual mengalahkan pemetaan otomatis. Slot kosong memakai file bernama sama di `photos/story/` bila tersedia. Hanya `portrait` dan `moment0` yang meminjam dua foto orbit pertama ketika kosong; bingkai suasana memakai ilustrasi pemandangan sampai fotonya diisi.
 
 Path dimulai dari dalam `public/`: file `public/photos/orbit/001.webp` ditulis **`/photos/orbit/001.webp`**, tanpa kata `public`. Foto yang sama boleh dipakai dalam cerita dan Gargantua; sumber dengan URL sama hanya dihitung satu kali oleh renderer.
+
+### Tiga foto suasana, dua bingkai personal
+
+Isi `sceneryPhotos` sekali di bagian atas `src/content.js` untuk mengisi pemandangan pada slide ulang tahun, bunga, tiga puisi, dan surat:
+
+```js
+export const sceneryPhotos = {
+  prague: "/photos/scenery/prague-evening.jpg",
+  edinburgh: "/photos/scenery/edinburgh-night.jpg",
+  street: "/photos/scenery/edinburgh-street.jpg",
+};
+```
+
+Masukkan tiga file itu terlebih dahulu. Foto personal cukup di `portrait` dan `moment0`. Foto suasana tidak dimasukkan ke Gargantua. Selama path suasana masih kosong, slide memakai ilustrasi bawaan; tidak ada pengaturan untuk pengunjung.
+
+## Foto per bagian
+
+| Bagian | Foto yang diatur dari kode |
+| --- | --- |
+| Semestamu / Gargantua | Semua file `public/photos/orbit/`, atau urutan manual `photoConfig.orbit` |
+| Hari lahirmu | `photoConfig.story.portrait` dan `moment0` untuk dua foto personal; `moment3`, `sceneryPhotos.edinburgh`, dan `prague` untuk suasana |
+| Bunga & doa | `photoConfig.story.moment1` dan `sceneryPhotos.edinburgh` (keduanya suasana) |
+| Bait untukmu | `photoConfig.story.poem0`, `poem1`, `poem2`, serta `moment2` sebagai pengiring suasana |
+| Tiup lilin | Ilustrasi kue dan lilin, tidak memakai foto |
+| Surat untukmu | `content.letterPhotos` menentukan urutan slot; bawaan `moment1`, `moment2`, `moment3`, `hero` (semuanya suasana) |
+
+Untuk mengganti potret ulang tahun saja, masukkan `public/photos/story/portrait.jpg` (atau PNG/WebP), atau isi `photoConfig.story.portrait` dengan path foto yang dipilih. Dua slot personal yang masih kosong meminjam dua foto orbit pertama; isian manual mengalahkan foto pinjaman tersebut. Slot yang dipakai beberapa bab memperbarui semua pemakaiannya.
+
+Kartu pemandangan dapat diganti lewat `sceneryPhotos` di bagian atas `src/content.js`, misalnya `edinburgh: "/photos/scenery/edinburgh.jpg"`. Masukkan file tersebut ke `public/photos/scenery/` terlebih dahulu. Nilai kosong memakai ilustrasi bawaan. Setelah mengganti file/pemetaan, build dan deploy ulang.
 
 ## 3. Isi nama, puisi, dan surat
 
@@ -80,7 +109,7 @@ Di `src/content.js`:
 - `birthday`: kosong, atau tanggal ISO lengkap, misalnya `2027-02-14T00:00:00+07:00`.
 - `poems`: judul, subjudul, dan isi masing-masing puisi. `\n` membuat baris baru.
 - `letter`: paragraf/bait surat.
-- `letterPhotos`: nama slot foto yang menemani bait surat. Bawaan: `hero`, `moment0`, `moment1`, `moment3`.
+- `letterPhotos`: nama slot foto yang menemani bait surat. Bawaan: `moment1`, `moment2`, `moment3`, `hero`.
 
 Doa, kutipan, terjemahan, dan sumber tetap berada di `src/quotes.js`. Data dan tulisan bawaan yang sudah ada tetap dipertahankan.
 

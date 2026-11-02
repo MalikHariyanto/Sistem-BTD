@@ -1,18 +1,48 @@
-/* Preserve the original desk artwork while giving text its own readable paper. */
+/* Keep the shared artwork visible without putting the garden in a card. */
 body:is([data-chapter="1"],[data-chapter="3"]) #app {
   background-image:linear-gradient(#f5e8d630,#eadac538),url('/art/stationery-desk.webp');
 }
-#semesta .cover-copy > .eyebrow {
-  display:inline-block; max-width:100%; padding:10px 14px;
-  color:#fff8ea; background:#100f0ee8; border:1px solid #fff2d84a;
-  border-radius:3px; font-size:clamp(10px,1vw,12px); line-height:1.8;
-  letter-spacing:2px; text-shadow:0 1px 3px #000;
+/* Only the ink changes; the original label has no badge or panel. */
+.cover-copy > .eyebrow { color:#fff5e6; }
+
+/* The reveal spans the viewport, as in the original centered composition. */
+.reveal-copy { max-width:none; }
+#reveal-copy > .reveal-message {
+  max-width:30ch;
+  margin:0 0 24px;
+  font:italic clamp(25px,3vw,40px)/1.4 var(--serif);
+  color:#e1bd8c;
 }
-#reveal-copy { max-width:650px; }
-#reveal-copy > p:not(.eyebrow) { font-size:clamp(20px,2.5vw,30px); line-height:1.5; }
-.scene .dedication-copy > p:not(.eyebrow) { font-size:clamp(16px,1.5vw,19px); line-height:1.8; }
-.garden-intro { background:#fbf3e2d9; border-radius:3px; padding:22px; }
-/* Each decoration has its own layer beneath every photo frame. */
+#main .dedication-copy > p:not(.eyebrow) {
+  font-family:var(--serif);
+  font-size:clamp(20px,1.8vw,24px);
+  line-height:1.6;
+}
+/* Give the longer poems room while retaining the original typeface. */
+.poem-paper { min-width:0; }
+.poem-paper h2 { line-height:1.12; margin-bottom:22px; }
+.poem-paper .poem-text {
+  font:400 clamp(21px,1.8vw,25px)/1.6 var(--serif) !important;
+  min-height:0;
+  white-space:pre-line;
+  text-wrap:wrap;
+  overflow-wrap:normal;
+  word-break:normal;
+}
+.poem-subtitle:empty { display:none; }
+@media(min-width:901px) {
+  .poem-layout { grid-template-columns:minmax(0,.7fr) minmax(0,1.3fr); column-gap:clamp(40px,5vw,72px); }
+}
+@media(min-width:701px) and (max-width:900px) {
+  .poem-layout { grid-template-columns:minmax(0,1fr); max-width:650px; row-gap:28px; }
+  .poem-layout .poem-visual { width:220px; margin:22px auto; }
+  .poem-visual > #poem-photo > .photo-slot { aspect-ratio:4/3; }
+}
+@media(max-width:700px) {
+  .poem-layout { max-width:100%; }
+  .poem-paper .poem-text { font-size:22px !important; line-height:1.55 !important; }
+}
+/* Flowers remain behind all photographs, including the accompanying cards. */
 .memory-constellation > .romance-flower { z-index:0; }
 .memory-constellation > .memory { z-index:2; }
 .memory-constellation > .memory-0 { z-index:4; }
@@ -23,30 +53,12 @@ body:is([data-chapter="1"],[data-chapter="3"]) #app {
 .poem-visual > #poem-photo,.poem-visual > .poem-small-photo { z-index:2; }
 .letter-photo-stack { isolation:isolate; }
 .letter-photo-stack > .romance-flower { z-index:-1; }
-.poem-subtitle:empty { display:none; }
-.poem-text { overflow-wrap:anywhere; }
-#edit-photos { color:inherit; margin-left:auto; min-width:44px; min-height:44px; font-size:13px; }
-.photo-editor { width:min(760px,94vw); max-height:88svh; padding:28px; color:#503d2c; background:#fbf3e2; border:1px solid #b2956c; border-radius:8px; }
-.photo-editor::backdrop { background:#100f0ebd; }
-.photo-editor h2 { font-size:32px; padding-right:28px; }
-.photo-editor p { font-size:15px; line-height:1.6; }
-.photo-editor-close { position:absolute; top:12px; right:14px; font-size:28px; min-width:44px; min-height:44px; }
-.photo-editor button,.photo-editor select,.photo-editor input { font:inherit; }
-.photo-editor button:not(.photo-editor-close),.photo-editor select { border:1px solid #b2956c; padding:10px 12px; border-radius:4px; min-height:44px; }
-.photo-editor button:disabled { opacity:.45; }
-.photo-editor-slots { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:18px; margin-block:20px; }
-.photo-edit-slot { min-width:0; display:flex; flex-direction:column; gap:10px; }
-.photo-edit-slot img,.photo-edit-empty { width:100%; height:145px; object-fit:contain; background:#e8dcc9; }
-.photo-edit-empty { display:grid; place-items:center; }
-.photo-edit-slot label { display:grid; gap:8px; }
-.photo-edit-slot input { width:100%; min-height:44px; font-size:12px; }
-.photo-editor-status { min-height:24px; }
-.photo-restore { display:grid; gap:10px; margin-top:18px; }
-.photo-editor :focus-visible { outline:2px solid #805432; outline-offset:3px; }
-@media(max-width:700px) {
- .story-dedication { display:none; }
- .garden-intro { padding:20px 16px; }
- .photo-editor { padding:24px 18px; }
- .photo-editor-slots { grid-template-columns:1fr 1fr; gap:12px; }
- .photo-edit-slot input { font-size:10px; }
+
+/* Until a scenery path is filled in code, keep a scenery illustration rather
+   than borrowing a portrait. Uploaded files replace this background normally. */
+.photo-slot:is([data-photo="hero"],[data-photo^="poem"],[data-photo="moment1"],[data-photo="moment2"],[data-photo="moment3"]):not(.has-photo) {
+  background:url('/art/travel-atelier.webp') center / 300% 100%;
 }
+.photo-slot:is([data-photo="hero"],[data-photo="poem1"],[data-photo="moment2"]):not(.has-photo) { background-position:left center; }
+.photo-slot:is([data-photo="poem2"],[data-photo="moment3"]):not(.has-photo) { background-position:right center; }
+.photo-slot:is([data-photo="hero"],[data-photo^="poem"],[data-photo="moment1"],[data-photo="moment2"],[data-photo="moment3"]):not(.has-photo) > span { visibility:hidden; }

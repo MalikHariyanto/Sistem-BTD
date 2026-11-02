@@ -24,7 +24,7 @@ test("deployed content ignores legacy browser overrides without deleting the old
   await page.addInitScript(() => {
     const open = indexedDB.open.bind(indexedDB);
     window.databaseReads = 0;
-    indexedDB.open = (...args) => { if (args[0] === "ambis-copenhagen") window.databaseReads++; return open(...args); };
+    indexedDB.open = (...args) => { window.databaseReads++; return open(...args); };
   });
   await page.reload();
   await expect(page.locator('#universe')).toHaveAttribute('data-photo-sources', '1');
@@ -59,7 +59,7 @@ test("fresh browser sessions show the same configured gift without uploads", asy
       await page.locator('#begin').click(); await finishIntro(page); await page.locator('#enter-story').click();
       await expect(page.locator('#birthday-title [data-recipient]')).toHaveText(config.recipient);
       await expect(page.locator('[data-photo="portrait"] img')).toHaveAttribute('src', config.photos.portrait);
-      await expect(page.locator('.photo-editor[open]')).toHaveCount(0);
+      await expect(page.locator('input[type="file"], .photo-editor, #edit-photos')).toHaveCount(0);
     }
   } finally { await Promise.all(contexts.map(context => context.close())); }
 });

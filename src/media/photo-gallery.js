@@ -1,10 +1,11 @@
 import { mediaUrl } from "./asset-url.js";
 
-// Deployed files provide defaults; the photo editor can override individual slots.
+// The library is fixed by deployed code. Replacing a poem binds its new slot,
+// without rebuilding the orbit atlas or loading a browser-local alternative.
 export function createPhotoGallery(content, base = "/") {
   const photos = Object.fromEntries(Object.entries(content.photos).map(([key, source]) => [key, mediaUrl(source, base)]));
-  for (const place of ["edinburgh", "prague"]) photos[`scenery-${place}`] = mediaUrl(content.scrapbook?.[place] || "", base);
-  const defaults = { ...photos };
+  const scenerySources = new Set(Object.values(content.scrapbook || {}).filter(Boolean).map(source => mediaUrl(source, base)));
+  const sources = [...new Set(Object.values(photos).filter(source => source && !scenerySources.has(source)))];
   const orbitSources = new Map(Object.entries(content.orbitThumbnails || {}).map(([src, thumb]) => [mediaUrl(src, base), mediaUrl(thumb, base)]));
   const prefetchedPoems = new Set();
   let initialized = false;
@@ -29,23 +30,12 @@ export function createPhotoGallery(content, base = "/") {
   }
 
   function bind(root = document) {
-    root.querySelectorAll("[data-scenery]").forEach(card => {
-      const source = photos[card.dataset.scenery];
-      if (card.dataset.src === source) return;
-      card.dataset.src = source;
-      card.querySelector("img")?.remove();
-      let art = card.querySelector(".travel-art");
-      if (!art) { art = document.createElement("div"); art.className = "travel-art"; card.prepend(art); }
-      art.hidden = !!source;
-      if (source) {
-        const image = new Image(); image.alt = card.getAttribute("aria-label");
-        image.src = source; image.decoding = "async"; card.prepend(image);
-      }
-    });
     root.querySelectorAll("[data-photo]").forEach(slot => {
       const key = slot.dataset.photo;
-      // A personal story slot can borrow an existing orbit photo until its own file is added.
-      const source = photos[key] || (["portrait", "hero", "moment0", "moment1", "moment2", "moment3"].includes(key) ? photos.orbit01 || "" : "");
+      // Only the two personal frames borrow an orbit photo; scenery stays scenery.
+      const borrowed = key === "portrait" ? photos.orbit01
+        : key === "moment0" ? photos.orbit02 || photos.orbit01 : "";
+      const source = photos[key] || borrowed || "";
       if (slot.dataset.src === source) return;
       slot.querySelector("img")?.remove();
       slot.dataset.src = source;
@@ -64,25 +54,14 @@ export function createPhotoGallery(content, base = "/") {
     });
   }
 
-  function publish() {
-    const sources = [...new Set(Object.values(photos).filter(Boolean))];
-    window.dispatchEvent(new CustomEvent("photoschanged", { detail: sources.map(source => orbitSources.get(source) || source) }));
-  }
-
   return {
-    photos,
-    refresh() { bind(); publish(); },
-    replace(key, source = defaults[key], quiet = false) {
-      photos[key] = source;
-      if (!quiet) { bind(); publish(); }
-    },
     bind,
     warmChapter,
     initialize() {
       bind();
       if (initialized) return;
       initialized = true;
-      publish();
+      window.dispatchEvent(new CustomEvent("photoschanged", { detail: sources.map(source => orbitSources.get(source) || source) }));
     },
   };
 }

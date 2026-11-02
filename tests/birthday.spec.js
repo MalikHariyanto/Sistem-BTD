@@ -236,7 +236,7 @@ test("code-configured names, dates and photographs survive reload without a brow
   await chapter(page, "Surat untukmu");
   await page.locator("#open-letter").click();
   await expect(page.locator('[data-photo="hero"] img')).toBeVisible();
-  await expect(page.locator('.photo-editor[open]')).toHaveCount(0);
+  await expect(page.locator('input[type="file"], .photo-editor, #edit-photos')).toHaveCount(0);
 });
 
 test("reduced motion, keyboard focus and responsive scenes", async ({

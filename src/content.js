@@ -3,19 +3,28 @@ import { photoManifest } from "./generated/photo-manifest.js";
 import { createPhotoLibrary } from "./media/photo-library.js";
 export { ORBIT_PHOTO_COUNT } from "./media/photo-library.js";
 
+// Hanya untuk slide cerita; tidak ditambahkan ke koleksi Gargantua.
+// Simpan foto di public/photos/scenery/, lalu isi tiga path di bawah.
+// Kosong sementara memakai ilustrasi pemandangan bawaan.
+export const sceneryPhotos = {
+  prague: "", // "/photos/scenery/prague-evening.jpg"
+  edinburgh: "", // "/photos/scenery/edinburgh-night.jpg"
+  street: "", // "/photos/scenery/edinburgh-street.jpg"
+};
+
 export const photoConfig = {
   // Kosong = cari otomatis nama slot yang sama di public/photos/story/.
   // Contoh manual: portrait: "/photos/orbit/001.webp".
   story: {
-    hero: "",
-    portrait: "",
-    poem0: "",
-    poem1: "",
-    poem2: "",
-    moment0: "",
-    moment1: "",
-    moment2: "",
-    moment3: "",
+    hero: sceneryPhotos.edinburgh, // Surat: suasana Edinburgh.
+    portrait: "", // Hari lahirmu: potret utama.
+    poem0: sceneryPhotos.prague, // Bait untukmu: Gargantua.
+    poem1: sceneryPhotos.edinburgh, // Bait untukmu: hari hari.
+    poem2: sceneryPhotos.street, // Bait untukmu: pada hari lahirmu.
+    moment0: "", // Hari lahirmu: bingkai personal kedua.
+    moment1: sceneryPhotos.prague, // Bunga & doa + foto surat pertama.
+    moment2: sceneryPhotos.edinburgh, // Pengiring puisi + foto surat kedua.
+    moment3: sceneryPhotos.street, // Hari lahirmu + foto surat ketiga.
   },
   // Kosong = baca semua JPG/PNG/WebP di public/photos/orbit/ saat build.
   // Urutan alami: 1.jpg, 2.jpg, ... 200.jpg. Nama file bebas, maksimal 200.
@@ -31,7 +40,7 @@ export const content = {
   photos: createPhotoLibrary(photoConfig, photoManifest),
   orbitThumbnails: photoManifest.thumbnails || {},
   // Opsional: foto scenery asli di public/photos/scenery/; kosong memakai ilustrasi dekoratif orisinal.
-  scrapbook: { edinburgh: "", prague: "" },
+  scrapbook: sceneryPhotos,
   poems: [
     {
         "title": "Gargantua",
@@ -85,7 +94,7 @@ export const content = {
     },
   ],
   // Foto menemani setiap bait surat saat di-scroll, memakai slot foto di atas.
-  letterPhotos: ["hero", "moment0", "moment1", "moment3"],
+  letterPhotos: ["moment1", "moment2", "moment3", "hero"],
   letter: [
     "Hai, hari ini layak kamu rayakan. Di balik usia yang bertambah, ada keberanian untuk mencoba, keputusan yang tidak mudah, dan banyak hari yang berhasil kamu lewati. Beri dirimu waktu untuk menengok perjalanan itu. Ada yang patut kamu banggakan dari caramu sampai sejauh ini, termasuk usaha kecil yang selama ini luput kamu hargai.",
     "Semoga pengalaman yang sulit perlahan bisa kamu terima tanpa kehilangan lembutnya hati. Ada bagian dari diri sendiri yang memang perlu dikenali pelan-pelan, seperti halaman yang baru terasa maknanya ketika dibaca kembali. Kamu boleh berubah pikiran, belajar lagi, dan tumbuh dengan waktumu sendiri. Mudah-mudahan prosesnya membantumu lebih mengerti apa yang kamu butuhkan.",
