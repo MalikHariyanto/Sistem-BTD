@@ -118,3 +118,22 @@ body:is([data-chapter="1"],[data-chapter="3"]) #app {
 /* A hover lift must not oscillate when the opening button and reveal button
    share the same pointer position on a short phone viewport. */
 .reveal-copy .primary:hover { transform:none; }
+
+/* A feathered light wash lifts the reading area from the busy stationery.
+   Its edge fades beyond the text; the shared page remains continuous. */
+.garden-intro { isolation:isolate; }
+.garden-intro::before {
+  content:""; position:absolute; inset:-70px -100px -40px; z-index:-1;
+  pointer-events:none;
+  background:radial-gradient(ellipse closest-side at 50% 46%,#faf1dfff 0%,#faf1dff5 50%,#faf1dfb8 70%,#faf1df00 100%);
+}
+.garden-intro h2 { color:#3b291b; }
+.garden-intro h2 em { color:#654128; }
+.garden-intro > .eyebrow,.garden-intro > p:not(.eyebrow) { color:#46301f; }
+.garden-layout::before {
+  background:radial-gradient(ellipse at 60% 45%,#fff7e8cf,transparent 78%);
+}
+body[data-chapter="3"] #home-link { color:#3b291b; }
+@media(max-width:700px) {
+  .garden-intro::before { inset:-60px -22vw -50px; }
+}

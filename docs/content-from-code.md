@@ -95,11 +95,11 @@ Nilai kosong tidak menampilkan bingkai pemandangan. Tidak ada ilustrasi generate
 | Semestamu / Gargantua | File `public/photos/orbit/`, atau urutan manual `photoConfig.orbit` |
 | Hari lahirmu | Dua foto personal `portrait` dan `moment0`, lalu foto suasana `sceneryPhotos.prague`, `river`, dan `street` |
 | Bunga & doa | Foto suasana `sceneryPhotos.edinburgh`, `oldTown`, dan `castle` |
-| Bait untukmu | Isi sendiri `photoConfig.story.poem0`, `poem1`, dan `poem2` |
+| Bait untukmu | `photoConfig.story.poem0`, `poem1`, dan `poem2`; sementara memakai Praha, Edinburgh, dan sungai |
 | Tiup lilin | Ilustrasi kue dan lilin, tanpa bingkai foto |
-| Surat untukmu | Isi sendiri `photoConfig.story.hero`, `moment1`, `moment2`, dan `moment3` |
+| Surat untukmu | `photoConfig.story.hero`, `moment1`, `moment2`, dan `moment3`; sementara memakai foto kota dari ZIP |
 
-Foto puisi dan surat sengaja tidak mengikuti `sceneryPhotos`. Selama belum diisi, puisi dan surat tampil sebagai bacaan tanpa kolom foto kosong. Setelah file dimasukkan dan path diisi, foto kembali tampil di samping tulisan (di atas tulisan pada HP).
+Foto puisi dan surat sementara diisi foto asli dari ZIP pengguna. Untuk menggantinya, ubah path pada `photoConfig.story` tanpa mengubah `sceneryPhotos` yang dipakai bab lain. Nilai kosong menampilkan bacaan tanpa kolom foto kosong; setelah file dimasukkan dan path diisi, foto tampil di samping tulisan (di atas tulisan pada HP).
 
 Untuk foto personal di Hari lahirmu, masukkan `public/photos/story/portrait.jpg` dan `moment0.jpg`, atau isi path-nya langsung di `photoConfig.story`. Jika kosong, kedua slot ini memakai dua foto orbit pertama. Tidak ada formulir foto di website.
 

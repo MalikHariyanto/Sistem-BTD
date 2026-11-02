@@ -10,7 +10,7 @@ test('scrapbook keeps personal photos, all poem pages, flowers and letter readab
  await expect(page.locator('[data-photo="portrait"] img')).toBeVisible();
  await chooseChapter(page,3);await page.getByRole('button',{name:'Mekarkan doa: Bahagia',exact:true}).click();
  await expect(page.locator('.garden-note:not([hidden])')).toHaveCount(1);
- expect(await page.locator('.garden-intro > p:not(.eyebrow)').first().evaluate(e=>getComputedStyle(e).color)).toBe('rgb(115, 88, 63)');
+ expect(await page.locator('.garden-intro > p:not(.eyebrow)').first().evaluate(e=>getComputedStyle(e).color)).toBe('rgb(70, 48, 31)');
  await chooseChapter(page,2);
  for(let i=0;i<3;i++){await page.locator(`[data-poem="${i}"]`).click();await expect(page.locator(`#poem-photo [data-photo="poem${i}"] img`)).toBeVisible();}
  await chooseChapter(page,4);await page.locator('#open-letter').click();await expect(page.locator('.letter-verse')).toHaveCount(4);

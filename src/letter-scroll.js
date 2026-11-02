@@ -5,7 +5,7 @@ import { keepsakeContent } from "./keepsakes.js";
 export function createScrollLetter(root, { content, photo, flowers, escapeHtml: esc }) {
   const scene = root.closest('.scene');
   const captions = ['a day to celebrate.', 'every little step.', 'room to grow.', 'a new chapter.'];
-  const themes = ['Hari perayaan', 'Mengenali diri', 'Merawat ikhtiar', 'Satu musim lagi'];
+  const themes = ['Hari lahirmu', 'Yang belum selesai', 'Ikut mendoakan', 'Rayakan dulu'];
   const keys = content.letterPhotos?.length ? content.letterPhotos : ['hero', 'moment1', 'moment2', 'moment3'];
   const count = content.letter.length;
   const hasPhotos = keys.some(key => Boolean(content.photos[key]));

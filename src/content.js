@@ -7,27 +7,27 @@ export { ORBIT_PHOTO_COUNT } from "./media/photo-library.js";
 // Simpan enam foto asli di public/photos/scenery/, lalu isi path di bawah.
 // Slot yang kosong disembunyikan; tidak ada gambar generate sebagai pengganti.
 export const sceneryPhotos = {
-  prague: "", // "/photos/scenery/prague-evening.jpg"
-  edinburgh: "", // "/photos/scenery/edinburgh-night.jpg"
-  street: "", // "/photos/scenery/edinburgh-street.jpg"
-  oldTown: "", // "/photos/scenery/prague-old-town.jpg"
-  castle: "", // "/photos/scenery/prague-castle.jpg"
-  river: "", // "/photos/scenery/prague-river.jpg"
+  prague: "/photos/scenery/prague-evening.jpg",
+  edinburgh: "/photos/scenery/edinburgh-night.jpg",
+  street: "/photos/scenery/edinburgh-street.jpg",
+  oldTown: "/photos/scenery/prague-old-town.jpg",
+  castle: "/photos/scenery/prague-castle.jpg",
+  river: "/photos/scenery/prague-river.jpg",
 };
 
 export const photoConfig = {
   // Kosong = cari otomatis nama slot yang sama di public/photos/story/.
   // Contoh manual: portrait: "/photos/orbit/001.webp".
   story: {
-    hero: "", // Surat: foto pertama, isi sendiri.
+    hero: sceneryPhotos.castle, // Surat: foto pertama; ganti path ini nanti.
     portrait: "", // Hari lahirmu: potret utama.
-    poem0: "", // Puisi Gargantua: isi foto sendiri.
-    poem1: "", // Puisi hari hari: isi foto sendiri.
-    poem2: "", // Puisi pada hari lahirmu: isi foto sendiri.
+    poem0: sceneryPhotos.prague, // Puisi Gargantua; ganti path ini nanti.
+    poem1: sceneryPhotos.edinburgh, // Puisi hari hari; ganti path ini nanti.
+    poem2: sceneryPhotos.river, // Puisi pada hari lahirmu; ganti path ini nanti.
     moment0: "", // Hari lahirmu: bingkai personal kedua.
-    moment1: "", // Surat: foto kedua, isi sendiri.
-    moment2: "", // Surat: foto ketiga, isi sendiri.
-    moment3: "", // Surat: foto keempat, isi sendiri.
+    moment1: sceneryPhotos.oldTown, // Surat: foto kedua; ganti path ini nanti.
+    moment2: sceneryPhotos.street, // Surat: foto ketiga; ganti path ini nanti.
+    moment3: sceneryPhotos.river, // Surat: foto keempat; ganti path ini nanti.
   },
   // Kosong = baca semua JPG/PNG/WebP di public/photos/orbit/ saat build.
   // Urutan alami: 1.jpg, 2.jpg, ... 200.jpg. Nama file bebas, maksimal 200.
@@ -99,9 +99,9 @@ export const content = {
   // Foto menemani setiap bait surat saat di-scroll, memakai slot foto di atas.
   letterPhotos: ["hero", "moment1", "moment2", "moment3"],
   letter: [
-    "Hai, hari ini layak kamu rayakan. Di balik usia yang bertambah, ada keberanian untuk mencoba, keputusan yang tidak mudah, dan banyak hari yang berhasil kamu lewati. Beri dirimu waktu untuk menengok perjalanan itu. Ada yang patut kamu banggakan dari caramu sampai sejauh ini, termasuk usaha kecil yang selama ini luput kamu hargai.",
-    "Semoga pengalaman yang sulit perlahan bisa kamu terima tanpa kehilangan lembutnya hati. Ada bagian dari diri sendiri yang memang perlu dikenali pelan-pelan, seperti halaman yang baru terasa maknanya ketika dibaca kembali. Kamu boleh berubah pikiran, belajar lagi, dan tumbuh dengan waktumu sendiri. Mudah-mudahan prosesnya membantumu lebih mengerti apa yang kamu butuhkan.",
-    "Semoga Allah melapangkan rezekimu, menjernihkan pertimbanganmu, dan memberi arah bagi usaha-usaha yang sedang kamu rawat. Bila suatu rencana berjalan berbeda dari keinginanmu, mudah-mudahan tersedia jalan lain yang baik untukmu. Tetaplah berprasangka baik kepada-Nya, sambil memberi dirimu waktu untuk memahami hal-hal yang belum terjawab.",
-    "Untuk hari-hari mendatang, semoga ada ketenangan dalam keseharianmu dan orang-orang tulus yang turut merayakan kabar baikmu. Semoga tubuhmu sehat, istirahatmu cukup, dan harapan tetap tumbuh di sela kesibukan. Masih banyak tempat yang belum kamu datangi, hal yang belum kamu pelajari, dan kejutan kecil yang kelak membuatmu bersyukur. Selamat menempuh satu musim lagi dalam hidupmu."
+    "Hai, sudah sampai di hari lahirmu lagi. Semoga hari ini ada waktu buat makan yang kamu suka, ketemu orang-orang terdekat, dan tertawa tanpa buru-buru. Urusan yang bisa menunggu, biar menunggu sebentar.",
+    "Kalau masih ada rencana yang belum kesampaian, sisakan saja untuk diusahakan lagi. Ulang tahun boleh dirayakan sebelum semua urusan beres. Hitung juga hal-hal kecil yang berhasil kamu selesaikan tahun kemarin. Sering kali, justru itu yang paling gampang terlupakan.",
+    "Aku ikut mendoakan yang sedang kamu usahakan. Semoga Allah memberi jalan yang baik, juga rezeki yang cukup untuk kebutuhanmu dan sedikit lebih untuk hal-hal yang kamu sukai. Kalau mesti menunggu, mudah-mudahan kamu tetap punya tenaga untuk berusaha dan tidak kehilangan prasangka baik kepada-Nya.",
+    "Selamat bertambah usia. Semoga tahun ini kamu lebih sering pulang dengan hati lapang, punya waktu untuk beristirahat, dan dikelilingi orang-orang yang tulus. Kalau nanti ada kabar gembira, rayakan sekecil apa pun itu. Untuk sekarang, nikmati dulu hari lahirmu."
 ],
 };

@@ -65,7 +65,7 @@ test("media paths preserve spaces, fragments and deployment subpaths", () => {
 test("build validation fails on missing assets instead of silently shipping broken slots", async t => {
   const root = await mkdtemp(resolve(tmpdir(), "gift-check-"));
   t.after(() => rm(root, { recursive: true, force: true }));
-  const sample = { ...content, photos: Object.fromEntries(Object.keys(content.photos).map(key => [key, ""])), tracks: [{ src: "/song.mp3" }] };
+  const sample = { ...content, scrapbook: {}, photos: Object.fromEntries(Object.keys(content.photos).map(key => [key, ""])), tracks: [{ src: "/song.mp3" }] };
   await writeFile(resolve(root, "song.mp3"), "soundtrack");
   assert.equal(await validateMedia(sample, root), 1);
   sample.photos.hero = "/missing.jpg";
