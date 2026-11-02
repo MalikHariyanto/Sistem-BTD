@@ -19,16 +19,16 @@ return `
   <section class="scene dedication-scene" data-scene="1" aria-labelledby="dedication-title" hidden inert><div class="scene-inner dedication-layout">
     <div class="dedication-copy"><h2 id="dedication-title" tabindex="-1">Selamat tiba<br><em>di usia yang baru.</em></h2><p>Semoga langkah yang kau tempuh membawamu lebih dekat pada apa yang selama ini kau doakan.</p><p>Aku ingin merayakan semuanya. Pelan-pelan, satu halaman pada satu waktu.</p></div>
     <div class="memory-constellation birthday-photo-ribbon" aria-label="Rangkaian foto hari lahirmu">
-      <div class="memory memory-1"${content.scrapbook?.prague ? "" : " hidden"}>${postcard("prague", "Praha, menjelang malam.")}</div>
-      <div class="memory memory-0">${photo("portrait", "Potret ucapan")}</div>
-      <div class="memory memory-4"${content.scrapbook?.river ? "" : " hidden"}>${postcard("river", "Cahaya di atas Vltava.")}</div>
-      <div class="memory memory-3">${photo("moment0", "Kenangan kecil")}</div>
-      <div class="memory memory-2"${content.scrapbook?.street ? "" : " hidden"}>${postcard("street", "Sehabis hujan di Edinburgh.")}</div>
+      <div class="memory memory-1"${content.scrapbook?.prague ? "" : " hidden"}>${postcard("prague", "Kenangan 01.")}</div>
+      <div class="memory memory-0">${photo("portrait", "Kenangan 02")}</div>
+      <div class="memory memory-4"${content.scrapbook?.river ? "" : " hidden"}>${postcard("river", "Kenangan 03.")}</div>
+      <div class="memory memory-3">${photo("moment0", "Kenangan 04")}</div>
+      <div class="memory memory-2"${content.scrapbook?.street ? "" : " hidden"}>${postcard("street", "Kenangan 05.")}</div>
       ${flowers("flower-memory-left")}${flowers("flower-memory-right")}
     </div>
   </div></section>
   <section class="scene quotes-scene garden-scene" data-scene="3" aria-labelledby="quote-heading" hidden inert><div class="scene-inner garden-layout">
-    <div class="garden-intro">${ephemera}<p class="eyebrow">SEBUAH KEBUN KECIL UNTUKMU</p><h2 id="quote-heading" tabindex="-1">Untukmu,<br> <em>semoga selalu<br> ada yang mekar.</em></h2><p>Tiga bunga, tiga harapan.<br>Sentuh bunganya satu per satu.<br>Biarkan doa-doa baik ini mekar untukmu.</p><div class="garden-photos">${postcard("edinburgh", "Edinburgh, sesudah senja.")}${postcard("oldTown", "Di antara jalan kota lama.")}${postcard("castle", "Lampu-lampu menuju kastel.")}${flowers("flower-garden")}</div></div>
+    <div class="garden-intro">${ephemera}<p class="eyebrow">SEBUAH KEBUN KECIL UNTUKMU</p><h2 id="quote-heading" tabindex="-1">Untukmu,<br> <em>semoga selalu<br> ada yang mekar.</em></h2><p>Tiga bunga, tiga harapan.<br>Sentuh bunganya satu per satu.<br>Biarkan doa-doa baik ini mekar untukmu.</p><div class="garden-photos">${postcard("edinburgh", "Kenangan 11.")}${postcard("oldTown", "Kenangan 12.")}${postcard("castle", "Kenangan 13.")}${flowers("flower-garden")}</div></div>
     <div class="garden-experience" id="wish-garden"></div>
   </div></section>
   <section class="scene poems-scene" data-scene="2" aria-labelledby="poem-title" hidden inert><div class="scene-inner poem-layout">

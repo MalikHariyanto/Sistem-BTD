@@ -137,3 +137,7 @@ body[data-chapter="3"] #home-link { color:#3b291b; }
 @media(max-width:700px) {
   .garden-intro::before { inset:-60px -22vw -50px; }
 }
+
+/* Preserve both faces in a landscape letter photograph such as foto24. */
+.letter-frame .photo-slot img { object-fit:contain; }
+.letter-frame .photo-slot.has-photo { background:#f7eedc; }

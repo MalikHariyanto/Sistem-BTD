@@ -4,7 +4,7 @@ import { mediaUrl } from "./asset-url.js";
 // without rebuilding the orbit atlas or loading a browser-local alternative.
 export function createPhotoGallery(content, base = "/") {
   const photos = Object.fromEntries(Object.entries(content.photos).map(([key, source]) => [key, mediaUrl(source, base)]));
-  const scenerySources = new Set(Object.values(content.scrapbook || {}).filter(Boolean).map(source => mediaUrl(source, base)));
+  const scenerySources = new Set([...Object.values(content.scrapbook || {}), ...(content.storyOnlyPhotos || [])].filter(Boolean).map(source => mediaUrl(source, base)));
   const sources = [...new Set(Object.values(photos).filter(source => source && !scenerySources.has(source)))];
   const orbitSources = new Map(Object.entries(content.orbitThumbnails || {}).map(([src, thumb]) => [mediaUrl(src, base), mediaUrl(thumb, base)]));
   const prefetchedPoems = new Set();

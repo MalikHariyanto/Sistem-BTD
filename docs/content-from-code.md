@@ -88,6 +88,20 @@ export const sceneryPhotos = {
 
 Nilai kosong tidak menampilkan bingkai pemandangan. Tidak ada ilustrasi generate atau foto pinjaman yang menggantikan foto suasana. Koleksi Gargantua tetap memakai foto orbit.
 
+## Urutan foto terbaru
+
+Urutan yang diminta disimpan di `sectionPhotos` di bagian atas `src/content.js`:
+
+| Bagian | Urutan file |
+| --- | --- |
+| Hari lahirmu, kiri ke kanan | `foto1.jpg`, `foto2.jpg`, `foto3.jpg`, `foto4.jpg`, `foto5.jpg` |
+| Bunga & doa, kiri ke kanan | `foto11.jpg`, `foto 12.jpg`, `foto13.jpg` |
+| Surat, bait 1–4 | `foto21.jpg`, `foto22.jpg`, `foto23.jpg`, `foto24.jpg` |
+
+Semua file berada di `public/photos/scenery/`. Nama `foto 12.jpg` memakai spasi;
+path akan diubah menjadi URL yang benar secara otomatis. Foto-foto bab tetap
+terpisah dari koleksi Gargantua. Tiga foto puisi tetap memakai foto kota lama.
+
 ## Foto per bagian
 
 | Bagian | Foto yang diatur dari kode |
@@ -99,7 +113,7 @@ Nilai kosong tidak menampilkan bingkai pemandangan. Tidak ada ilustrasi generate
 | Tiup lilin | Ilustrasi kue dan lilin, tanpa bingkai foto |
 | Surat untukmu | `photoConfig.story.hero`, `moment1`, `moment2`, dan `moment3`; sementara memakai foto kota dari ZIP |
 
-Foto puisi dan surat sementara diisi foto asli dari ZIP pengguna. Untuk menggantinya, ubah path pada `photoConfig.story` tanpa mengubah `sceneryPhotos` yang dipakai bab lain. Nilai kosong menampilkan bacaan tanpa kolom foto kosong; setelah file dimasukkan dan path diisi, foto tampil di samping tulisan (di atas tulisan pada HP).
+Foto puisi tetap memakai foto kota dari ZIP pengguna; ubah path pada `photoConfig.story` untuk menggantinya. Foto surat mengikuti `sectionPhotos.letter`. Nilai kosong menampilkan bacaan tanpa kolom foto kosong; setelah file dimasukkan dan path diisi, foto tampil di samping tulisan (di atas tulisan pada HP).
 
 Untuk foto personal di Hari lahirmu, masukkan `public/photos/story/portrait.jpg` dan `moment0.jpg`, atau isi path-nya langsung di `photoConfig.story`. Jika kosong, kedua slot ini memakai dua foto orbit pertama. Tidak ada formulir foto di website.
 

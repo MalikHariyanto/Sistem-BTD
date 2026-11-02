@@ -3,31 +3,52 @@ import { photoManifest } from "./generated/photo-manifest.js";
 import { createPhotoLibrary } from "./media/photo-library.js";
 export { ORBIT_PHOTO_COUNT } from "./media/photo-library.js";
 
-// Hanya untuk slide cerita; tidak ditambahkan ke koleksi Gargantua.
-// Simpan enam foto asli di public/photos/scenery/, lalu isi path di bawah.
-// Slot yang kosong disembunyikan; tidak ada gambar generate sebagai pengganti.
+// Urutan foto slide: kiri ke kanan; surat mengikuti urutan bait saat digulir.
+// Koleksi Gargantua tetap di photoConfig.orbit, terpisah dari foto-foto ini.
+export const sectionPhotos = {
+  birthday: [
+    "/photos/scenery/foto1.jpg",
+    "/photos/scenery/foto2.jpg",
+    "/photos/scenery/foto3.jpg",
+    "/photos/scenery/foto4.jpg",
+    "/photos/scenery/foto5.jpg",
+  ],
+  garden: [
+    "/photos/scenery/foto11.jpg",
+    "/photos/scenery/foto 12.jpg", // Nama file asli memakai spasi.
+    "/photos/scenery/foto13.jpg",
+  ],
+  letter: [
+    "/photos/scenery/foto21.jpg",
+    "/photos/scenery/foto22.jpg",
+    "/photos/scenery/foto23.jpg",
+    "/photos/scenery/foto24.jpg",
+  ],
+};
+
+// Alias identitas bingkai lama; urutan foto cukup diedit di sectionPhotos.
 export const sceneryPhotos = {
-  prague: "/photos/scenery/prague-evening.jpg",
-  edinburgh: "/photos/scenery/edinburgh-night.jpg",
-  street: "/photos/scenery/edinburgh-street.jpg",
-  oldTown: "/photos/scenery/prague-old-town.jpg",
-  castle: "/photos/scenery/prague-castle.jpg",
-  river: "/photos/scenery/prague-river.jpg",
+  prague: sectionPhotos.birthday[0],
+  edinburgh: sectionPhotos.garden[0],
+  street: sectionPhotos.birthday[4],
+  oldTown: sectionPhotos.garden[1],
+  castle: sectionPhotos.garden[2],
+  river: sectionPhotos.birthday[2],
 };
 
 export const photoConfig = {
   // Kosong = cari otomatis nama slot yang sama di public/photos/story/.
   // Contoh manual: portrait: "/photos/orbit/001.webp".
   story: {
-    hero: sceneryPhotos.castle, // Surat: foto pertama; ganti path ini nanti.
-    portrait: "", // Hari lahirmu: potret utama.
-    poem0: sceneryPhotos.prague, // Puisi Gargantua; ganti path ini nanti.
-    poem1: sceneryPhotos.edinburgh, // Puisi hari hari; ganti path ini nanti.
-    poem2: sceneryPhotos.river, // Puisi pada hari lahirmu; ganti path ini nanti.
-    moment0: "", // Hari lahirmu: bingkai personal kedua.
-    moment1: sceneryPhotos.oldTown, // Surat: foto kedua; ganti path ini nanti.
-    moment2: sceneryPhotos.street, // Surat: foto ketiga; ganti path ini nanti.
-    moment3: sceneryPhotos.river, // Surat: foto keempat; ganti path ini nanti.
+    hero: sectionPhotos.letter[0], // Surat: foto21.
+    portrait: sectionPhotos.birthday[1], // Hari lahirmu: foto2.
+    poem0: "/photos/scenery/prague-evening.jpg", // Foto puisi tetap.
+    poem1: "/photos/scenery/edinburgh-night.jpg",
+    poem2: "/photos/scenery/prague-river.jpg",
+    moment0: sectionPhotos.birthday[3], // Hari lahirmu: foto4.
+    moment1: sectionPhotos.letter[1], // Surat: foto22.
+    moment2: sectionPhotos.letter[2], // Surat: foto23.
+    moment3: sectionPhotos.letter[3], // Surat: foto24.
   },
   // Kosong = baca semua JPG/PNG/WebP di public/photos/orbit/ saat build.
   // Urutan alami: 1.jpg, 2.jpg, ... 200.jpg. Nama file bebas, maksimal 200.
@@ -42,7 +63,9 @@ export const content = {
   birthday: "", // ISO lengkap dengan zona, misalnya 2027-02-14T00:00:00+07:00
   photos: createPhotoLibrary(photoConfig, photoManifest),
   orbitThumbnails: photoManifest.thumbnails || {},
-  // Foto asli untuk Hari lahirmu dan Bunga & doa. Slot kosong tidak ditampilkan.
+  // Foto bab tidak dimasukkan ke atlas Gargantua.
+  storyOnlyPhotos: [...Object.values(sectionPhotos).flat(), ...Object.values(photoConfig.story).filter(Boolean)],
+  // Pemetaan foto bingkai Hari lahirmu dan Bunga & doa.
   scrapbook: sceneryPhotos,
   poems: [
     {
